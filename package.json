@@ -1,7 +1,7 @@
 {
   "name": "directjs",
   "scripts": {
-    "compile": "node ./bin/compile.js",
+    "compile": "node ./src/main.js",
     "minify": "uglifyjs ./bin/output.js -o ./bin/output.min.js -m"
   },
   "dependencies": {

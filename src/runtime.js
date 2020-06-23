@@ -6,6 +6,8 @@ module.exports = {
 const {assert} = require('./parser');
 const { get } = require('https');
 
+let uniqIndex = 0;
+let buildBlock;
 
 function buildRuntime(data) {
     let runtime = [`
@@ -20,9 +22,10 @@ function buildRuntime(data) {
         (function() {
             function $$CD() {
                 let cd = {children: [],watchers: []};
-                cd.wf = function(fn, callback, mode) {
+                cd.watch = function(fn, callback, mode) {
                     cd.watchers.push({fn: fn, cb: callback, value: undefined, ro: mode == 'ro'});
                 };
+                cd.wf = (fn, callback) => cd.watch(fn, callback, 'ro');
                 cd.wa = function(fn, callback) {
                     cd.watchers.push({fn: fn, cb: callback, value: undefined, a: true})
                 };
@@ -74,13 +77,10 @@ function buildRuntime(data) {
 
     `];
 
-    let uniqIndex = 0;
-
-    function build(data) {
+    buildBlock = function(data, option = {}) {
         let tpl = [];
         let lvl = [];
         let binds = [];
-        let each_block = [];
         let elements = {};
 
         function go(level, data) {
@@ -88,7 +88,8 @@ function buildRuntime(data) {
             const setLvl = () => {lvl[level] = index++;}
             const getElementName = () => {
                 let el = '$element';
-                lvl.forEach(n => el += `.childNodes[${n}]`);
+                if(option.top0) lvl.slice(1).forEach(n => el += `.childNodes[${n}]`);
+                else lvl.forEach(n => el += `.childNodes[${n}]`);
                 let name = elements[el];
                 if(!name) {
                     elements[el] = name = 'el' + (uniqIndex++);
@@ -103,7 +104,7 @@ function buildRuntime(data) {
                     if(n.value.indexOf('{') >= 0) {
                         tpl.push(' ');
                         let exp = parseText(n.value);
-                        binds.push(`$cd.wf(() => ${exp}, (value) => {${getElementName()}.textContent=value;}, 'ro');`);
+                        binds.push(`$cd.wf(() => ${exp}, (value) => {${getElementName()}.textContent=value;});`);
                     } else tpl.push(n.value);
                 } else if(n.type === 'script') {
                     return
@@ -128,10 +129,10 @@ function buildRuntime(data) {
                         tpl.push(`</${n.name}>`);
                     }
                 } else if(n.type === 'each') {
-                    each_block.push({
-                        prevNode: lvl.slice(),
-                        data: n
-                    });
+                    setLvl();
+                    tpl.push(`<!-- ${n.value} -->`);
+                    let eachBlock = makeEachBlock(n, getElementName());
+                    binds.push(eachBlock.source);
                 } else if(n.type === 'if') {
                 }
             });
@@ -158,10 +159,10 @@ function buildRuntime(data) {
 
     };
 
-    let bb = build(data);
+    let bb = buildBlock(data);
     runtime.push(bb.source);
     runtime.push(`
-        $element.innerHTML = \`${bb.tpl}\`;
+        $element.innerHTML = \`${Q(bb.tpl)}\`;
         ${bb.name}($cd, $element);
     `);
 
@@ -237,18 +238,18 @@ function parseElement(source) {
         assert(index < source.length, 'EOF');
         return source[index++];
     }
-    const flush = () => {
+    const flush = (shift) => {
         if(index <= start) return;
         if(first) {
             first = false;
             return;
         }
         let prop = {
-            content: source.substring(start, index - 1)
+            content: source.substring(start, index + shift)
         }
         if(eq) {
             prop.name = source.substring(start, eq - 1);
-            prop.value = source.substring(eq, index -1);
+            prop.value = source.substring(eq, index + shift);
             eq = null;
         }
         result.push(prop);
@@ -275,7 +276,7 @@ function parseElement(source) {
         }
 
         if(a == ' ') {
-            flush();
+            flush(-1);
             start = index;
             continue;
         }
@@ -283,7 +284,7 @@ function parseElement(source) {
             eq = index;
         }
     }
-    flush();
+    flush(0);
     return result;
 };
 
@@ -296,15 +297,96 @@ function makeBind(prop, el) {
     assert(exp, prop.content);
 
     if(name == 'on') {
-        let event = d[1];
+        let mod = '', opt = d[1].split('|');
+        event = opt[0];
+        if(opt[1] === 'preventDefault') mod = `$event.preventDefault();`;
         assert(event, prop.content);
-        return el + `.addEventListener("${event}", ($event) => {${Q(exp)}});`;
+        return el + `.addEventListener("${event}", ($event) => { ${mod} $$apply(); ${Q(exp)}});`;
     } else if(name == 'bind') {
         let attr = d[1];
         assert(attr, prop.content);
         if(attr === 'value') {
-            return `${el}.addEventListener('input', () => { ${exp}=${el}.value; $$apply(); })
-                    $cd.wf(() => (${exp}), (value) => { if(value != ${el}.value) ${el}.value = value; }, 'ro');`;
+            return `${el}.addEventListener('input', () => { ${exp}=${el}.value; $$apply(); });
+                    $cd.wf(() => (${exp}), (value) => { if(value != ${el}.value) ${el}.value = value; });`;
+        } else if(attr == 'checked') {
+            return `${el}.addEventListener('input', () => { ${exp}=${el}.checked; $$apply(); });
+                    $cd.wf(() => !!(${exp}), (value) => { if(value != ${el}.checked) ${el}.checked = value; });`;
         } else throw 'Not supported: ' + prop.content;
+    } else if(name == 'class') {
+        let className = d[1];
+        assert(className, prop.content);
+        return `$cd.wf(() => !!(${exp}), (value) => { if(value) ${el}.classList.add("${className}"); else ${el}.classList.remove("${className}"); });`;
     } else throw 'Wrong binding: ' + prop.content;
+};
+
+
+function makeEachBlock(data, topElementName) {
+    let source = [];
+
+    let nodeItems = data.body.filter(n => n.type == 'node');
+    assert(nodeItems.length === 1, 'Only 1 node for #each');
+    itemData = buildBlock({body: nodeItems}, {top0: true});
+
+    let rx = data.value.match(/^#each\s+(\S+)\s+as\s+(\w+)\s*$/);
+    let arrayName = rx[1];
+    let itemName = rx[2];
+
+    let eachBlockName = 'eachBlock' + (uniqIndex++);
+    source.push(`
+        function ${eachBlockName} ($cd, top) {
+            let srcNode = document.createElement("div");
+            srcNode.innerHTML=\`${Q(itemData.tpl)}\`;
+            srcNode=srcNode.firstChild;
+
+            let mapping = new Map();
+            $cd.wa(() => (${arrayName}), (array) => {
+                let prevNode = top;
+                let newMapping = new Map();
+
+                if(mapping.size) {
+                    let arrayAsSet = new Set();
+                    for(let i=0;i<array.length;i++) {
+                        arrayAsSet.add(array[i]);
+                    }
+                    mapping.forEach((ctx, item) => {
+                        if(arrayAsSet.has(item)) return;
+                        ctx.el.remove();
+                        let i = $cd.children.indexOf(ctx.cd);
+                        i>=0 && $cd.children.splice(i, 1);
+                    });
+                    arrayAsSet.clear();
+                }
+
+                array.forEach(${itemName} => {
+                    ${itemData.source};
+                    let el, ctx = mapping.get(todo);
+                    if(ctx) {
+                        el = ctx.el;
+                    } else {
+                        el = srcNode.cloneNode(true);
+                        let childCD = $$CD(); $cd.children.push(childCD);
+                        ctx = {el: el, cd: childCD};
+                        ${itemData.name}(childCD, el);
+                    }
+                    if(el.previousSibling != prevNode) {
+                        if(el.previousSibling) el.previousSibling.remove();
+                        if(el.previousSibling != prevNode) top.parentNode.insertBefore(el, prevNode.nextSibling);
+                    }
+                    prevNode = el;
+                    newMapping.set(todo, ctx);
+
+
+                });
+                mapping.clear();
+                mapping = newMapping;
+
+            });
+
+        }
+        ${eachBlockName}($cd, ${topElementName});
+    `);
+
+    return {
+        source: source.join('\n')
+    }
 };

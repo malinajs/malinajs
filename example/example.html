@@ -27,10 +27,9 @@
     }
 </script>
 
-<input type="text" on:keydown={enter( $event, 'test' )} bind:value={name} />
-{name}
-<!--
+<input type="text" on:keydown={enter($event)} bind:value={name} />
 <button on:click={add()}>Add</button>
+{name}
 
 <ul>
     {#each todos as todo }
@@ -43,4 +42,3 @@
 </ul>
 
 Edit: <input type="text" bind:value={active.name} />
--->
