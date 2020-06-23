@@ -19,7 +19,6 @@ const { buildRuntime } = require('./runtime');
 
     script = transformJS(script.content);
 
-    console.log(script);
     const runtime = buildRuntime(data);
     const result = script.split('$$runtime()').join(runtime);
     fs.writeFileSync('./bin/output.js', result, {encoding:'utf8', flag:'w'}); 
