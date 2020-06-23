@@ -44,6 +44,7 @@ function buildRuntime(data) {
                 this.destroyList.push(fn);
             }
             $$CD.prototype.destroy = function() {
+                this.watchers.length = 0;
                 this.destroyList.forEach(fn => {
                     try {
                         fn();
@@ -75,12 +76,14 @@ function buildRuntime(data) {
                 let loop = 10;
                 while(loop >= 0) {
                     let changes = 0;
-                    let cd;
-                    for(let cdIndex=-1;cdIndex<$cd.children.length;cdIndex++) {
-                        if(cdIndex == -1) cd = $cd;
-                        else cd = $cd.children[cdIndex];
-                        cd.watchers.forEach((w) => {
-                            let value = w.fn();
+                    let index = 0;
+                    let queue = [];
+                    let cd = $cd;
+                    let i, w, value;
+                    while(cd) {
+                        for(let i=0;i<cd.watchers.length;i++) {
+                            w = cd.watchers[i];
+                            value = w.fn();
                             if(w.a) {
                                 if(arrayCompare(w.value, value)) {
                                     w.value = value.slice();
@@ -94,7 +97,9 @@ function buildRuntime(data) {
                                     w.cb(w.value);
                                 }
                             }
-                        });
+                        };
+                        if(cd.children) queue.push.apply(queue, cd.children);
+                        cd = queue[index++];
                     }
                     loop--;
                     if(!changes) break;
@@ -190,6 +195,7 @@ function buildRuntime(data) {
     runtime.push(`
         $element.innerHTML = \`${Q(bb.tpl)}\`;
         ${bb.name}($cd, $element);
+        $$apply();
     `);
 
     runtime.push(`\n})();`);
