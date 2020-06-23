@@ -21,18 +21,44 @@ function buildRuntime(data) {
         };
         (function() {
             function $$CD() {
-                let cd = {children: [],watchers: []};
-                cd.watch = function(fn, callback, mode) {
-                    cd.watchers.push({fn: fn, cb: callback, value: undefined, ro: mode == 'ro'});
-                };
-                cd.wf = (fn, callback) => cd.watch(fn, callback, 'ro');
-                cd.wa = function(fn, callback) {
-                    cd.watchers.push({fn: fn, cb: callback, value: undefined, a: true})
-                };
-                return cd;
+                this.children = [];
+                this.watchers = [];
+                this.destroyList = [];
             };
+            $$CD.prototype.watch = function(fn, callback, mode) {
+                this.watchers.push({fn: fn, cb: callback, value: undefined, ro: mode == 'ro'});
+            };
+            $$CD.prototype.wf = function(fn, callback) {
+                this.watch(fn, callback, 'ro');
+            }
+            $$CD.prototype.wa = function(fn, callback) {
+                this.watchers.push({fn: fn, cb: callback, value: undefined, a: true})
+            }
+            $$CD.prototype.ev = function(el, event, callback) {
+                el.addEventListener(event, callback);
+                this.d(() => {
+                    el.removeEventListener(event, callback);
+                });
+            }
+            $$CD.prototype.d = function(fn) {
+                this.destroyList.push(fn);
+            }
+            $$CD.prototype.destroy = function() {
+                this.destroyList.forEach(fn => {
+                    try {
+                        fn();
+                    } catch (e) {
+                        console.error(e);
+                    }
+                });
+                this.destroyList.length = 0;
+                this.children.forEach(cd => {
+                    cd.destroy();
+                });
+                this.children.length = 0;
+            }
 
-            let $cd = $$CD();
+            let $cd = new $$CD();
 
             const arrayCompare = (a, b) => {
                 let e0 = a == null || !a.length;
@@ -301,15 +327,15 @@ function makeBind(prop, el) {
         event = opt[0];
         if(opt[1] === 'preventDefault') mod = `$event.preventDefault();`;
         assert(event, prop.content);
-        return el + `.addEventListener("${event}", ($event) => { ${mod} $$apply(); ${Q(exp)}});`;
+        return `$cd.ev(${el}, "${event}", ($event) => { ${mod} $$apply(); ${Q(exp)}});`;
     } else if(name == 'bind') {
         let attr = d[1];
         assert(attr, prop.content);
         if(attr === 'value') {
-            return `${el}.addEventListener('input', () => { ${exp}=${el}.value; $$apply(); });
+            return `$cd.ev(${el}, 'input', () => { ${exp}=${el}.value; $$apply(); });
                     $cd.wf(() => (${exp}), (value) => { if(value != ${el}.value) ${el}.value = value; });`;
         } else if(attr == 'checked') {
-            return `${el}.addEventListener('input', () => { ${exp}=${el}.checked; $$apply(); });
+            return `$cd.ev(${el}, 'input', () => { ${exp}=${el}.checked; $$apply(); });
                     $cd.wf(() => !!(${exp}), (value) => { if(value != ${el}.checked) ${el}.checked = value; });`;
         } else throw 'Not supported: ' + prop.content;
     } else if(name == 'class') {
@@ -351,6 +377,7 @@ function makeEachBlock(data, topElementName) {
                     mapping.forEach((ctx, item) => {
                         if(arrayAsSet.has(item)) return;
                         ctx.el.remove();
+                        ctx.cd.destroy();
                         let i = $cd.children.indexOf(ctx.cd);
                         i>=0 && $cd.children.splice(i, 1);
                     });
@@ -364,7 +391,7 @@ function makeEachBlock(data, topElementName) {
                         el = ctx.el;
                     } else {
                         el = srcNode.cloneNode(true);
-                        let childCD = $$CD(); $cd.children.push(childCD);
+                        let childCD = new $$CD(); $cd.children.push(childCD);
                         ctx = {el: el, cd: childCD};
                         ${itemData.name}(childCD, el);
                     }
