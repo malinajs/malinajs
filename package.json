@@ -1,0 +1,14 @@
+{
+  "name": "directjs",
+  "scripts": {
+    "compile": "node ./bin/compile.js",
+    "minify": "uglifyjs ./bin/output.js -o ./bin/output.min.js -m"
+  },
+  "dependencies": {
+    "acorn": "^7.3.1",
+    "astring": "^1.4.3",
+    "http-server": "^0.12.3",
+    "uglify-es": "^3.3.9",
+    "rollup": "^2.17.1"
+  }
+}

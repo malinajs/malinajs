@@ -1,0 +1,78 @@
+
+const acorn = require('acorn');
+const astring = require('astring');
+
+module.exports = {
+    transformJS
+};
+
+function transformJS(code) {
+    var ast = acorn.parse(code, { ecmaVersion: 6 })
+
+    const funcTypes = {
+        FunctionDeclaration: 1,
+        FunctionExpression: 1,
+        ArrowFunctionExpression: 1
+    }
+    
+    const fix = (node) => {
+        if(funcTypes[node.type] && node.body.body && node.body.body.length) {
+            node.body.body.unshift({
+                type: 'ExpressionStatement',
+                expression: {
+                    callee: {
+                        type: 'Identifier',
+                        name: '$$apply'
+                    },
+                    type: 'CallExpression'
+                }
+            });
+        }
+    }
+    
+    const transform = function(node) {
+        const x = 0;
+        for(let key in node) {
+            let value = node[key];
+            if(typeof value === 'object') {
+                if(Array.isArray(value)) {
+                    value.forEach(transform);
+                } else if(value && value.type) {
+                    transform(value);
+                }
+            }
+        }
+        fix(node);
+    };
+    
+    transform(ast.body);
+
+    ast.body.push({
+        type: 'ExpressionStatement',
+        expression: {
+            callee: {
+                type: 'Identifier',
+                name: '$$runtime'
+            },
+            type: 'CallExpression'
+        }
+    });
+    
+    ast.body = [{
+        body: {
+            type: 'BlockStatement',
+            body: ast.body
+        },
+        id: {
+            type: 'Identifier"',
+            name: 'widget'
+        },
+        params: [{
+            type: 'Identifier',
+            name: '$element'
+        }],
+        type: 'FunctionDeclaration'
+    }];
+    
+    return astring.generate(ast);
+}

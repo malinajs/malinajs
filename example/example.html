@@ -1,0 +1,46 @@
+<script lang="javascript">
+    let todos = [];
+    let name = '';
+    let active = {};
+
+    function enter(e) {
+        if(e.keyCode !== 13) return;
+        e.preventDefault();
+        add();
+    };
+
+    function add() {
+        if(!name) return;
+        todos.push({
+            name: name,
+            done: false
+        });
+        name = '';
+    }
+
+    function remove(todo) {
+        todos.splice(todos.indexOf(todo), 1);
+    }
+
+    function select(todo) {
+        active = todo;
+    }
+</script>
+
+<input type="text" on:keydown={enter( $event, 'test' )} bind:value={name} />
+{name}
+<!--
+<button on:click={add()}>Add</button>
+
+<ul>
+    {#each todos as todo }
+    <li class:active={todo === active}>
+        <input type="checkbox" bind:checked={todo.done} />
+        <span on:click={select(todo)} class:inactive={todo.done} style="cursor: pointer;">{todo.name}</span>
+        <a href on:click|preventDefault={remove(todo)}>[x]</a>
+    </li>
+    {/each}
+</ul>
+
+Edit: <input type="text" bind:value={active.name} />
+-->
