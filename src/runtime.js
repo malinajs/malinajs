@@ -349,7 +349,7 @@ function makeBind(prop, el) {
 
     if(name == 'on') {
         let mod = '', opt = d[1].split('|');
-        event = opt[0];
+        let event = opt[0];
         if(opt[1] === 'preventDefault') mod = `$event.preventDefault();`;
         assert(event, prop.content);
         return `$cd.ev(${el}, "${event}", ($event) => { ${mod} $$apply(); ${Q(exp)}});`;
@@ -377,7 +377,7 @@ function makeEachBlock(data, topElementName) {
     let nodeItems = data.body.filter(n => n.type == 'node');
     if(!nodeItems.length) nodeItems = [data.body[0]];
     assert(nodeItems.length === 1, 'Only 1 node for #each');
-    itemData = buildBlock({body: nodeItems}, {top0: true});
+    let itemData = buildBlock({body: nodeItems}, {top0: true});
 
     let rx = data.value.match(/^#each\s+(\S+)\s+as\s+(\w+)\s*$/);
     let arrayName = rx[1];

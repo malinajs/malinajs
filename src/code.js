@@ -6,7 +6,7 @@ module.exports = {
     transformJS
 };
 
-function transformJS(code) {
+function transformJS(code, option={}) {
     var ast = acorn.parse(code, { ecmaVersion: 6 })
 
     const funcTypes = {
@@ -65,7 +65,7 @@ function transformJS(code) {
         },
         id: {
             type: 'Identifier"',
-            name: 'widget'
+            name: option.name
         },
         params: [{
             type: 'Identifier',
