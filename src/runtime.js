@@ -34,6 +34,7 @@ function buildRuntime(data) {
                 this.children = [];
                 this.watchers = [];
                 this.destroyList = [];
+                this.onceList = [];
             };
             $$CD.prototype.watch = function(fn, callback, mode) {
                 this.watchers.push({fn: fn, cb: callback, value: undefined, ro: mode == 'ro'});
@@ -68,6 +69,9 @@ function buildRuntime(data) {
                 });
                 this.children.length = 0;
             }
+            $$CD.prototype.once = function(fn) {
+                this.onceList.push(fn);
+            }
 
             let $cd = new $$CD();
 
@@ -84,6 +88,7 @@ function buildRuntime(data) {
             };
             $$apply.go = () => {
                 let loop = 10;
+                let once = [];
                 while(loop >= 0) {
                     let changes = 0;
                     let index = 0;
@@ -108,12 +113,23 @@ function buildRuntime(data) {
                                 }
                             }
                         };
-                        if(cd.children) queue.push.apply(queue, cd.children);
+                        if(cd.children.length) queue.push.apply(queue, cd.children);
+                        if(cd.onceList.length) {
+                            once.push.apply(once, cd.onceList);
+                            cd.onceList.length = 0;
+                        }
                         cd = queue[index++];
                     }
                     loop--;
                     if(!changes) break;
                 }
+                once.forEach(fn => {
+                    try {
+                        fn();
+                    } catch (e) {
+                        console.error(e);
+                    }
+                });
             };
 
     `];
@@ -370,6 +386,8 @@ function makeBind(prop, el) {
         let className = d[1];
         assert(className, prop.content);
         return `$cd.wf(() => !!(${exp}), (value) => { if(value) ${el}.classList.add("${className}"); else ${el}.classList.remove("${className}"); });`;
+    } else if(name == 'use') {
+        return `$cd.once(() => { $$apply(); let $element=${el}; ${exp}; });`;
     } else throw 'Wrong binding: ' + prop.content;
 };
 

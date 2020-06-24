@@ -38,7 +38,7 @@
 </ul>
 
 {#if active}
-    Edit: <input type="text" on:keydown|enter={active=null} bind:value={active.name} />
+    Edit: <input use={$element.focus()} type="text" on:keydown|enter={active=null} bind:value={active.name} />
 {:else}
     Select item, total {todos.length}.
 {/if}
