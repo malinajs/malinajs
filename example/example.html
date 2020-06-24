@@ -37,7 +37,7 @@
     {#each todos as todo}
     <li class:active={todo === active}>
         <input type="checkbox" bind:checked={todo.done} />
-        <span on:click={select(todo)} class:inactive={todo.done} style="cursor: pointer;">{todo.name}</span>
+        <span on:click={select(todo)} class:inactive={todo.done} style="cursor: pointer;">{this.index}: {todo.name}</span>
         <a href on:click|preventDefault={remove(todo)}>[x]</a>
     </li>
     {/each}
@@ -46,5 +46,5 @@
 {#if active}
     Edit: <input type="text" bind:value={active.name} />
 {:else}
-    Not selected, total {todos.length}.
+    Select item, total {todos.length}.
 {/if}

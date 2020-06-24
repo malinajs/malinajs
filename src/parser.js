@@ -64,9 +64,15 @@ function parse(source) {
         let end = source.substring(start).indexOf('</script>') + start;
         assert(end >= 0, '<script> is not closed')
         index = end + 10;
-        return {
-            content: source.substring(start, end)
-        }
+        return source.substring(start, end);
+    };
+
+    const readStyle = () => {
+        let start = index;
+        let end = source.substring(start).indexOf('</style>') + start;
+        assert(end >= 0, '<style> is not closed')
+        index = end + 9;
+        return source.substring(start, end);
     };
 
     const readBinding = () => {
@@ -129,7 +135,12 @@ function parse(source) {
                 parent.body.push(tag);
                 if(tag.name === 'script') {
                     tag.type = 'script';
-                    tag.content = readScript().content;
+                    tag.content = readScript();
+                    continue;
+                };
+                if(tag.name === 'style') {
+                    tag.type = 'style';
+                    tag.content = readStyle();
                     continue;
                 };
                 if(tag.closedTag) continue;

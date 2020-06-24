@@ -149,6 +149,11 @@ function buildRuntime(data) {
                     } else tpl.push(n.value);
                 } else if(n.type === 'script') {
                     return
+                } else if(n.type === 'style') {
+                    setLvl();
+                    tpl.push(n.openTag);
+                    tpl.push(n.content);
+                    tpl.push('</style>');
                 } else if(n.type === 'node') {
                     setLvl();
                     if(n.openTag.indexOf('{') >= 0) {
@@ -404,23 +409,23 @@ function makeEachBlock(data, topElementName) {
                     arrayAsSet.clear();
                 }
 
-                array.forEach(${itemName} => {
+                array.forEach((${itemName}, $$index) => {
                     ${itemData.source};
-                    let el, ctx = mapping.get(todo);
+                    let el, ctx = mapping.get(${itemName});
                     if(ctx) {
                         el = ctx.el;
                     } else {
                         el = srcNode.cloneNode(true);
                         let childCD = new $$CD(); $cd.children.push(childCD);
-                        ctx = {el: el, cd: childCD};
-                        ${itemData.name}(childCD, el);
+                        ctx = {el: el, cd: childCD, scope: {}};
+                        ${itemData.name}.call(ctx.scope, childCD, el);
                     }
                     if(el.previousSibling != prevNode) {
-                        if(el.previousSibling) el.previousSibling.remove();
-                        if(el.previousSibling != prevNode) top.parentNode.insertBefore(el, prevNode.nextSibling);
+                        top.parentNode.insertBefore(el, prevNode.nextSibling);
                     }
+                    ctx.scope.index = $$index;
                     prevNode = el;
-                    newMapping.set(todo, ctx);
+                    newMapping.set(${itemName}, ctx);
 
 
                 });
