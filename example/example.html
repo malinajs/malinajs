@@ -1,7 +1,7 @@
 <script lang="javascript">
     let todos = [];
     let name = '';
-    let active = {};
+    let active = null;
 
     function enter(e) {
         if(e.keyCode !== 13) return;
@@ -16,6 +16,7 @@
             done: false
         });
         name = '';
+        active = null;
     }
 
     function remove(todo) {
@@ -23,7 +24,8 @@
     }
 
     function select(todo) {
-        active = todo;
+        if(active === todo) active = null;
+        else active = todo;
     }
 </script>
 
@@ -32,7 +34,7 @@
 {name}
 
 <ul>
-    {#each todos as todo }
+    {#each todos as todo}
     <li class:active={todo === active}>
         <input type="checkbox" bind:checked={todo.done} />
         <span on:click={select(todo)} class:inactive={todo.done} style="cursor: pointer;">{todo.name}</span>
@@ -41,4 +43,8 @@
     {/each}
 </ul>
 
-Edit: <input type="text" bind:value={active.name} />
+{#if active}
+    Edit: <input type="text" bind:value={active.name} />
+{:else}
+    Not selected, total {todos.length}.
+{/if}

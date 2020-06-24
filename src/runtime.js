@@ -20,6 +20,16 @@ function buildRuntime(data) {
             }, 1);
         };
         (function() {
+            function $$htmlToFragment(html) {
+                let t = document.createElement('template');
+                t.innerHTML = html;
+                return t.content;
+            };
+            function $$removeItem(array, item) {
+                let i = array.indexOf(item);
+                if(i>=0) array.splice(i, 1);
+            };
+
             function $$CD() {
                 this.children = [];
                 this.watchers = [];
@@ -165,6 +175,10 @@ function buildRuntime(data) {
                     let eachBlock = makeEachBlock(n, getElementName());
                     binds.push(eachBlock.source);
                 } else if(n.type === 'if') {
+                    setLvl();
+                    tpl.push(`<!-- ${n.value} -->`);
+                    let ifBlock = makeifBlock(n, getElementName());
+                    binds.push(ifBlock.source);
                 }
             });
 
@@ -356,6 +370,7 @@ function makeEachBlock(data, topElementName) {
     let source = [];
 
     let nodeItems = data.body.filter(n => n.type == 'node');
+    if(!nodeItems.length) nodeItems = [data.body[0]];
     assert(nodeItems.length === 1, 'Only 1 node for #each');
     itemData = buildBlock({body: nodeItems}, {top0: true});
 
@@ -384,8 +399,7 @@ function makeEachBlock(data, topElementName) {
                         if(arrayAsSet.has(item)) return;
                         ctx.el.remove();
                         ctx.cd.destroy();
-                        let i = $cd.children.indexOf(ctx.cd);
-                        i>=0 && $cd.children.splice(i, 1);
+                        $$removeItem($cd.children, ctx.cd);
                     });
                     arrayAsSet.clear();
                 }
@@ -419,6 +433,72 @@ function makeEachBlock(data, topElementName) {
         ${eachBlockName}($cd, ${topElementName});
     `);
 
+    return {
+        source: source.join('\n')
+    }
+};
+
+
+function makeifBlock(data, topElementName) {
+    let source = [];
+
+    let r = data.value.match(/^#if (.*)$/);
+    let exp = r[1];
+    assert(exp, 'Wrong binding: ' + data.value);
+
+    let ifBlockName = 'ifBlock' + (uniqIndex++);
+    source.push(`function ${ifBlockName}($cd, $element) {`);
+    let mainBlock, elseBlock;
+    if(data.bodyMain) {
+        mainBlock = buildBlock({body: data.bodyMain});
+        elseBlock = buildBlock(data);
+        source.push(`
+            let elsefr = $$htmlToFragment(\`${Q(elseBlock.tpl)}\`);
+            ${elseBlock.source}
+        `);
+
+    } else {
+        mainBlock = buildBlock(data);
+    }
+    source.push(`
+        let mainfr = $$htmlToFragment(\`${Q(mainBlock.tpl)}\`);
+        ${mainBlock.source}
+    `);
+
+    source.push(`
+        let childCD;
+        let elements = [];
+
+        function create(fr, builder) {
+            childCD = new $$CD();
+            $cd.children.push(childCD);
+            let el = fr.cloneNode(true);
+            for(let i=0;i<el.childNodes.length;i++) elements.push(el.childNodes[i]);
+            builder(childCD, el);
+            $element.parentNode.insertBefore(el, $element.nextSibling);
+        };
+
+        function destroy() {
+            if(!childCD) return;
+            $$removeItem($cd.children, childCD);
+            childCD.destroy();
+            childCD = null;
+            for(let i=0;i<elements.length;i++) elements[i].remove();
+            elements.length = 0;
+        };
+
+        $cd.wf(() => !!(${exp}), (value) => {
+            if(value) {
+                destroy();
+                create(mainfr, ${mainBlock.name});
+            } else {
+                destroy();
+                ` + (elseBlock?`if(elsefr) create(elsefr, ${elseBlock.name});`:'') + `
+            }
+        });
+    `);
+    source.push(`};\n ${ifBlockName}($cd, ${topElementName});`);
+    
     return {
         source: source.join('\n')
     }

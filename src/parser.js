@@ -150,15 +150,25 @@ function parse(source) {
                         parent.body.push(tag);
                         go(tag);
                         continue;
-                    } else if(bind.value.startsWith('#if ')) {
-                        throw 'No implemented';
                     } else if(bind.value === '/each') {
                         assert(parent.type === 'each', 'Bind error: /each');
                         return;
+                    } else if(bind.value.startsWith('#if ')) {
+                        let tag = {
+                            type: 'if',
+                            value: bind.value,
+                            body: []
+                        };
+                        parent.body.push(tag);
+                        go(tag);
+                        continue;
                     } else if(bind.value === '/if') {
-                        throw 'No implemented';
+                        assert(parent.type === 'if', 'Bind error: /if');
+                        return;
                     } else if(bind.value === ':else') {
-                        throw 'No implemented';
+                        assert(parent.type === 'if', 'Bind error: :else');
+                        parent.bodyMain = parent.body;
+                        parent.body = [];
                     } else throw 'Error binding: ' + bind.value;
                 }
             }
