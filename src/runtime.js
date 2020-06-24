@@ -350,7 +350,10 @@ function makeBind(prop, el) {
     if(name == 'on') {
         let mod = '', opt = d[1].split('|');
         let event = opt[0];
-        if(opt[1] === 'preventDefault') mod = `$event.preventDefault();`;
+        opt.slice(1).forEach(opt => {
+            if(opt == 'preventDefault') mod += `$event.preventDefault();`;
+            else if(opt == 'enter') mod += `if($event.keyCode != 13) return; $event.preventDefault();`;
+        });
         assert(event, prop.content);
         return `$cd.ev(${el}, "${event}", ($event) => { ${mod} $$apply(); ${Q(exp)}});`;
     } else if(name == 'bind') {

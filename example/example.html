@@ -3,12 +3,6 @@
     let name = '';
     let active = null;
 
-    function enter(e) {
-        if(e.keyCode !== 13) return;
-        e.preventDefault();
-        add();
-    };
-
     function add() {
         if(!name) return;
         todos.push({
@@ -29,7 +23,7 @@
     }
 </script>
 
-<input type="text" on:keydown={enter($event)} bind:value={name} />
+<input type="text" on:keydown|enter={add()} bind:value={name} />
 <button on:click={add()}>Add</button>
 {name}
 
@@ -44,7 +38,7 @@
 </ul>
 
 {#if active}
-    Edit: <input type="text" bind:value={active.name} />
+    Edit: <input type="text" on:keydown|enter={active=null} bind:value={active.name} />
 {:else}
     Select item, total {todos.length}.
 {/if}
