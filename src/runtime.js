@@ -189,6 +189,7 @@ export function buildRuntime(data) {
                 } else if(n.type === 'each') {
                     setLvl();
                     tpl.push(`<!-- ${n.value} -->`);
+                    n.parent = data;
                     let eachBlock = makeEachBlock(n, getElementName());
                     binds.push(eachBlock.source);
                 } else if(n.type === 'if') {
@@ -403,7 +404,7 @@ function makeEachBlock(data, topElementName) {
     let eachBlockName = 'eachBlock' + (uniqIndex++);
     source.push(`
         function ${eachBlockName} ($cd, top) {
-            let srcNode = document.createElement("div");
+            let srcNode = document.createElement("${data.parent.name}");
             srcNode.innerHTML=\`${Q(itemData.tpl)}\`;
             srcNode=srcNode.firstChild;
 

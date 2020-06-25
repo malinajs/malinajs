@@ -46,7 +46,7 @@ export function parse(source) {
                 }
             }
             if(begin) {
-                if(a.match(/[a-zA-Z]/)) {
+                if(a.match(/[\da-zA-Z]/)) {
                     name += a;
                     continue;
                 } else begin = false;
