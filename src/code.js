@@ -1,12 +1,9 @@
 
-const acorn = require('acorn');
-const astring = require('astring');
+import acorn from 'acorn';
+import astring from 'astring';
 
-module.exports = {
-    transformJS
-};
 
-function transformJS(code, option={}) {
+export function transformJS(code, option={}) {
     var ast = acorn.parse(code, { ecmaVersion: 6 })
 
     const funcTypes = {

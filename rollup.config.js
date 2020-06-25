@@ -1,19 +1,24 @@
 
-import commonjs from '@rollup/plugin-commonjs';
-import babel from '@rollup/plugin-babel';
-
-
-export default {
+export default [{
+	input: './src/main.js',
+	output: {
+		sourcemap: true,
+		format: 'cjs',
+		file: './bin/compile.js',
+		globals: ['acorn', 'astring']
+    },
+    external: ['fs', 'acorn', 'astring']
+}, {
 	input: './src/compiler.js',
 	output: {
 		sourcemap: true,
 		format: 'umd',
 		file: './bin/malina.js',
-		name: 'malina'
+		name: 'malina',
+		globals: {
+			acorn: 'acorn',
+			astring: 'astring'
+		}
     },
-    external: ['fs', 'acorn', 'astring'],
-	plugins: [
-		commonjs(),
-		babel({ presets: ['@babel/preset-env'] })
-	]
-};
+	external: ['acorn', 'astring']
+}];

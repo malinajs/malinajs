@@ -1,6 +1,6 @@
 
-const fs = require('fs');
-const { compile } = require('./compiler');
+import fs from 'fs';
+import { compile } from './compiler';
 
 let inputFile = process.argv[2] || './example/example.html';
 const src = fs.readFileSync(inputFile, {encoding:'utf8', flag:'r'}); 

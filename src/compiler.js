@@ -1,12 +1,10 @@
 
-module.exports = { compile };
-
-const { parse, assert } = require('./parser');
-const { transformJS } = require('./code');
-const { buildRuntime } = require('./runtime');
+import { parse, assert } from './parser';
+import { transformJS } from './code';
+import { buildRuntime } from './runtime';
 
 
-function compile(src, option = {}) {
+export function compile(src, option = {}) {
     const data = parse(src);
     let script;
     data.body.forEach(d => {

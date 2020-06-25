@@ -1,14 +1,9 @@
 
-module.exports = {
-    parse,
-    assert
-};
-
-function assert (x, info) {
+export function assert (x, info) {
     if(!x) throw info;
 }
 
-function parse(source) {
+export function parse(source) {
     let index = 0;
 
     const readNext = () => {

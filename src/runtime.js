@@ -1,15 +1,11 @@
 
-module.exports = {
-    buildRuntime
-};
+import { assert } from './parser'
 
-const {assert} = require('./parser');
-const { get } = require('https');
 
 let uniqIndex = 0;
 let buildBlock;
 
-function buildRuntime(data) {
+export function buildRuntime(data) {
     let runtime = [`
         function $$apply() {
             if($$apply.planned) return;
