@@ -25,6 +25,10 @@ export function buildRuntime(data) {
                 let i = array.indexOf(item);
                 if(i>=0) array.splice(i, 1);
             };
+            function $$getElement(el, a) {
+                a.split(',').forEach(i => el = el.childNodes[i]);
+                return el;
+            }
 
             function $$CD() {
                 this.children = [];
@@ -32,42 +36,44 @@ export function buildRuntime(data) {
                 this.destroyList = [];
                 this.onceList = [];
             };
-            $$CD.prototype.watch = function(fn, callback, mode) {
-                this.watchers.push({fn: fn, cb: callback, value: undefined, ro: mode == 'ro'});
-            };
-            $$CD.prototype.wf = function(fn, callback) {
-                this.watch(fn, callback, 'ro');
-            }
-            $$CD.prototype.wa = function(fn, callback) {
-                this.watchers.push({fn: fn, cb: callback, value: undefined, a: true})
-            }
-            $$CD.prototype.ev = function(el, event, callback) {
-                el.addEventListener(event, callback);
-                this.d(() => {
-                    el.removeEventListener(event, callback);
-                });
-            }
-            $$CD.prototype.d = function(fn) {
-                this.destroyList.push(fn);
-            }
-            $$CD.prototype.destroy = function() {
-                this.watchers.length = 0;
-                this.destroyList.forEach(fn => {
-                    try {
-                        fn();
-                    } catch (e) {
-                        console.error(e);
-                    }
-                });
-                this.destroyList.length = 0;
-                this.children.forEach(cd => {
-                    cd.destroy();
-                });
-                this.children.length = 0;
-            }
-            $$CD.prototype.once = function(fn) {
-                this.onceList.push(fn);
-            }
+            Object.assign($$CD.prototype, {
+                watch: function(fn, callback, mode) {
+                    this.watchers.push({fn: fn, cb: callback, value: undefined, ro: mode == 'ro'});
+                },
+                wf: function(fn, callback) {
+                    this.watch(fn, callback, 'ro');
+                },
+                wa: function(fn, callback) {
+                    this.watchers.push({fn: fn, cb: callback, value: undefined, a: true})
+                },
+                ev: function(el, event, callback) {
+                    el.addEventListener(event, callback);
+                    this.d(() => {
+                        el.removeEventListener(event, callback);
+                    });
+                },
+                d: function(fn) {
+                    this.destroyList.push(fn);
+                },
+                destroy: function() {
+                    this.watchers.length = 0;
+                    this.destroyList.forEach(fn => {
+                        try {
+                            fn();
+                        } catch (e) {
+                            console.error(e);
+                        }
+                    });
+                    this.destroyList.length = 0;
+                    this.children.forEach(cd => {
+                        cd.destroy();
+                    });
+                    this.children.length = 0;
+                },
+                once: function(fn) {
+                    this.onceList.push(fn);
+                }
+            });
 
             let $cd = new $$CD();
 
@@ -140,9 +146,11 @@ export function buildRuntime(data) {
             let index = 0;
             const setLvl = () => {lvl[level] = index++;}
             const getElementName = () => {
-                let el = '$element';
-                if(option.top0) lvl.slice(1).forEach(n => el += `.childNodes[${n}]`);
-                else lvl.forEach(n => el += `.childNodes[${n}]`);
+                let el, l = lvl;
+                if(option.top0) l = l.slice(1);
+                if(l.length) el = `$$getElement($element, '${l.join(',')}')`;
+                else el = '$element';
+                
                 let name = elements[el];
                 if(!name) {
                     elements[el] = name = 'el' + (uniqIndex++);
