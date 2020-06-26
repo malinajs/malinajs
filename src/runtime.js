@@ -404,6 +404,15 @@ function makeEachBlock(data, topElementName) {
     let eachBlockName = 'eachBlock' + (uniqIndex++);
     source.push(`
         function ${eachBlockName} ($cd, top) {
+
+            function bind($ctx, ${itemName}) {
+                let $index;
+                ${itemData.source};
+                ${itemData.name}($ctx.cd, $ctx.el);
+                $ctx.reindex = function(i) { $index = i; };
+            };
+
+            let parentNode = top.parentNode;
             let srcNode = document.createElement("${data.parent.name}");
             srcNode.innerHTML=\`${Q(itemData.tpl)}\`;
             srcNode=srcNode.firstChild;
@@ -427,26 +436,44 @@ function makeEachBlock(data, topElementName) {
                     arrayAsSet.clear();
                 }
 
-                array.forEach((${itemName}, $$index) => {
-                    ${itemData.source};
-                    let el, ctx = mapping.get(${itemName});
+                let i, item, next_ctx, el, ctx;
+                for(i=0;i<array.length;i++) {
+                    item = array[i];
+                    if(next_ctx) {
+                        ctx = next_ctx;
+                        next_ctx = null;
+                    } else ctx = mapping.get(item);
                     if(ctx) {
                         el = ctx.el;
+
+                        if(el.previousSibling != prevNode) {
+                            let insert = true;
+
+                            if(i + 1 < array.length && prevNode.nextSibling) {
+                                next_ctx = mapping.get(array[i + 1]);
+                                if(prevNode.nextSibling.nextSibling === next_ctx.el) {
+                                    parentNode.replaceChild(el, prevNode.nextSibling);
+                                    insert = false;
+                                }
+                            }
+
+                            if(insert) {
+                                parentNode.insertBefore(el, prevNode.nextSibling);
+                            }
+                        }
+    
                     } else {
                         el = srcNode.cloneNode(true);
                         let childCD = new $$CD(); $cd.children.push(childCD);
-                        ctx = {el: el, cd: childCD, scope: {}};
-                        ${itemData.name}.call(ctx.scope, childCD, el);
+                        ctx = {el: el, cd: childCD};
+                        bind(ctx, item);
+                        parentNode.insertBefore(el, prevNode.nextSibling);
                     }
-                    if(el.previousSibling != prevNode) {
-                        top.parentNode.insertBefore(el, prevNode.nextSibling);
-                    }
-                    ctx.scope.index = $$index;
+                    ctx.reindex(i);
                     prevNode = el;
-                    newMapping.set(${itemName}, ctx);
+                    newMapping.set(item, ctx);
 
-
-                });
+                };
                 mapping.clear();
                 mapping = newMapping;
 
