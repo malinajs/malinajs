@@ -13,8 +13,8 @@
         active = null;
     }
 
-    function remove(todo) {
-        todos.splice(todos.indexOf(todo), 1);
+    function remove(i) {
+        todos.splice(i, 1);
     }
 
     function select(todo) {
@@ -32,7 +32,7 @@
     <li class:active={todo === active}>
         <input type="checkbox" bind:checked={todo.done} />
         <span on:click={select(todo)} class:inactive={todo.done} style="cursor: pointer;">{$index}: {todo.name}</span>
-        <a href on:click|preventDefault={remove(todo)}>[x]</a>
+        <a href on:click|preventDefault={remove($index)}>[x]</a>
     </li>
     {/each}
 </ul>
