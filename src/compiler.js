@@ -13,8 +13,9 @@ export function compile(src, option = {}) {
         script = d;
     });
 
-    script = transformJS(script.content, {name: option.name || 'widget'});
+    if(!option.name) option.name = 'widget';
+    script = transformJS(script.content, option);
 
-    const runtime = buildRuntime(data);
+    const runtime = buildRuntime(data, option);
     return script.split('$$runtime()').join(runtime);
 };

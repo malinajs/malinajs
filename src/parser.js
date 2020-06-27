@@ -54,12 +54,30 @@ export function parse(source) {
         }
     };
 
-    const readScript = () => {
-        let start = index;
-        let end = source.substring(start).indexOf('</script>') + start;
-        assert(end >= 0, '<script> is not closed')
-        index = end + 10;
-        return source.substring(start, end);
+    const readScript = (tag) => {
+        let endTag = `</${tag}>`;
+        let q, a, p, start = index;
+        while(true) {
+            p = a;
+            a = readNext();
+            if(q) {
+                if(a != q) continue;
+                if(p == '\\') continue;
+                q = null;
+                continue
+            }
+            if(a == '"' || a == '\'' || a == '`') {
+                q = a;
+                continue;
+            }
+            if(a == '<') {
+                if(source.substring(index-1, index + endTag.length - 1) == endTag) {
+                    let end = index - 1;
+                    index += endTag.length - 1;
+                    return source.substring(start, end);
+                }
+            }
+        }
     };
 
     const readStyle = () => {
@@ -90,9 +108,7 @@ export function parse(source) {
         assert(end >= 0, 'Comment is not closed');
         end += 3;
         index = end;
-        return {
-            value: source.substring(start, end)
-        }
+        return source.substring(start, end);
     };
 
     const go = (parent) => {
@@ -110,7 +126,10 @@ export function parse(source) {
                 flushText();
 
                 if(source.substring(index, index + 4) === '<!--') {
-                    readComment();
+                    parent.body.push({
+                        type: 'comment',
+                        content: readComment()
+                    });
                     continue;
                 }
 
@@ -130,10 +149,13 @@ export function parse(source) {
                 parent.body.push(tag);
                 if(tag.name === 'script') {
                     tag.type = 'script';
-                    tag.content = readScript();
+                    tag.content = readScript('script');
                     continue;
-                };
-                if(tag.name === 'style') {
+                } else if(tag.name === 'template') {
+                    tag.type = 'template';
+                    tag.content = readScript('template');
+                    continue;
+                } else if(tag.name === 'style') {
                     tag.type = 'style';
                     tag.content = readStyle();
                     continue;

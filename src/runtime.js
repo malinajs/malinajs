@@ -5,7 +5,7 @@ import { assert } from './parser'
 let uniqIndex = 0;
 let buildBlock;
 
-export function buildRuntime(data) {
+export function buildRuntime(data, runtimeOption) {
     let runtime = [`
         function $$apply() {
             if($$apply.planned) return;
@@ -174,17 +174,20 @@ export function buildRuntime(data) {
                     tpl.push(n.openTag);
                     tpl.push(n.content);
                     tpl.push('</style>');
+                } else if(n.type === 'template') {
+                    setLvl();
+                    tpl.push(n.openTag);
+                    tpl.push(n.content);
+                    tpl.push('</template>');
                 } else if(n.type === 'node') {
                     setLvl();
                     if(n.openTag.indexOf('{') >= 0) {
                         let r = parseElement(n.openTag);
                         let el = ['<' + n.name];
                         r.forEach(p => {
-                            if(!p.value || p.value[0] != '{') {
-                                el.push(p.content);
-                            } else {
-                                binds.push(makeBind(p, getElementName()));
-                            }
+                            let b = makeBind(p, getElementName());
+                            if(b.prop) el.push(b.prop);
+                            if(b.bind) binds.push(b.bind);
                         });
                         if(n.closedTag) el.push('/>');
                         else el.push('>');
@@ -205,6 +208,10 @@ export function buildRuntime(data) {
                     tpl.push(`<!-- ${n.value} -->`);
                     let ifBlock = makeifBlock(n, getElementName());
                     binds.push(ifBlock.source);
+                } else if(n.type === 'comment') {
+                    if(!runtimeOption.preserveComments) return;
+                    setLvl();
+                    tpl.push(n.content);
                 }
             });
 
@@ -248,14 +255,24 @@ function Q(s) {
 };
 
 
-function parseText (source) {
+function parseText(source, quotes) {
     let i = 0;
     let step = 0;
     let text = '';
     let exp = '';
     let result = [];
     let q;
-    while(i < source.length) {
+    let len = source.length;
+    if(quotes) {
+        if(source[0] === '{') quotes = false;
+        else {
+            i++;
+            len--;
+            quotes = source[0];
+            assert(quotes === source[len], source);
+        }
+    }
+    while(i < len) {
         let a = source[i++];
         if(step == 1) {
             if(q) {
@@ -362,38 +379,53 @@ function parseElement(source) {
 
 
 function makeBind(prop, el) {
-    let d = prop.name.split(':');
-    let name = d[0];
+    let parts = prop.name.split(':');
+    let name = parts[0];
     
-    let exp = prop.value.match(/^\{(.*)\}$/)[1];
-    assert(exp, prop.content);
+    function getExpression() {
+        let exp = prop.value.match(/^\{(.*)\}$/)[1];
+        assert(exp, prop.content);
+        return exp;
+    }
 
     if(name == 'on') {
-        let mod = '', opt = d[1].split('|');
+        let exp = getExpression();
+        let mod = '', opt = parts[1].split('|');
         let event = opt[0];
         opt.slice(1).forEach(opt => {
             if(opt == 'preventDefault') mod += `$event.preventDefault();`;
             else if(opt == 'enter') mod += `if($event.keyCode != 13) return; $event.preventDefault();`;
         });
         assert(event, prop.content);
-        return `$cd.ev(${el}, "${event}", ($event) => { ${mod} $$apply(); ${Q(exp)}});`;
+        return {bind:`$cd.ev(${el}, "${event}", ($event) => { ${mod} $$apply(); ${Q(exp)}});`};
     } else if(name == 'bind') {
-        let attr = d[1];
+        let exp = getExpression();
+        let attr = parts[1];
         assert(attr, prop.content);
         if(attr === 'value') {
-            return `$cd.ev(${el}, 'input', () => { ${exp}=${el}.value; $$apply(); });
-                    $cd.wf(() => (${exp}), (value) => { if(value != ${el}.value) ${el}.value = value; });`;
+            return {bind: `$cd.ev(${el}, 'input', () => { ${exp}=${el}.value; $$apply(); });
+                    $cd.wf(() => (${exp}), (value) => { if(value != ${el}.value) ${el}.value = value; });`};
         } else if(attr == 'checked') {
-            return `$cd.ev(${el}, 'input', () => { ${exp}=${el}.checked; $$apply(); });
-                    $cd.wf(() => !!(${exp}), (value) => { if(value != ${el}.checked) ${el}.checked = value; });`;
+            return {bind: `$cd.ev(${el}, 'input', () => { ${exp}=${el}.checked; $$apply(); });
+                    $cd.wf(() => !!(${exp}), (value) => { if(value != ${el}.checked) ${el}.checked = value; });`};
         } else throw 'Not supported: ' + prop.content;
     } else if(name == 'class') {
-        let className = d[1];
+        let exp = getExpression();
+        let className = parts[1];
         assert(className, prop.content);
-        return `$cd.wf(() => !!(${exp}), (value) => { if(value) ${el}.classList.add("${className}"); else ${el}.classList.remove("${className}"); });`;
+        return {bind: `$cd.wf(() => !!(${exp}), (value) => { if(value) ${el}.classList.add("${className}"); else ${el}.classList.remove("${className}"); });`};
     } else if(name == 'use') {
-        return `$cd.once(() => { $$apply(); let $element=${el}; ${exp}; });`;
-    } else throw 'Wrong binding: ' + prop.content;
+        let exp = getExpression();
+        return {bind: `$cd.once(() => { $$apply(); let $element=${el}; ${exp}; });`};
+    } else {
+        if(prop.value && prop.value.indexOf('{') >= 0) {
+            let exp = parseText(prop.value, true);
+            return {bind: `$cd.wf(() => (${exp}), (value) => { ${el}.setAttribute('${name}', value) });`};
+        }
+        return {
+            prop: prop.content
+        }
+    }
 };
 
 
