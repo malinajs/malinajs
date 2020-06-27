@@ -159,14 +159,16 @@ export function buildRuntime(data, runtimeOption) {
                 return name;
             };
 
+            let lastText;
             data.body.forEach(n => {
                 if(n.type === 'text') {
-                    setLvl();
+                    if(lastText !== tpl.length) setLvl();
                     if(n.value.indexOf('{') >= 0) {
                         tpl.push(' ');
                         let exp = parseText(n.value);
                         binds.push(`$cd.wf(() => ${exp}, (value) => {${getElementName()}.textContent=value;});`);
                     } else tpl.push(n.value);
+                    lastText = tpl.length;
                 } else if(n.type === 'script') {
                     return
                 } else if(n.type === 'style') {
@@ -287,7 +289,7 @@ function parseText(source, quotes) {
             }
             if(a === '}') {
                 step = 0;
-                result.push(exp);
+                result.push('(' + exp + ')');
                 exp = '';
                 continue;
             }
@@ -340,7 +342,7 @@ function parseElement(source) {
             prop.name = source.substring(start, eq - 1);
             prop.value = source.substring(eq, index + shift);
             eq = null;
-        }
+        } else prop.name = prop.content;
         result.push(prop);
     };
 
@@ -397,7 +399,7 @@ function makeBind(prop, el) {
             else if(opt == 'enter') mod += `if($event.keyCode != 13) return; $event.preventDefault();`;
         });
         assert(event, prop.content);
-        return {bind:`$cd.ev(${el}, "${event}", ($event) => { ${mod} $$apply(); ${Q(exp)}});`};
+        return {bind:`$cd.ev(${el}, "${event}", ($event) => { ${mod} $$apply(); let $element=${el}; ${Q(exp)}});`};
     } else if(name == 'bind') {
         let exp = getExpression();
         let attr = parts[1];
@@ -409,7 +411,7 @@ function makeBind(prop, el) {
             return {bind: `$cd.ev(${el}, 'input', () => { ${exp}=${el}.checked; $$apply(); });
                     $cd.wf(() => !!(${exp}), (value) => { if(value != ${el}.checked) ${el}.checked = value; });`};
         } else throw 'Not supported: ' + prop.content;
-    } else if(name == 'class') {
+    } else if(name == 'class' && parts.length > 1) {
         let exp = getExpression();
         let className = parts[1];
         assert(className, prop.content);
