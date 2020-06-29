@@ -4,6 +4,7 @@ import astring from 'astring';
 
 
 export function transformJS(code, option={}) {
+    let result = {};
     var ast = acorn.parse(code, { ecmaVersion: 6 })
 
     const funcTypes = {
@@ -44,6 +45,12 @@ export function transformJS(code, option={}) {
     
     transform(ast.body);
 
+    ast.body.forEach(n => {
+        if(n.type != 'FunctionDeclaration') return;
+        if(n.id.name != 'onMount') return;
+        result.$onMount = true;
+    });
+
     ast.body.push({
         type: 'ExpressionStatement',
         expression: {
@@ -71,5 +78,6 @@ export function transformJS(code, option={}) {
         type: 'FunctionDeclaration'
     }];
     
-    return astring.generate(ast);
+    result.code = astring.generate(ast);
+    return result;
 }

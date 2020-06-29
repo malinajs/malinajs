@@ -15,7 +15,8 @@ export function compile(src, option = {}) {
 
     if(!option.name) option.name = 'widget';
     script = transformJS(script.content, option);
+    if(script.$onMount) option.$onMount = true;
 
     const runtime = buildRuntime(data, option);
-    return script.split('$$runtime()').join(runtime);
+    return script.code.split('$$runtime()').join(runtime);
 };

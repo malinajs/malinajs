@@ -246,6 +246,7 @@ export function buildRuntime(data, runtimeOption) {
         ${bb.name}($cd, $element);
         $$apply();
     `);
+    if(runtimeOption.$onMount) runtime.push(`$cd.once(onMount);`);
 
     runtime.push(`\n})();`);
     return runtime.join('');
