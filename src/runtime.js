@@ -44,7 +44,9 @@ export function buildRuntime(data, runtimeOption) {
                     this.watch(fn, callback, 'ro');
                 },
                 wa: function(fn, callback) {
-                    this.watchers.push({fn: fn, cb: callback, value: undefined, a: true})
+                    let w = {fn: fn, cb: callback, value: undefined, a: true};
+                    this.watchers.push(w);
+                    return w;
                 },
                 ev: function(el, event, callback) {
                     el.addEventListener(event, callback);
@@ -183,11 +185,11 @@ export function buildRuntime(data, runtimeOption) {
                     tpl.push('</template>');
                 } else if(n.type === 'node') {
                     setLvl();
-                    if(n.openTag.indexOf('{') >= 0) {
+                    if(n.openTag.indexOf('{') || n.openTag.indexOf('use:')) {
                         let r = parseElement(n.openTag);
                         let el = ['<' + n.name];
                         r.forEach(p => {
-                            let b = makeBind(p, getElementName());
+                            let b = makeBind(p, getElementName);
                             if(b.prop) el.push(b.prop);
                             if(b.bind) binds.push(b.bind);
                         });
@@ -381,7 +383,7 @@ function parseElement(source) {
 };
 
 
-function makeBind(prop, el) {
+function makeBind(prop, makeEl) {
     let parts = prop.name.split(':');
     let name = parts[0];
     
@@ -392,6 +394,7 @@ function makeBind(prop, el) {
     }
 
     if(name == 'on') {
+        let el = makeEl();
         let exp = getExpression();
         let mod = '', opt = parts[1].split('|');
         let event = opt[0];
@@ -402,6 +405,7 @@ function makeBind(prop, el) {
         assert(event, prop.content);
         return {bind:`$cd.ev(${el}, "${event}", ($event) => { ${mod} $$apply(); let $element=${el}; ${Q(exp)}});`};
     } else if(name == 'bind') {
+        let el = makeEl();
         let exp = getExpression();
         let attr = parts[1];
         assert(attr, prop.content);
@@ -413,15 +417,31 @@ function makeBind(prop, el) {
                     $cd.wf(() => !!(${exp}), (value) => { if(value != ${el}.checked) ${el}.checked = value; });`};
         } else throw 'Not supported: ' + prop.content;
     } else if(name == 'class' && parts.length > 1) {
+        let el = makeEl();
         let exp = getExpression();
         let className = parts[1];
         assert(className, prop.content);
         return {bind: `$cd.wf(() => !!(${exp}), (value) => { if(value) ${el}.classList.add("${className}"); else ${el}.classList.remove("${className}"); });`};
     } else if(name == 'use') {
+        let el = makeEl();
+        if(parts.length == 2) {
+            let local = 'use' + (uniqIndex++);
+            let args = prop.value?getExpression():'';
+            let code = `var ${local} = ${parts[1]}(${el}${args?', '+args:''});\n if(${local}) {`;
+            if(args) code += `
+                if(${local}.update) {
+                    let w = $cd.wa(() => [${args}], (args) => {${local}.update.apply(${local}, args);});
+                    w.value = w.fn();
+                }`;
+            code += `if(${local}.destroy) $cd.d(${local}.destroy);}`;
+            return {bind: code};
+        }
+        assert(parts.length == 1, prop.content);
         let exp = getExpression();
         return {bind: `$cd.once(() => { $$apply(); let $element=${el}; ${exp}; });`};
     } else {
         if(prop.value && prop.value.indexOf('{') >= 0) {
+            let el = makeEl();
             let exp = parseText(prop.value, true);
             return {bind: `$cd.wf(() => (${exp}), (value) => { ${el}.setAttribute('${name}', value) });`};
         }
@@ -448,8 +468,7 @@ function makeEachBlock(data, topElementName) {
     source.push(`
         function ${eachBlockName} ($cd, top) {
 
-            function bind($ctx, ${itemName}) {
-                let $index;
+            function bind($ctx, ${itemName}, $index) {
                 ${itemData.source};
                 ${itemData.name}($ctx.cd, $ctx.el);
                 $ctx.reindex = function(i) { $index = i; };
@@ -505,14 +524,14 @@ function makeEachBlock(data, topElementName) {
                             }
                         }
     
+                        ctx.reindex(i);
                     } else {
                         el = srcNode.cloneNode(true);
                         let childCD = new $$CD(); $cd.children.push(childCD);
                         ctx = {el: el, cd: childCD};
-                        bind(ctx, item);
+                        bind(ctx, item, i);
                         parentNode.insertBefore(el, prevNode.nextSibling);
                     }
-                    ctx.reindex(i);
                     prevNode = el;
                     newMapping.set(item, ctx);
 
