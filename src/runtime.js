@@ -426,6 +426,8 @@ function makeBind(prop, makeEl) {
         opt.slice(1).forEach(opt => {
             if(opt == 'preventDefault') mod += `$event.preventDefault();`;
             else if(opt == 'enter') mod += `if($event.keyCode != 13) return; $event.preventDefault();`;
+            else if(opt == 'escape') mod += `if($event.keyCode != 27) return; $event.preventDefault();`;
+            else throw 'Wrong modificator: ' + opt;
         });
         assert(event, prop.content);
         return {bind:`$cd.ev(${el}, "${event}", ($event) => { ${mod} $$apply(); let $element=${el}; ${Q(exp)}});`};
