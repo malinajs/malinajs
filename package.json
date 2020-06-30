@@ -3,9 +3,9 @@
   "version": "0.4.1",
   "scripts": {
     "build": "rollup -c",
-    "build_app": "node ./bin/compile.js ./example/example.html && babel ./bin/output.js -o ./bin/output.js && uglifyjs ./bin/output.js -o ./bin/output.min.js -m",
-    "build_app_es5": "babel ./bin/output.js -o ./bin/output.es5.js --presets babel-preset-es2015 && uglifyjs ./bin/output.es5.js -o ./bin/output.es5.min.js -m",
-    "web": "http-server ./bin"
+    "build_app": "rollup -c rollup.config.app.js && babel ./example/public/app.js -o ./example/public/app.js && uglifyjs ./example/public/app.js -o ./example/public/app.min.js -m",
+    "build_app_es5": "babel ./example/public/app.js -o ./example/public/app.es5.js --presets babel-preset-es2015 && uglifyjs ./example/public/app.es5.js -o ./example/public/app.es5.min.js -m",
+    "web": "http-server ./example/public"
   },
   "dependencies": {
     "acorn": "^7.3.1",

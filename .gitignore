@@ -1,4 +1,5 @@
 node_modules/
-bin/output.js
+example/public/app*
 .vscode/
 info
+bin
