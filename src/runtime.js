@@ -8,6 +8,7 @@ let buildBlock;
 export function buildRuntime(data, runtimeOption) {
     let runtime = [`
         function $$apply() {
+            if($$apply._p) return;
             if($$apply.planned) return;
             $$apply.planned = true;
             setTimeout(() => {
@@ -91,14 +92,23 @@ export function buildRuntime(data, runtimeOption) {
                 return false;
             };
             $$apply.go = () => {
+                $$apply._p = true;
+                try {
+                    $digest($cd);
+                } finally {
+                    $$apply._p = false;
+                }
+            };
+            
+            function $digest($cd) {
                 let loop = 10;
                 let once = [];
+                let w;
                 while(loop >= 0) {
                     let changes = 0;
                     let index = 0;
                     let queue = [];
-                    let cd = $cd;
-                    let i, w, value;
+                    let i, value, cd = $cd;
                     while(cd) {
                         for(let i=0;i<cd.watchers.length;i++) {
                             w = cd.watchers[i];
@@ -134,8 +144,8 @@ export function buildRuntime(data, runtimeOption) {
                         console.error(e);
                     }
                 });
+                if(loop < 0) console.error('Infinity changes: ', w);
             };
-
     `];
 
     buildBlock = function(data, option = {}) {
@@ -369,7 +379,7 @@ function parseElement(source) {
             continue;
         }
 
-        if(a == ' ') {
+        if(a.match(/^\s$/)) {
             flush(-1);
             start = index;
             continue;
