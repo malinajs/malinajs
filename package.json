@@ -1,6 +1,6 @@
 {
   "name": "malinajs",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "scripts": {
     "build": "rollup -c",
     "build_app": "node ./bin/compile.js ./example/example.html && babel ./bin/output.js -o ./bin/output.js && uglifyjs ./bin/output.js -o ./bin/output.min.js -m",
