@@ -33,6 +33,11 @@ export function parse(source) {
                 q = '\'';
                 continue;
             }
+            if(a === '<') {
+                let e = new Error('Wrong tag');
+                e.details = source.substring(start, index);
+                throw e;
+            }
             if(a === '>') {
                 const voidTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
                 let closedTag = source[index-1] == '/' || voidTags.indexOf(name) >= 0;
@@ -91,9 +96,22 @@ export function parse(source) {
     const readBinding = () => {
         let start = index;
         assert(readNext() === '{', 'Bind error');
+        let p, q;
         while(true) {
             let a = readNext();
-            // TODO: fix for '"`
+
+            if(q) {
+                if(a != q) continue;
+                if(p == '\\') continue;
+                q = null;
+                continue
+            }
+            if(a == '"' || a == '\'' || a == '`') {
+                q = a;
+                continue;
+            }
+
+            if(a == '{') throw 'Error binding: ' + source.substring(start, index);
             if(a != '}') continue;
 
             return {

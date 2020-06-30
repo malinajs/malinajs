@@ -172,7 +172,7 @@ export function buildRuntime(data, runtimeOption) {
             };
 
             let lastText;
-            data.body.forEach(n => {
+            function bindNode(n) {
                 if(n.type === 'text') {
                     if(lastText !== tpl.length) setLvl();
                     if(n.value.indexOf('{') >= 0) {
@@ -226,6 +226,21 @@ export function buildRuntime(data, runtimeOption) {
                     if(!runtimeOption.preserveComments) return;
                     setLvl();
                     tpl.push(n.content);
+                }
+            }
+            data.body.forEach(n => {
+                try {
+                    bindNode(n);
+                } catch (e) {
+                    if(typeof e === 'string') e = new Error(e);
+                    if(!e.details) {
+                        console.log('Node: ', n);
+                        if(n.type == 'text') e.details = n.value.trim();
+                        else if(n.type == 'node') e.details = n.openTag.trim();
+                        else if(n.type == 'each') e.details = n.value.trim();
+                        else if(n.type == 'if') e.details = n.value.trim();
+                    }
+                    throw e;
                 }
             });
 
@@ -471,6 +486,7 @@ function makeEachBlock(data, topElementName) {
     let itemData = buildBlock({body: nodeItems}, {top0: true});
 
     let rx = data.value.match(/^#each\s+(\S+)\s+as\s+(\w+)\s*$/);
+    assert(rx, 'Wrong #each expression');
     let arrayName = rx[1];
     let itemName = rx[2];
 
