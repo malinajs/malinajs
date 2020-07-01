@@ -2,4 +2,7 @@ node_modules/
 example/public/app*
 .vscode/
 info
-bin
+/malina.js
+/malina.js.map
+/compile.js
+/compile.js.map

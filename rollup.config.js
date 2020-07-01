@@ -4,7 +4,7 @@ export default [{
 	output: {
 		sourcemap: true,
 		format: 'cjs',
-		file: './bin/compile.js',
+		file: './compile.js',
 		globals: ['acorn', 'astring']
     },
     external: ['fs', 'acorn', 'astring']
@@ -13,7 +13,7 @@ export default [{
 	output: {
 		sourcemap: true,
 		format: 'umd',
-		file: './bin/malina.js',
+		file: './malina.js',
 		name: 'malina',
 		globals: {
 			acorn: 'acorn',

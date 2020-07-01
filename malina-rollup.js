@@ -1,5 +1,5 @@
 
-const malina = require('./bin/malina.js')
+const malina = require('./malina.js')
 
 export default function malinaRollup(option = {}) {
     if(!option.name) option.name = 'widget';
