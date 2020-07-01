@@ -203,9 +203,9 @@ export function buildRuntime(data, runtimeOption) {
                             if(b.prop) el.push(b.prop);
                             if(b.bind) binds.push(b.bind);
                         });
-                        if(n.closedTag) el.push('/>');
-                        else el.push('>');
-                        tpl.push(el.join(' '));
+                        el = el.join(' ');
+                        el += n.closedTag?'/>':'>';
+                        tpl.push(el);
                     } else tpl.push(n.openTag);
                     if(!n.closedTag) {
                         go(level + 1, n);
