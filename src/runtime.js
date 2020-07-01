@@ -317,6 +317,8 @@ function parseText(source, quotes) {
             }
             if(a === '}') {
                 step = 0;
+                exp = exp.trim();
+                if(!exp) throw 'Wrong expression';
                 result.push('(' + exp + ')');
                 exp = '';
                 continue;
