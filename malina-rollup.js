@@ -7,7 +7,12 @@ export default function malinaRollup(option = {}) {
         name: 'malina',
         transform(code, id) {
             if(!id.endsWith('.html')) return null;
-            let result = 'export default ' + malina.compile(code, option);
+            try {
+                let result = 'export default ' + malina.compile(code, option);
+            } catch (e) {
+                if(e.details) console.log(e.details);
+                throw e;
+            }
             return {code: result};
         }
     };

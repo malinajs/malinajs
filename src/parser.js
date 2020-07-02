@@ -40,7 +40,8 @@ export function parse(source) {
             }
             if(a === '>') {
                 const voidTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
-                let closedTag = source[index-1] == '/' || voidTags.indexOf(name) >= 0;
+                // source[index-2] == '/'
+                let closedTag = voidTags.indexOf(name) >= 0;
                 return {
                     type: 'node',
                     name: name,
@@ -181,7 +182,13 @@ export function parse(source) {
                 if(tag.closedTag) continue;
 
                 tag.body = [];
-                go(tag);
+                try {
+                    go(tag);
+                } catch (e) {
+                    if(typeof e == 'string') e = new Error(e);
+                    if(!e.details) e.details = tag.openTag;
+                    throw e;
+                }
                 continue;
             } else if(a === '{') {
                 if(['#', '/', ':'].indexOf(source[index + 1]) >= 0) {
