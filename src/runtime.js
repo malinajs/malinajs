@@ -31,6 +31,13 @@ export function buildRuntime(data, runtimeOption) {
                 return el;
             }
 
+            function $watch(cd, fn, callback, mode) {
+                var w = {fn: fn, cb: callback, value: void 0};
+                if(mode == 'ro') w.ro = true;
+                if(mode == 'init') w.value = fn();
+                cd.watchers.push(w);
+            }
+
             function $$CD() {
                 this.children = [];
                 this.watchers = [];
@@ -38,11 +45,8 @@ export function buildRuntime(data, runtimeOption) {
                 this.onceList = [];
             };
             Object.assign($$CD.prototype, {
-                watch: function(fn, callback, mode) {
-                    this.watchers.push({fn: fn, cb: callback, value: undefined, ro: mode == 'ro'});
-                },
                 wf: function(fn, callback) {
-                    this.watch(fn, callback, 'ro');
+                    $watch(this, fn, callback, 'ro');
                 },
                 wa: function(fn, callback) {
                     let w = {fn: fn, cb: callback, value: undefined, a: true};
@@ -137,6 +141,7 @@ export function buildRuntime(data, runtimeOption) {
                     loop--;
                     if(!changes) break;
                 }
+                $$apply._p = false;
                 once.forEach(fn => {
                     try {
                         fn();
@@ -252,11 +257,9 @@ export function buildRuntime(data, runtimeOption) {
 
         let buildName = '$$build' + (uniqIndex++);
         tpl = Q(tpl.join(''));
-        source.push(`
-            function ${buildName}($cd, $element) {
-        `);
+        source.push(`function ${buildName}($cd, $element) {\n`);
         source.push(binds.join('\n'));
-        source.push(`    };`);
+        source.push(`};`);
 
         return {
             name: buildName,
@@ -271,11 +274,13 @@ export function buildRuntime(data, runtimeOption) {
     runtime.push(`
         $element.innerHTML = \`${Q(bb.tpl)}\`;
         ${bb.name}($cd, $element);
-        $$apply();
     `);
     if(runtimeOption.$onMount) runtime.push(`$cd.once(onMount);`);
+    if(runtimeOption.$watchers.length) {
+        runtime.push('$cd.once(() => {\n' + runtimeOption.$watchers.join('\n') + '\n$$apply();\n});');
+    }
 
-    runtime.push(`\n})();`);
+    runtime.push(`$$apply();\n})();`);
     return runtime.join('');
 }
 
