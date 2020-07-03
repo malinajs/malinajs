@@ -64,16 +64,19 @@ export function transformJS(code, option={}) {
             result.watchers.push(`$watch($cd, () => (${exp}), ($value) => {${target}=$value;});`);
         } else if(n.body.expression.type == 'SequenceExpression') {
             const ex = n.body.expression.expressions;
-            if(ex.length != 2) throw 'Error';
-    
-            assertExpression(ex[0]);
-            if(!ex[0].type.endsWith('Expression') && ex[0].type != 'Identifier') throw 'Wrong expression';
-            let exp = code.substring(ex[0].start, ex[0].end);
-    
-            if(['ArrowFunctionExpression', "FunctionExpression"].indexOf(ex[1].type) < 0) throw 'Error function';
-            let callback = code.substring(ex[1].start, ex[1].end);
-    
-            result.watchers.push(`$watch($cd, () => (${exp}), ${callback});`);
+            const handler = ex[ex.length - 1];
+            if(['ArrowFunctionExpression', "FunctionExpression"].indexOf(handler.type) < 0) throw 'Error function';
+            let callback = code.substring(handler.start, handler.end);
+
+            if(ex.length == 2) {
+                assertExpression(ex[0]);
+                let exp = code.substring(ex[0].start, ex[0].end);
+                result.watchers.push(`$watch($cd, () => (${exp}), ${callback});`);
+            } else if(ex.length > 2) {
+                for(let i = 0;i<ex.length-1;i++) assertExpression(ex[i]);
+                let exp = code.substring(ex[0].start, ex[ex.length-2].end);
+                result.watchers.push(`$cd.wa(() => [${exp}], ($args) => { (${callback}).apply(null, $args); });`);
+            } else throw 'Error';
         } else throw 'Error';
     }
 
