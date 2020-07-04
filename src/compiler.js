@@ -3,7 +3,7 @@ import { parse, assert } from './parser';
 import { transformJS } from './code';
 import { buildRuntime } from './runtime';
 
-export const version = '0.4.3';
+export const version = '0.4.4';
 
 export function compile(src, option = {}) {
     const data = parse(src);

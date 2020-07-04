@@ -480,9 +480,20 @@ function makeBind(prop, makeEl) {
     } else {
         if(prop.value && prop.value.indexOf('{') >= 0) {
             let exp = parseText(prop.value, true);
-            return {bind: `{
-                let $element=${makeEl()};
-                $cd.wf(() => (${exp}), (value) => { $element.setAttribute('${name}', value) });}`};
+            if(['hidden','checked','value','disabled','selected'].indexOf(name) >= 0) {
+                return {bind: `{
+                    let $element=${makeEl()};
+                    $cd.wf(() => (${exp}), (value) => {$element.${name} = value;});
+                }`};
+            } else {
+                return {bind: `{
+                    let $element=${makeEl()};
+                    $cd.wf(() => (${exp}), (value) => {
+                        if(value) $element.setAttribute('${name}', value);
+                        else $element.removeAttribute('${name}');
+                    });
+                }`};
+            }
         }
         return {
             prop: prop.content

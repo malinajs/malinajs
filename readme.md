@@ -3,7 +3,7 @@
 
 Web development compiler, inspired by Svelte.js
 
-[Try Malina.js online](https://malinajs.github.io/repl/index.html)
+[Try Malina.js online](https://malinajs.github.io/repl/)
 
 
 Run dev environment:

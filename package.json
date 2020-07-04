@@ -1,6 +1,6 @@
 {
   "name": "malinajs",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "license": "MIT",
   "scripts": {
     "build": "rollup -c && uglifyjs ./malina.js -o ./malina.min.js -m -c",
