@@ -26,10 +26,7 @@ export function buildRuntime(data, runtimeOption) {
                 let i = array.indexOf(item);
                 if(i>=0) array.splice(i, 1);
             };
-            function $$getElement(el, a) {
-                a.split(',').forEach(i => el = el.childNodes[i]);
-                return el;
-            }
+            const $$childNodes = 'childNodes';
 
             function $watch(cd, fn, callback, mode) {
                 var w = {fn: fn, cb: callback, value: void 0};
@@ -165,8 +162,11 @@ export function buildRuntime(data, runtimeOption) {
             const getElementNameRaw = () => {
                 let l = lvl;
                 if(option.top0) l = l.slice(1);
-                if(l.length) return `$$getElement($parentElement, '${l.join(',')}')`;
-                return '$parentElement';
+                let name = '$parentElement';
+                l.forEach(n => {
+                    name += `[$$childNodes][${n}]`;
+                });
+                return name;
             };
 
             let lastText;
