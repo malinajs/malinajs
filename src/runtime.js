@@ -157,23 +157,16 @@ export function buildRuntime(data, runtimeOption) {
         let tpl = [];
         let lvl = [];
         let binds = [];
-        let elements = {};
 
         function go(level, data) {
             let index = 0;
             const setLvl = () => {lvl[level] = index++;}
-            const getElementName = () => {
-                let el, l = lvl;
+
+            const getElementNameRaw = () => {
+                let l = lvl;
                 if(option.top0) l = l.slice(1);
-                if(l.length) el = `$$getElement($element, '${l.join(',')}')`;
-                else el = '$element';
-                
-                let name = elements[el];
-                if(!name) {
-                    elements[el] = name = 'el' + (uniqIndex++);
-                    binds.push(`var ${name} = ${el};`);
-                }
-                return name;
+                if(l.length) return `$$getElement($parentElement, '${l.join(',')}')`;
+                return '$parentElement';
             };
 
             let lastText;
@@ -183,7 +176,9 @@ export function buildRuntime(data, runtimeOption) {
                     if(n.value.indexOf('{') >= 0) {
                         tpl.push(' ');
                         let exp = parseText(n.value);
-                        binds.push(`$cd.wf(() => ${exp}, (value) => {${getElementName()}.textContent=value;});`);
+                        binds.push(`{
+                            let $element=${getElementNameRaw()};
+                            $cd.wf(() => ${exp}, (value) => {$element.textContent=value;});}`);
                     } else tpl.push(n.value);
                     lastText = tpl.length;
                 } else if(n.type === 'script') {
@@ -204,7 +199,7 @@ export function buildRuntime(data, runtimeOption) {
                         let r = parseElement(n.openTag);
                         let el = ['<' + n.name];
                         r.forEach(p => {
-                            let b = makeBind(p, getElementName);
+                            let b = makeBind(p, getElementNameRaw);
                             if(b.prop) el.push(b.prop);
                             if(b.bind) binds.push(b.bind);
                         });
@@ -220,12 +215,12 @@ export function buildRuntime(data, runtimeOption) {
                     setLvl();
                     tpl.push(`<!-- ${n.value} -->`);
                     n.parent = data;
-                    let eachBlock = makeEachBlock(n, getElementName());
+                    let eachBlock = makeEachBlock(n, getElementNameRaw());
                     binds.push(eachBlock.source);
                 } else if(n.type === 'if') {
                     setLvl();
                     tpl.push(`<!-- ${n.value} -->`);
-                    let ifBlock = makeifBlock(n, getElementName());
+                    let ifBlock = makeifBlock(n, getElementNameRaw());
                     binds.push(ifBlock.source);
                 } else if(n.type === 'comment') {
                     if(!runtimeOption.preserveComments) return;
@@ -257,7 +252,7 @@ export function buildRuntime(data, runtimeOption) {
 
         let buildName = '$$build' + (uniqIndex++);
         tpl = Q(tpl.join(''));
-        source.push(`function ${buildName}($cd, $element) {\n`);
+        source.push(`function ${buildName}($cd, $parentElement) {\n`);
         source.push(binds.join('\n'));
         source.push(`};`);
 
@@ -426,7 +421,6 @@ function makeBind(prop, makeEl) {
     }
 
     if(name == 'on') {
-        let el = makeEl();
         let exp = getExpression();
         let mod = '', opt = parts[1].split('|');
         let event = opt[0];
@@ -437,47 +431,58 @@ function makeBind(prop, makeEl) {
             else throw 'Wrong modificator: ' + opt;
         });
         assert(event, prop.content);
-        return {bind:`$cd.ev(${el}, "${event}", ($event) => { ${mod} $$apply(); let $element=${el}; ${Q(exp)}});`};
+        return {bind:`{
+            let $element=${makeEl()};
+            $cd.ev($element, "${event}", ($event) => { ${mod} $$apply(); ${Q(exp)}});
+            }`};
     } else if(name == 'bind') {
-        let el = makeEl();
         let exp = getExpression();
         let attr = parts[1];
         assert(attr, prop.content);
         if(attr === 'value') {
-            return {bind: `$cd.ev(${el}, 'input', () => { ${exp}=${el}.value; $$apply(); });
-                    $cd.wf(() => (${exp}), (value) => { if(value != ${el}.value) ${el}.value = value; });`};
+            return {bind: `{
+                    let $element=${makeEl()};
+                    $cd.ev($element, 'input', () => { ${exp}=$element.value; $$apply(); });
+                    $cd.wf(() => (${exp}), (value) => { if(value != $element.value) $element.value = value; });
+                }`};
         } else if(attr == 'checked') {
-            return {bind: `$cd.ev(${el}, 'input', () => { ${exp}=${el}.checked; $$apply(); });
-                    $cd.wf(() => !!(${exp}), (value) => { if(value != ${el}.checked) ${el}.checked = value; });`};
+            return {bind: `{
+                    let $element=${makeEl()};
+                    $cd.ev($element, 'input', () => { ${exp}=$element.checked; $$apply(); });
+                    $cd.wf(() => !!(${exp}), (value) => { if(value != $element.checked) $element.checked = value; });
+                }`};
         } else throw 'Not supported: ' + prop.content;
     } else if(name == 'class' && parts.length > 1) {
-        let el = makeEl();
         let exp = getExpression();
         let className = parts[1];
         assert(className, prop.content);
-        return {bind: `$cd.wf(() => !!(${exp}), (value) => { if(value) ${el}.classList.add("${className}"); else ${el}.classList.remove("${className}"); });`};
+        return {bind: `{
+                let $element = ${makeEl()};
+                $cd.wf(() => !!(${exp}), (value) => { if(value) $element.classList.add("${className}"); else $element.classList.remove("${className}"); });
+            }`};
     } else if(name == 'use') {
-        let el = makeEl();
         if(parts.length == 2) {
-            let local = 'use' + (uniqIndex++);
             let args = prop.value?getExpression():'';
-            let code = `var ${local} = ${parts[1]}(${el}${args?', '+args:''});\n if(${local}) {`;
+            let code = `{let useObject = ${parts[1]}(${makeEl()}${args?', '+args:''});\n if(useObject) {`;
             if(args) code += `
-                if(${local}.update) {
-                    let w = $cd.wa(() => [${args}], (args) => {${local}.update.apply(${local}, args);});
+                if(useObject.update) {
+                    let w = $cd.wa(() => [${args}], (args) => {useObject.update.apply(useObject, args);});
                     w.value = w.fn();
                 }`;
-            code += `if(${local}.destroy) $cd.d(${local}.destroy);}`;
+            code += `if(useObject.destroy) $cd.d(useObject.destroy);}}`;
             return {bind: code};
         }
         assert(parts.length == 1, prop.content);
         let exp = getExpression();
-        return {bind: `$cd.once(() => { $$apply(); let $element=${el}; ${exp}; });`};
+        return {bind: `{
+            let $element=${makeEl()};
+            $cd.once(() => { $$apply(); ${exp}; });}`};
     } else {
         if(prop.value && prop.value.indexOf('{') >= 0) {
-            let el = makeEl();
             let exp = parseText(prop.value, true);
-            return {bind: `$cd.wf(() => (${exp}), (value) => { ${el}.setAttribute('${name}', value) });`};
+            return {bind: `{
+                let $element=${makeEl()};
+                $cd.wf(() => (${exp}), (value) => { $element.setAttribute('${name}', value) });}`};
         }
         return {
             prop: prop.content
@@ -594,7 +599,7 @@ function makeifBlock(data, topElementName) {
     assert(exp, 'Wrong binding: ' + data.value);
 
     let ifBlockName = 'ifBlock' + (uniqIndex++);
-    source.push(`function ${ifBlockName}($cd, $element) {`);
+    source.push(`function ${ifBlockName}($cd, $parentElement) {`);
     let mainBlock, elseBlock;
     if(data.bodyMain) {
         mainBlock = buildBlock({body: data.bodyMain});
@@ -622,7 +627,7 @@ function makeifBlock(data, topElementName) {
             let el = fr.cloneNode(true);
             for(let i=0;i<el.childNodes.length;i++) elements.push(el.childNodes[i]);
             builder(childCD, el);
-            $element.parentNode.insertBefore(el, $element.nextSibling);
+            $parentElement.parentNode.insertBefore(el, $parentElement.nextSibling);
         };
 
         function destroy() {
