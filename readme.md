@@ -1,5 +1,7 @@
 
-### Malina.js
+## Malina.js
+
+<img align="right" width="100" height="100" src="malinajs.png" />
 
 Malina.js builds your web-application to use it **without framework on frontend side**. Thus your web-app becomes thinner and faster, and the application itself consist of **vanilla JavaScript**, look at [examples](https://malinajs.github.io/repl/). [TodoMVC example](https://malina-todomvc.surge.sh) **2.7kb** (gzipped) and [source code](https://github.com/malinajs/todomvc)
 
@@ -29,3 +31,8 @@ Build compiler
 npm install
 npm run build
 ```
+
+
+## License
+
+[MIT](LICENSE)
