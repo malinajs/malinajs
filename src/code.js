@@ -45,6 +45,22 @@ export function transformJS(code, option={}) {
     
     transform(ast.body);
 
+
+    function makeVariable(name) {
+        return {
+            "type": "VariableDeclaration",
+            "declarations": [{
+                "type": "VariableDeclarator",
+                "id": {
+                    "type": "Identifier",
+                    "name": name
+                },
+                "init": null
+            }],
+            "kind": "var"
+        }
+    }
+
     function makeWatch(n) {
         function assertExpression(n) {
             if(n.type == 'Identifier') return;
@@ -58,10 +74,11 @@ export function transformJS(code, option={}) {
             if(ex.operator != '=') throw 'Error';
             if(ex.left.type != 'Identifier') throw 'Error';
             const target = ex.left.name;
+            if(!(target in rootVariables)) resultBody.push(makeVariable(target));
 
             assertExpression(ex.right);
             const exp = code.substring(ex.right.start, ex.right.end);
-            result.watchers.push(`$watch($cd, () => (${exp}), ($value) => {${target}=$value;});`);
+            result.watchers.push(`$cd.wa(() => (${exp}), ($value) => {${target}=$value;});`);
         } else if(n.body.expression.type == 'SequenceExpression') {
             const ex = n.body.expression.expressions;
             const handler = ex[ex.length - 1];
@@ -81,6 +98,12 @@ export function transformJS(code, option={}) {
     }
 
     let resultBody = [];
+    let rootVariables = {};
+    ast.body.forEach(n => {
+        if(n.type !== 'VariableDeclaration') return;
+        n.declarations.forEach(i => rootVariables[i.id.name] = true);
+    });
+
     ast.body.forEach(n => {
         if(n.type == 'FunctionDeclaration' && n.id.name == 'onMount') result.$onMount = true;
         if(n.type == 'LabeledStatement' && n.label.name == '$') {

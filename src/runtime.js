@@ -81,11 +81,11 @@ export function buildRuntime(data, runtimeOption) {
 
             let $cd = new $$CD();
 
-            const arrayCompare = (a, b) => {
-                let e0 = a == null || !a.length;
-                let e1 = b == null || !b.length;
-                if(e0 !== e1) return true;
-                if(e0 === true) return false;
+            const compareArray = (a, b) => {
+                let a0 = Array.isArray(a);
+                let a1 = Array.isArray(b);
+                if(a0 !== a1) return true;
+                if(!a0) return a !== b;
                 if(a.length !== b.length) return true;
                 for(let i=0;i<a.length;i++) {
                     if(a[i] !== b[i]) return true;
@@ -115,8 +115,9 @@ export function buildRuntime(data, runtimeOption) {
                             w = cd.watchers[i];
                             value = w.fn();
                             if(w.a) {
-                                if(arrayCompare(w.value, value)) {
-                                    w.value = value.slice();
+                                if(compareArray(w.value, value)) {
+                                    if(Array.isArray(value)) w.value = value.slice();
+                                    else w.value = value;
                                     if(!w.ro) changes++;
                                     w.cb(w.value);
                                 }
@@ -532,6 +533,7 @@ function makeEachBlock(data, topElementName) {
 
             let mapping = new Map();
             $cd.wa(() => (${arrayName}), (array) => {
+                if(!array || !Array.isArray(array)) array = [];
                 let prevNode = top;
                 let newMapping = new Map();
 
