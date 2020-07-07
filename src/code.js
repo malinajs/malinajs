@@ -25,22 +25,38 @@ export function transformJS(code, option={}) {
                     type: 'CallExpression'
                 }
             });
+        } else if(node.type === 'ArrowFunctionExpression') {
+            if(node.body.type !== 'BlockStatement') {
+                node.body = {
+                    type: 'BlockStatement',
+                    body: [{
+                        type: 'ReturnStatement',
+                        argument: node.body
+                    }]
+                };
+                fix(node);
+            }
         }
     }
 
-    const transform = function(node) {
-        const x = 0;
-        for(let key in node) {
-            let value = node[key];
-            if(typeof value === 'object') {
-                if(Array.isArray(value)) {
-                    value.forEach(transform);
-                } else if(value && value.type) {
-                    transform(value);
+    const transform = function(node, skipTop) {
+        if(node.type === 'CallExpression' && node.callee && node.callee.property && ['map', 'forEach', 'filter'].indexOf(node.callee.property.name) >=0) {
+            node.arguments.forEach(n => {
+                transform(n, true);
+            });
+        } else {
+            for(let key in node) {
+                let value = node[key];
+                if(typeof value === 'object') {
+                    if(Array.isArray(value)) {
+                        value.forEach(n => transform(n));
+                    } else if(value && value.type) {
+                        transform(value);
+                    }
                 }
             }
         }
-        fix(node);
+        if(!skipTop) fix(node);
     };
     
     transform(ast.body);
