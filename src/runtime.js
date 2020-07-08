@@ -28,10 +28,11 @@ export function buildRuntime(data, runtimeOption, script) {
             };
             const $$childNodes = 'childNodes';
 
-            function $watch(cd, fn, callback, mode) {
-                var w = {fn: fn, cb: callback, value: void 0};
-                if(mode == 'ro') w.ro = true;
-                if(mode == 'init') w.value = fn();
+            function $watch(cd, fn, callback, w) {
+                if(!w) w = {};
+                w.fn = fn;
+                w.cb = callback;
+                w.value = void 0;
                 cd.watchers.push(w);
             }
 
@@ -43,7 +44,7 @@ export function buildRuntime(data, runtimeOption, script) {
             };
             Object.assign($$CD.prototype, {
                 wf: function(fn, callback) {
-                    $watch(this, fn, callback, 'ro');
+                    $watch(this, fn, callback, {ro: true});
                 },
                 wa: function(fn, callback) {
                     let w = {fn: fn, cb: callback, value: undefined, a: true};
@@ -97,6 +98,52 @@ export function buildRuntime(data, runtimeOption, script) {
                 }
                 return false;
             };
+
+            const compareDeep = (a, b, lvl) => {
+                if(lvl < 0) return false;
+                if(!a || !b) return a !== b;
+                let o0 = typeof(a) == 'object';
+                let o1 = typeof(b) == 'object';
+                if(!(o0 && o1)) return a !== b;
+
+                let a0 = Array.isArray(a);
+                let a1 = Array.isArray(b);
+                if(a0 !== a1) return true;
+
+                if(a0) {
+                    if(a.length !== b.length) return false;
+                    for(let i=0;i<a.length;i++) {
+                        if(compareDeep(a[i], b[i], lvl-1)) return true;
+                    }
+                } else {
+                    let set = {};
+                    for(let k in a) {
+                        if(compareDeep(a[k], b[k])) return true;
+                        set[k] = true;
+                    }
+                    for(let k in b) {
+                        if(set[k]) continue;
+                        return true;
+                    }
+                }
+
+                return false;
+            };
+
+            function cloneDeep(d, lvl) {
+                if(lvl < 0) return;
+                if(!d) return d;
+
+                if(typeof(d) == 'object') {
+                    if(d instanceof Date) return d;
+                    if(Array.isArray(d)) return d.map(i => cloneDeep(t, lvl-1));
+                    let r = {};
+                    for(let k in d) r[k] = cloneDeep(d[k], lvl-1);
+                    return r;
+                }
+                return d;
+            };
+
             $$apply.go = () => {
                 $$apply._p = true;
                 try {
@@ -119,15 +166,21 @@ export function buildRuntime(data, runtimeOption, script) {
                         for(let i=0;i<cd.watchers.length;i++) {
                             w = cd.watchers[i];
                             value = w.fn();
-                            if(w.a) {
-                                if(compareArray(w.value, value)) {
-                                    if(Array.isArray(value)) w.value = value.slice();
-                                    else w.value = value;
-                                    if(!w.ro) changes++;
-                                    w.cb(w.value);
-                                }
-                            } else {
-                                if(w.value !== value) {
+                            if(w.value !== value) {
+                                if(w.a) {
+                                    if(compareArray(w.value, value)) {
+                                        if(Array.isArray(value)) w.value = value.slice();
+                                        else w.value = value;
+                                        if(!w.ro) changes++;
+                                        w.cb(w.value);
+                                    }
+                                } else if(w.d) {
+                                    if(compareDeep(w.value, value, 10)) {
+                                        w.value = cloneDeep(value, 10);
+                                        if(!w.ro) changes++;
+                                        w.cb(w.value);
+                                    }
+                                } else {
                                     w.value = value;
                                     if(!w.ro) changes++;
                                     w.cb(w.value);
@@ -722,7 +775,7 @@ function makeComponent(node, makeEl) {
             let exp = parseText(prop.value, true);
             binds.push(`
                 if($component.setProp_${prop.name}) {
-                    $cd.wf(() => (${exp}), $component.setProp_${prop.name});
+                    $watch($cd, () => (${exp}), $component.setProp_${prop.name}, {d: true, ro: true});
                 } else console.error("Component ${node.name} doesn't have prop ${prop.name}");
             `);
         } else {
