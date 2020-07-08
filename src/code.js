@@ -1,11 +1,18 @@
 
 import acorn from 'acorn';
 import astring from 'astring';
+import { assert } from './parser'
 
 
 export function transformJS(code, option={}) {
-    let result = {watchers: []};
-    var ast = acorn.parse(code, { ecmaVersion: 6 })
+    let result = {
+        watchers: [],
+        imports: [],
+        props: []
+    };
+    var ast = acorn.parse(code, {
+        sourceType: 'module'
+    })
 
     const funcTypes = {
         FunctionDeclaration: 1,
@@ -113,6 +120,7 @@ export function transformJS(code, option={}) {
         } else throw 'Error';
     }
 
+    let imports = [];
     let resultBody = [];
     let rootVariables = {};
     ast.body.forEach(n => {
@@ -121,7 +129,26 @@ export function transformJS(code, option={}) {
     });
 
     ast.body.forEach(n => {
-        if(n.type == 'FunctionDeclaration' && n.id.name == 'onMount') result.$onMount = true;
+        if(n.type == 'ImportDeclaration') {
+            imports.push(n);
+            n.specifiers.forEach(s => {
+                if(s.type != 'ImportDefaultSpecifier') return;
+                if(s.local.type != 'Identifier') return;
+                result.imports.push(s.local.name);
+            });
+            return;
+        } else if(n.type == 'ExportNamedDeclaration') {
+            assert(n.declaration.type == 'VariableDeclaration', 'Wrong export');
+            n.declaration.declarations.forEach(d => {
+                assert(d.type == 'VariableDeclarator', 'Wrong export');
+                result.props.push(d.id.name);
+            });
+            resultBody.push(n.declaration);
+            return;
+        }
+
+        if(n.type == 'FunctionDeclaration' && n.id.name == 'onMount') result.onMount = true;
+        if(n.type == 'FunctionDeclaration' && n.id.name == 'onDestroy') result.onDestroy = true;
         if(n.type == 'LabeledStatement' && n.label.name == '$') {
             try {
                 makeWatch(n);
@@ -132,9 +159,8 @@ export function transformJS(code, option={}) {
         }
         resultBody.push(n);
     });
-    ast.body = resultBody;
 
-    ast.body.push({
+    resultBody.push({
         type: 'ExpressionStatement',
         expression: {
             callee: {
@@ -144,11 +170,29 @@ export function transformJS(code, option={}) {
             type: 'CallExpression'
         }
     });
-    
-    ast.body = [{
+
+    resultBody.unshift({
+        type: 'IfStatement',
+        test: {
+            type: 'BinaryExpression',
+            left: {type: 'Identifier', name: '$option'},
+            operator: '==',
+            right: {type: 'Literal', value: null}
+        },
+        consequent: {
+            type: 'ExpressionStatement',
+            expression: {
+                type: 'AssignmentExpression',
+                operator: '=',
+                left: {type: 'Identifier', name: '$option'},
+                right: {type: 'ObjectExpression', properties: []}
+            }
+        }
+    });
+    let widgetFunc = {
         body: {
             type: 'BlockStatement',
-            body: ast.body
+            body: resultBody
         },
         id: {
             type: 'Identifier"',
@@ -157,10 +201,23 @@ export function transformJS(code, option={}) {
         params: [{
             type: 'Identifier',
             name: '$element'
+        }, {
+            type: 'Identifier',
+            name: '$option'
         }],
         type: 'FunctionDeclaration'
-    }];
-    
+    };
+
+    if(option.exportDefault) {
+        widgetFunc = {
+            type: 'ExportDefaultDeclaration',
+            declaration: widgetFunc
+        }
+    };
+
+    ast.body = [widgetFunc];
+    ast.body.unshift.apply(ast.body, imports);
+
     result.code = astring.generate(ast);
     return result;
 }

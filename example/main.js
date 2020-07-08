@@ -1,4 +1,4 @@
 
-import widget from './app.html';
+import app from './app.html';
 
-widget(document.body);
+app(document.body);

@@ -1,4 +1,6 @@
 <script lang="javascript">
+    import Box from './Box.html';
+
     let todos = [];
     let name = '';
     let active = null;
@@ -33,6 +35,7 @@
         <input type="checkbox" bind:checked={todo.done} />
         <span on:click={select(todo)} class:inactive={todo.done} style="cursor: pointer;">{$index}: {todo.name}</span>
         <a href on:click|preventDefault={remove($index)}>[x]</a>
+        <Box value={todo.name}></Box>
     </li>
     {/each}
 </ul>

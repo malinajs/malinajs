@@ -5,7 +5,7 @@ import { assert } from './parser'
 let uniqIndex = 0;
 let buildBlock;
 
-export function buildRuntime(data, runtimeOption) {
+export function buildRuntime(data, runtimeOption, script) {
     let runtime = [`
         function $$apply() {
             if($$apply._p) return;
@@ -16,7 +16,7 @@ export function buildRuntime(data, runtimeOption) {
                 $$apply.go();
             }, 1);
         };
-        (function() {
+        return (function() {
             function $$htmlToFragment(html) {
                 let t = document.createElement('template');
                 t.innerHTML = html;
@@ -80,6 +80,11 @@ export function buildRuntime(data, runtimeOption) {
             });
 
             let $cd = new $$CD();
+
+            let $component = {};
+            $component.destroy = () => {
+                $cd.destroy();
+            };
 
             const compareArray = (a, b) => {
                 let a0 = Array.isArray(a);
@@ -155,6 +160,8 @@ export function buildRuntime(data, runtimeOption) {
         let tpl = [];
         let lvl = [];
         let binds = [];
+        let targets = [];
+        let targetMap = {};
 
         function go(level, data) {
             let index = 0;
@@ -167,9 +174,17 @@ export function buildRuntime(data, runtimeOption) {
                 l.forEach(n => {
                     name += `[$$childNodes][${n}]`;
                 });
-                return name;
+
+                let tname = targetMap[name];
+                if(!tname) {
+                    tname = `el${uniqIndex++}`;
+                    targets.push(`let ${tname} = ${name};`);
+                    targetMap[name] = tname;
+                }
+                return tname;
             };
 
+            let body = data.body.filter(n => n.type != 'script');
             let lastText;
             function bindNode(n) {
                 if(n.type === 'text') {
@@ -182,8 +197,6 @@ export function buildRuntime(data, runtimeOption) {
                             $cd.wf(() => ${exp}, (value) => {$element.textContent=value;});}`);
                     } else tpl.push(n.value);
                     lastText = tpl.length;
-                } else if(n.type === 'script') {
-                    return
                 } else if(n.type === 'style') {
                     setLvl();
                     tpl.push(n.openTag);
@@ -196,6 +209,13 @@ export function buildRuntime(data, runtimeOption) {
                     tpl.push('</template>');
                 } else if(n.type === 'node') {
                     setLvl();
+                    if(n.name.match(/^[A-Z]/) && script.imports.indexOf(n.name) >= 0) {
+                        // component
+                        tpl.push(`<!-- ${n.name} -->`);
+                        let b = makeComponent(n, getElementNameRaw);
+                        binds.push(b.bind);
+                        return;
+                    }
                     if(n.openTag.indexOf('{') || n.openTag.indexOf('use:')) {
                         let r = parseElement(n.openTag);
                         let el = ['<' + n.name];
@@ -229,7 +249,7 @@ export function buildRuntime(data, runtimeOption) {
                     tpl.push(n.content);
                 }
             }
-            data.body.forEach(n => {
+            body.forEach(n => {
                 try {
                     bindNode(n);
                 } catch (e) {
@@ -254,6 +274,7 @@ export function buildRuntime(data, runtimeOption) {
         let buildName = '$$build' + (uniqIndex++);
         tpl = Q(tpl.join(''));
         source.push(`function ${buildName}($cd, $parentElement) {\n`);
+        source.push(targets.join('\n'));
         source.push(binds.join('\n'));
         source.push(`};`);
 
@@ -268,15 +289,39 @@ export function buildRuntime(data, runtimeOption) {
     let bb = buildBlock(data);
     runtime.push(bb.source);
     runtime.push(`
-        $element.innerHTML = \`${Q(bb.tpl)}\`;
-        ${bb.name}($cd, $element);
+        const rootTemplate = \`${Q(bb.tpl)}\`;
+        if($option.afterElement) {
+            let tag = $element;
+            $element = $$htmlToFragment(rootTemplate);
+            ${bb.name}($cd, $element);
+            tag.parentNode.insertBefore($element, tag.nextSibling);
+        } else {
+            $element.innerHTML = rootTemplate;
+            ${bb.name}($cd, $element);
+        }
     `);
-    if(runtimeOption.$onMount) runtime.push(`$cd.once(onMount);`);
-    if(runtimeOption.$watchers.length) {
-        runtime.push('$cd.once(() => {\n' + runtimeOption.$watchers.join('\n') + '\n$$apply();\n});');
+    if(script.onMount) runtime.push(`$cd.once(onMount);`);
+    if(script.onDestroy) runtime.push(`$cd.d(onDestroy);`);
+    if(script.watchers.length) {
+        runtime.push('$cd.once(() => {\n' + script.watchers.join('\n') + '\n$$apply();\n});');
     }
+    if(script.props.length) {
+        script.props.forEach(prop => {
+            let valueName = prop=='value'?'_value':'value';
+            runtime.push(`
+                $component.setProp_${prop} = (${valueName}) => {
+                    if(${prop} == ${valueName}) return;
+                    ${prop} = ${valueName};
+                    $$apply();
+                };
+            `)
+        });
+    };
 
-    runtime.push(`$$apply();\n})();`);
+    runtime.push(`
+            $$apply();
+            return $component;
+        })();`);
     return runtime.join('');
 }
 
@@ -667,4 +712,29 @@ function makeifBlock(data, topElementName) {
     return {
         source: source.join('\n')
     }
+};
+
+function makeComponent(node, makeEl) {
+    let props = parseElement(node.openTag);
+    let binds = [];
+    props.forEach(prop => {
+        if(prop.value.indexOf('{') >= 0) {
+            let exp = parseText(prop.value, true);
+            binds.push(`
+                if($component.setProp_${prop.name}) {
+                    $cd.wf(() => (${exp}), $component.setProp_${prop.name});
+                } else console.error("Component ${node.name} doesn't have prop ${prop.name}");
+            `);
+        } else {
+            // bind as text
+        }
+    });
+
+    return {bind:`{
+        let $component = ${node.name}(${makeEl()}, {afterElement: true});
+        if($component) {
+            if($component.destroy) $cd.d($component.destroy);
+            ${binds.join('\n')};
+        }
+    }`};
 };

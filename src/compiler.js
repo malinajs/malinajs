@@ -3,7 +3,7 @@ import { parse, assert } from './parser';
 import { transformJS } from './code';
 import { buildRuntime } from './runtime';
 
-export const version = '0.4.6';
+export const version = '0.4.7';
 
 export function compile(src, option = {}) {
     const data = parse(src);
@@ -16,9 +16,7 @@ export function compile(src, option = {}) {
 
     if(!option.name) option.name = 'widget';
     script = transformJS(script.content, option);
-    if(script.$onMount) option.$onMount = true;
-    option.$watchers = script.watchers;
 
-    const runtime = buildRuntime(data, option);
+    const runtime = buildRuntime(data, option, script);
     return script.code.split('$$runtime()').join(runtime);
 };
