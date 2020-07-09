@@ -1,6 +1,6 @@
 {
   "name": "malinajs",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "license": "MIT",
   "scripts": {
     "build": "rollup -c && cp ./src/runtime.part.js ./",

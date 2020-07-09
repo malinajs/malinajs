@@ -10,9 +10,16 @@ export function transformJS(code, option={}) {
         imports: [],
         props: []
     };
-    var ast = acorn.parse(code, {
-        sourceType: 'module'
-    })
+    var ast;
+    if(code) {
+        ast = acorn.parse(code, {sourceType: 'module'})
+    } else {
+        ast = {
+            body: [],
+            sourceType: "module",
+            type: "Program"
+        };
+    }
 
     const funcTypes = {
         FunctionDeclaration: 1,
