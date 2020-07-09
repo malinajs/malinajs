@@ -3,9 +3,18 @@ import { assert, Q } from '../utils.js'
 
 
 export function bindProp(prop, makeEl) {
-    let parts = prop.name.split(':');
-    let name = parts[0];
-    
+    let arg, name;
+    if(prop.name[0] == '@') {
+        arg = prop.name.substring(1);
+        name = 'on';
+    } else {
+        let r = prop.name.match(/^(\w+)\:(.*)$/)
+        if(r) {
+            name = r[1];
+            arg = r[2];
+        } else name = prop.name;
+    }
+
     function getExpression() {
         let exp = prop.value.match(/^\{(.*)\}$/)[1];
         assert(exp, prop.content);
@@ -14,7 +23,7 @@ export function bindProp(prop, makeEl) {
 
     if(name == 'on') {
         let exp = getExpression();
-        let mod = '', opt = parts[1].split('|');
+        let mod = '', opt = arg.split('|');
         let event = opt[0];
         opt.slice(1).forEach(opt => {
             if(opt == 'preventDefault') mod += `$event.preventDefault();`;
@@ -29,7 +38,7 @@ export function bindProp(prop, makeEl) {
             }`};
     } else if(name == 'bind') {
         let exp = getExpression();
-        let attr = parts[1];
+        let attr = arg;
         assert(attr, prop.content);
         if(attr === 'value') {
             return {bind: `{
@@ -44,18 +53,18 @@ export function bindProp(prop, makeEl) {
                     $cd.wf(() => !!(${exp}), (value) => { if(value != $element.checked) $element.checked = value; });
                 }`};
         } else throw 'Not supported: ' + prop.content;
-    } else if(name == 'class' && parts.length > 1) {
+    } else if(name == 'class' && arg) {
         let exp = getExpression();
-        let className = parts[1];
+        let className = arg;
         assert(className, prop.content);
         return {bind: `{
                 let $element = ${makeEl()};
                 $cd.wf(() => !!(${exp}), (value) => { if(value) $element.classList.add("${className}"); else $element.classList.remove("${className}"); });
             }`};
     } else if(name == 'use') {
-        if(parts.length == 2) {
+        if(arg) {
             let args = prop.value?getExpression():'';
-            let code = `{let useObject = ${parts[1]}(${makeEl()}${args?', '+args:''});\n if(useObject) {`;
+            let code = `{let useObject = ${arg}(${makeEl()}${args?', '+args:''});\n if(useObject) {`;
             if(args) code += `
                 if(useObject.update) {
                     let w = $cd.wa(() => [${args}], (args) => {useObject.update.apply(useObject, args);});
@@ -64,7 +73,6 @@ export function bindProp(prop, makeEl) {
             code += `if(useObject.destroy) $cd.d(useObject.destroy);}}`;
             return {bind: code};
         }
-        assert(parts.length == 1, prop.content);
         let exp = getExpression();
         return {bind: `{
             let $element=${makeEl()};
