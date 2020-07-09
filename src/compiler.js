@@ -1,9 +1,10 @@
 
-import { parse, assert } from './parser';
+import { assert } from './utils.js'
+import { parse } from './parser';
 import { transformJS } from './code';
 import { buildRuntime } from './runtime';
 
-export const version = '0.4.7';
+export const version = '0.4.8';
 
 export function compile(src, option = {}) {
     const data = parse(src);

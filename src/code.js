@@ -1,7 +1,7 @@
 
 import acorn from 'acorn';
 import astring from 'astring';
-import { assert } from './parser'
+import { assert } from './utils.js'
 
 
 export function transformJS(code, option={}) {

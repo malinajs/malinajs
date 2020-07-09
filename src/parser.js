@@ -1,7 +1,6 @@
 
-export function assert (x, info) {
-    if(!x) throw info;
-}
+import { assert, Q } from './utils.js'
+
 
 export function parse(source) {
     let index = 0;
@@ -246,4 +245,129 @@ export function parse(source) {
 
 
     return root;
+};
+
+
+export function parseElement(source) {
+    // TODO: parse '/>' at the end
+    let len = source.length - 1;
+    assert(source[0] === '<');
+    assert(source[len] === '>');
+    if(source[len - 1] == '/') len--;
+
+    let index = 1;
+    let start = 1;
+    let eq;
+    let result = [];
+    let first = true;
+
+    const next = () => {
+        assert(index < source.length, 'EOF');
+        return source[index++];
+    }
+    const flush = (shift) => {
+        if(index <= start) return;
+        if(first) {
+            first = false;
+            return;
+        }
+        let prop = {
+            content: source.substring(start, index + shift)
+        }
+        if(eq) {
+            prop.name = source.substring(start, eq - 1);
+            prop.value = source.substring(eq, index + shift);
+            eq = null;
+        } else prop.name = prop.content;
+        result.push(prop);
+    };
+
+    let bind = false;
+
+    while(index < len) {
+        let a = next();
+
+        if(a === '"' || a === "'") {
+            while(a != next());
+            continue;
+        }
+
+        if(bind) {
+            bind = a != '}';
+            continue;
+        }
+
+        if(a == '{') {
+            bind = true;
+            continue;
+        }
+
+        if(a.match(/^\s$/)) {
+            flush(-1);
+            start = index;
+            continue;
+        }
+        if(a == '=' && !eq) {
+            eq = index;
+        }
+    }
+    flush(0);
+    return result;
+};
+
+
+export function parseText(source, quotes) {
+    let i = 0;
+    let step = 0;
+    let text = '';
+    let exp = '';
+    let result = [];
+    let q;
+    let len = source.length;
+    if(quotes) {
+        if(source[0] === '{') quotes = false;
+        else {
+            i++;
+            len--;
+            quotes = source[0];
+            assert(quotes === source[len], source);
+        }
+    }
+    while(i < len) {
+        let a = source[i++];
+        if(step == 1) {
+            if(q) {
+                if(a === q) q = null;
+                exp += a;
+                continue;
+            }
+            if(a === '"' || a === "'") {
+                q = a;
+                exp += a;
+                continue;
+            }
+            if(a === '}') {
+                step = 0;
+                exp = exp.trim();
+                if(!exp) throw 'Wrong expression';
+                result.push('(' + exp + ')');
+                exp = '';
+                continue;
+            }
+            exp += a;
+            continue;
+        }
+        if(a === '{') {
+            if(text) {
+                result.push('`' + Q(text) + '`');
+                text = '';
+            }
+            step = 1;
+            continue;
+        }
+        text += a;
+    }
+    if(text) result.push('`' + Q(text) + '`');
+    assert(step == 0, 'Wrong expression: ' + source);
+    return result.join('+');
 };
