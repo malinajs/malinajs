@@ -19,5 +19,7 @@ export function compile(src, option = {}) {
     script = transformJS(script.content, option);
 
     const runtime = buildRuntime(data, option, script);
-    return script.code.split('$$runtime()').join(runtime);
+    let code = "import {$$htmlToFragment, $$removeItem, $$childNodes, $watch, $ChangeDetector, $digest} from 'malinajs/runtime.part.js'\n";
+    code += script.code.split('$$runtime()').join(runtime);
+    return code;
 };

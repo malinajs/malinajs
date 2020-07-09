@@ -81,7 +81,7 @@ export function makeEachBlock(data, topElementName) {
                         ctx.reindex(i);
                     } else {
                         el = srcNode.cloneNode(true);
-                        let childCD = new $$CD(); $cd.children.push(childCD);
+                        let childCD = $cd.new();
                         ctx = {el: el, cd: childCD};
                         bind(ctx, item, i);
                         parentNode.insertBefore(el, prevNode.nextSibling);

@@ -35,8 +35,7 @@ export function makeifBlock(data, topElementName) {
         let elements = [];
 
         function create(fr, builder) {
-            childCD = new $$CD();
-            $cd.children.push(childCD);
+            childCD = $cd.new();
             let el = fr.cloneNode(true);
             for(let i=0;i<el.childNodes.length;i++) elements.push(el.childNodes[i]);
             builder(childCD, el);
