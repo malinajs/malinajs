@@ -63,7 +63,10 @@ export function buildRuntime(data, config, script) {
             ${bb.name}($cd, $element);
         }
     `);
-    if(script.onMount) runtime.push(`$cd.once(onMount);`);
+    if(script.onMount) runtime.push(`
+        if($option.noMount) $component.onMount = onMount;
+        else $cd.once(onMount);
+    `);
     if(script.onDestroy) runtime.push(`$cd.d(onDestroy);`);
     if(script.watchers.length) {
         runtime.push('$cd.once(() => {\n' + script.watchers.join('\n') + '\n$$apply();\n});');

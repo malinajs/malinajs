@@ -18,10 +18,11 @@ export function makeComponent(node, makeEl) {
     });
 
     return {bind:`{
-        let $component = ${node.name}(${makeEl()}, {afterElement: true});
+        let $component = ${node.name}(${makeEl()}, {afterElement: true, noMount: true});
         if($component) {
             if($component.destroy) $cd.d($component.destroy);
             ${binds.join('\n')};
+            if($component.onMount) $cd.once($component.onMount);
         }
     }`};
 };
