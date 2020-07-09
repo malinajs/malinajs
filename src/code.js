@@ -102,10 +102,13 @@ export function transformJS(code, option={}) {
         if(n.body.expression.type == 'AssignmentExpression') {
             const ex = n.body.expression;
             if(ex.operator != '=') throw 'Error';
-            if(ex.left.type != 'Identifier') throw 'Error';
-            const target = ex.left.name;
-            if(!(target in rootVariables)) resultBody.push(makeVariable(target));
-
+            let target;
+            if(ex.left.type == 'Identifier') {
+                target = ex.left.name;
+                if(!(target in rootVariables)) resultBody.push(makeVariable(target));
+            } else if(ex.left.type == 'MemberExpression') {
+                target = code.substring(ex.left.start, ex.left.end);
+            } else throw 'Error';
             assertExpression(ex.right);
             const exp = code.substring(ex.right.start, ex.right.end);
             result.watchers.push(`$cd.wa(() => (${exp}), ($value) => {${target}=$value;});`);
