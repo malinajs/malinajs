@@ -5,6 +5,7 @@ import { makeComponent } from './parts/component.js'
 import { bindProp } from './parts/prop.js'
 import { makeifBlock } from './parts/if.js'
 import { makeEachBlock } from './parts/each.js'
+import { makeHtmlBlock } from './parts/html.js'
 
 
 let uniqIndex = 0;
@@ -46,7 +47,8 @@ export function buildRuntime(data, config, script) {
         bindProp,
         makeEachBlock,
         makeifBlock,
-        makeComponent
+        makeComponent,
+        makeHtmlBlock
     };
 
     let bb = ctx.buildBlock(data);
@@ -179,6 +181,16 @@ function buildBlock(data, option = {}) {
                 tpl.push(`<!-- ${n.value} -->`);
                 let ifBlock = this.makeifBlock(n, getElementName());
                 binds.push(ifBlock.source);
+            } else if(n.type === 'systag') {
+                let r = n.value.match(/^@(\w+)\s+(.*)$/)
+                let name = r[1];
+                let exp = r[2];
+
+                if(name == 'html') {
+                    setLvl();
+                    tpl.push(`<!-- html -->`);
+                    binds.push(this.makeHtmlBlock(exp, getElementName()));
+                } else throw 'Wrong tag';
             } else if(n.type === 'comment') {
                 if(!this.config.preserveComments) return;
                 setLvl();

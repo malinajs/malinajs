@@ -190,10 +190,17 @@ export function parse(source) {
                 }
                 continue;
             } else if(a === '{') {
-                if(['#', '/', ':'].indexOf(source[index + 1]) >= 0) {
+                if(['#', '/', ':', '@'].indexOf(source[index + 1]) >= 0) {
                     flushText();
                     let bind = readBinding();
-                    if(bind.value.startsWith('#each ')) {
+                    if(bind.value.match(/^@\w+/)) {
+                        let tag = {
+                            type: 'systag',
+                            value: bind.value
+                        };
+                        parent.body.push(tag);
+                        continue;
+                    } else if(bind.value.startsWith('#each ')) {
                         let tag = {
                             type: 'each',
                             value: bind.value,
