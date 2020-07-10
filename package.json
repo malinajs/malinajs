@@ -1,6 +1,6 @@
 {
   "name": "malinajs",
-  "version": "0.4.11",
+  "version": "0.4.12",
   "license": "MIT",
   "scripts": {
     "build": "npm run build_runtime && rollup -c",
@@ -24,6 +24,6 @@
   "files": [
     "malina.js",
     "compile.js",
-    "runtime.part.js"
+    "runtime.js"
   ]
 }
