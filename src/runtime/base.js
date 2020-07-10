@@ -133,6 +133,13 @@ function cloneDeep(d, lvl) {
     return d;
 };
 
+function $$compareDeep(w, value) {
+    if(!compareDeep(w.value, value, 10)) return 0;
+    w.value = cloneDeep(value, 10);
+    w.cb(w.value);
+    return w.ro?0:1;
+};
+
 function $digest($cd, onFinishLoop) {
     let loop = 10;
     let w;
@@ -153,12 +160,8 @@ function $digest($cd, onFinishLoop) {
                             if(!w.ro) changes++;
                             w.cb(w.value);
                         }
-                    } else if(w.d) {
-                        if(compareDeep(w.value, value, 10)) {
-                            w.value = cloneDeep(value, 10);
-                            if(!w.ro) changes++;
-                            w.cb(w.value);
-                        }
+                    } else if(w.cmp) {
+                        changes += w.cmp(w, value);
                     } else {
                         w.value = value;
                         if(!w.ro) changes++;
@@ -186,4 +189,4 @@ function $digest($cd, onFinishLoop) {
 };
 
 
-export {$$htmlToFragment, $$removeItem, $$childNodes, $watch, $ChangeDetector, $digest};
+export {$$htmlToFragment, $$removeItem, $$childNodes, $watch, $ChangeDetector, $digest, $$compareDeep};

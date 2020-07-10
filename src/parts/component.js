@@ -9,7 +9,7 @@ export function makeComponent(node, makeEl) {
             let exp = parseText(prop.value, true);
             binds.push(`
                 if($component.setProp_${prop.name}) {
-                    $watch($cd, () => (${exp}), $component.setProp_${prop.name}, {d: true, ro: true});
+                    $watch($cd, () => (${exp}), $component.setProp_${prop.name}, {cmp: $$compareDeep, ro: true});
                 } else console.error("Component ${node.name} doesn't have prop ${prop.name}");
             `);
         } else {
