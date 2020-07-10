@@ -77,12 +77,15 @@ export function buildRuntime(data, config, script) {
         script.props.forEach(prop => {
             let valueName = prop=='value'?'_value':'value';
             runtime.push(`
-                $component.setProp_${prop} = (${valueName}) => {
-                    if(${prop} == ${valueName}) return;
-                    ${prop} = ${valueName};
-                    $$apply();
-                };
-            `)
+                Object.defineProperty($component, '${prop}', {
+                    get: function() { return ${prop}; },
+                    set: function(${valueName}) {
+                        if(${prop} == ${valueName}) return;
+                        ${prop} = ${valueName};
+                        $$apply();
+                    }
+                });
+            `);
         });
     };
 

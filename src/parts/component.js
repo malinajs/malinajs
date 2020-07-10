@@ -1,19 +1,27 @@
 
 import { parseElement, parseText } from '../parser.js'
+import { assert, Q } from '../utils'
+
 
 export function makeComponent(node, makeEl) {
     let props = parseElement(node.openTag);
     let binds = [];
     props.forEach(prop => {
+        assert(prop.value, 'Empty property');
         if(prop.value.indexOf('{') >= 0) {
             let exp = parseText(prop.value, true);
             binds.push(`
-                if($component.setProp_${prop.name}) {
-                    $watch($cd, () => (${exp}), $component.setProp_${prop.name}, {cmp: $$compareDeep, ro: true});
+                if('${prop.name}' in $component) {
+                    $watch($cd, () => (${exp}), (value) => {$component.${prop.name} = value}, {cmp: $$compareDeep, ro: true});
                 } else console.error("Component ${node.name} doesn't have prop ${prop.name}");
             `);
         } else {
-            // bind as text
+            let value = prop.value.match(/^['"]?(.*?)['"]?$/)[1];
+            binds.push(`
+                if('${prop.name}' in $component) {
+                    $component.${prop.name} = \`${Q(value)}\`;
+                } else console.error("Component ${node.name} doesn't have prop ${prop.name}");
+            `);
         }
     });
 
