@@ -1,5 +1,6 @@
 
 import { assert, Q } from '../utils.js'
+import { parseText } from '../parser.js'
 
 
 export function bindProp(prop, makeEl) {

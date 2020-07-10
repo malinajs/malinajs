@@ -4,7 +4,7 @@ import { parse } from './parser';
 import { transformJS } from './code';
 import { buildRuntime } from './runtime';
 
-export const version = '0.4.9';
+export const version = '0.4.10';
 
 export function compile(src, option = {}) {
     const data = parse(src);
