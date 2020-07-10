@@ -2,7 +2,7 @@
 import { assert } from './utils.js'
 import { parse } from './parser';
 import { transformJS } from './code';
-import { buildRuntime } from './runtime';
+import { buildRuntime } from './builder';
 
 export const version = '0.4.10';
 
