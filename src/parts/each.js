@@ -7,10 +7,20 @@ let uniqIndex = 0;
 export function makeEachBlock(data, topElementName) {
     let source = [];
 
-    let nodeItems = data.body.filter(n => n.type == 'node');
+    let nodeItems = data.body;
+    while(nodeItems.length) {
+        let n = nodeItems[0];
+        if(n.type == 'text' && !n.value.trim()) nodeItems.shift();
+        else break;
+    }
+    while(nodeItems.length) {
+        let n = nodeItems[nodeItems.length - 1];
+        if(n.type == 'text' && !n.value.trim()) nodeItems.pop();
+        else break;
+    }
     if(!nodeItems.length) nodeItems = [data.body[0]];
-    assert(nodeItems.length === 1, 'Only 1 node for #each');
-    let itemData = this.buildBlock({body: nodeItems}, {top0: true});
+
+    let itemData = this.buildBlock({body: nodeItems});
 
     let rx = data.value.match(/^#each\s+(\S+)\s+as\s+(\w+)\s*$/);
     assert(rx, 'Wrong #each expression');
@@ -21,16 +31,14 @@ export function makeEachBlock(data, topElementName) {
     source.push(`
         function ${eachBlockName} ($cd, top) {
 
-            function bind($ctx, ${itemName}, $index) {
+            function bind($ctx, $template, ${itemName}, $index) {
                 ${itemData.source};
-                ${itemData.name}($ctx.cd, $ctx.el);
+                ${itemData.name}($ctx.cd, $template);
                 $ctx.reindex = function(i) { $index = i; };
             };
 
             let parentNode = top.parentNode;
-            let srcNode = document.createElement("${data.parent.name}");
-            srcNode.innerHTML=\`${Q(itemData.tpl)}\`;
-            srcNode=srcNode.firstChild;
+            let itemTemplate = $$htmlToFragment(\`${Q(itemData.tpl)}\`);
 
             let mapping = new Map();
             $watch($cd, () => (${arrayName}), (array) => {
@@ -45,7 +53,13 @@ export function makeEachBlock(data, topElementName) {
                     }
                     mapping.forEach((ctx, item) => {
                         if(arrayAsSet.has(item)) return;
-                        ctx.el.remove();
+                        let el = ctx.first;
+                        while(el) {
+                            let next = el.nextSibling;
+                            el.remove();
+                            if(el == ctx.last) break;
+                            el = next;
+                        }
                         ctx.cd.destroy();
                         $$removeItem($cd.children, ctx.cd);
                     });
@@ -60,35 +74,41 @@ export function makeEachBlock(data, topElementName) {
                         next_ctx = null;
                     } else ctx = mapping.get(item);
                     if(ctx) {
-                        el = ctx.el;
-
-                        if(el.previousSibling != prevNode) {
+                        if(prevNode.nextSibling != ctx.first) {
                             let insert = true;
 
+                ` + (nodeItems.length==1?`
                             if(i + 1 < array.length && prevNode.nextSibling) {
                                 next_ctx = mapping.get(array[i + 1]);
-                                if(prevNode.nextSibling.nextSibling === next_ctx.el) {
-                                    parentNode.replaceChild(el, prevNode.nextSibling);
+                                if(prevNode.nextSibling.nextSibling === next_ctx.first) {
+                                    parentNode.replaceChild(ctx.first, prevNode.nextSibling);
                                     insert = false;
                                 }
                             }
-
+                `:``) + `
                             if(insert) {
-                                parentNode.insertBefore(el, prevNode.nextSibling);
+                                let insertBefore = prevNode.nextSibling;
+                                let next, el = ctx.first;
+                                while(el) {
+                                    next = el.nextSibling;
+                                    parentNode.insertBefore(el, insertBefore);
+                                    if(el == ctx.last) break;
+                                    el = next;
+                                }
                             }
                         }
-    
                         ctx.reindex(i);
                     } else {
-                        el = srcNode.cloneNode(true);
+                        let tpl = itemTemplate.cloneNode(true);
                         let childCD = $cd.new();
-                        ctx = {el: el, cd: childCD};
-                        bind(ctx, item, i);
-                        parentNode.insertBefore(el, prevNode.nextSibling);
+                        ctx = {cd: childCD};
+                        bind(ctx, tpl, item, i);
+                        ctx.first = tpl.firstChild;
+                        ctx.last = tpl.lastChild;
+                        parentNode.insertBefore(tpl, prevNode.nextSibling);
                     }
-                    prevNode = el;
+                    prevNode = ctx.last;
                     newMapping.set(item, ctx);
-
                 };
                 mapping.clear();
                 mapping = newMapping;
