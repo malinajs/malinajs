@@ -111,7 +111,7 @@ export function transformJS(code, option={}) {
             } else throw 'Error';
             assertExpression(ex.right);
             const exp = code.substring(ex.right.start, ex.right.end);
-            result.watchers.push(`$cd.wa(() => (${exp}), ($value) => {${target}=$value;});`);
+            result.watchers.push(`$watch($cd, () => (${exp}), ($value) => {${target}=$value;}, {cmp: $$compareArray});`);
         } else if(n.body.expression.type == 'SequenceExpression') {
             const ex = n.body.expression.expressions;
             const handler = ex[ex.length - 1];
@@ -125,7 +125,7 @@ export function transformJS(code, option={}) {
             } else if(ex.length > 2) {
                 for(let i = 0;i<ex.length-1;i++) assertExpression(ex[i]);
                 let exp = code.substring(ex[0].start, ex[ex.length-2].end);
-                result.watchers.push(`$cd.wa(() => [${exp}], ($args) => { (${callback}).apply(null, $args); });`);
+                result.watchers.push(`$watch($cd, () => [${exp}], ($args) => { (${callback}).apply(null, $args); }, {cmp: $$compareArray});`);
             } else throw 'Error';
         } else throw 'Error';
     }

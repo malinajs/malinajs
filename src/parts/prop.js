@@ -68,7 +68,7 @@ export function bindProp(prop, makeEl) {
             let code = `{let useObject = ${arg}(${makeEl()}${args?', '+args:''});\n if(useObject) {`;
             if(args) code += `
                 if(useObject.update) {
-                    let w = $cd.wa(() => [${args}], (args) => {useObject.update.apply(useObject, args);});
+                    let w = $watch($cd, () => [${args}], (args) => {useObject.update.apply(useObject, args);}, {cmp: $$compareArray});
                     w.value = w.fn();
                 }`;
             code += `if(useObject.destroy) $cd.d(useObject.destroy);}}`;

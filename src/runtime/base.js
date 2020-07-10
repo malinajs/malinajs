@@ -1,26 +1,27 @@
 
-function $$htmlToFragment(html) {
+export function $$htmlToFragment(html) {
     let t = document.createElement('template');
     t.innerHTML = html;
     return t.content;
 };
 
-function $$removeItem(array, item) {
+export function $$removeItem(array, item) {
     let i = array.indexOf(item);
     if(i>=0) array.splice(i, 1);
 };
 
-const $$childNodes = 'childNodes';
+export const $$childNodes = 'childNodes';
 
-function $watch(cd, fn, callback, w) {
+export function $watch(cd, fn, callback, w) {
     if(!w) w = {};
     w.fn = fn;
     w.cb = callback;
     w.value = void 0;
     cd.watchers.push(w);
+    return w;
 }
 
-function $ChangeDetector(root) {
+export function $ChangeDetector(root) {
     if(root) this.root = root;
     else {
         this.root = this;
@@ -40,11 +41,6 @@ Object.assign($ChangeDetector.prototype, {
     },
     wf: function(fn, callback) {
         $watch(this, fn, callback, {ro: true});
-    },
-    wa: function(fn, callback) {
-        let w = {fn: fn, cb: callback, value: undefined, a: true};
-        this.watchers.push(w);
-        return w;
     },
     ev: function(el, event, callback) {
         el.addEventListener(event, callback);
@@ -87,6 +83,16 @@ const compareArray = (a, b) => {
     }
     return false;
 };
+
+
+export function $$compareArray(w, value) {
+    if(!compareArray(w.value, value)) return 0;
+    if(Array.isArray(value)) w.value = value.slice();
+    else w.value = value;
+    w.cb(w.value);
+    return w.ro?0:1;
+};
+
 
 const compareDeep = (a, b, lvl) => {
     if(lvl < 0) return false;
@@ -133,14 +139,14 @@ function cloneDeep(d, lvl) {
     return d;
 };
 
-function $$compareDeep(w, value) {
+export function $$compareDeep(w, value) {
     if(!compareDeep(w.value, value, 10)) return 0;
     w.value = cloneDeep(value, 10);
     w.cb(w.value);
     return w.ro?0:1;
 };
 
-function $digest($cd, onFinishLoop) {
+export function $digest($cd, onFinishLoop) {
     let loop = 10;
     let w;
     while(loop >= 0) {
@@ -153,14 +159,7 @@ function $digest($cd, onFinishLoop) {
                 w = cd.watchers[i];
                 value = w.fn();
                 if(w.value !== value) {
-                    if(w.a) {
-                        if(compareArray(w.value, value)) {
-                            if(Array.isArray(value)) w.value = value.slice();
-                            else w.value = value;
-                            if(!w.ro) changes++;
-                            w.cb(w.value);
-                        }
-                    } else if(w.cmp) {
+                    if(w.cmp) {
                         changes += w.cmp(w, value);
                     } else {
                         w.value = value;
@@ -187,6 +186,3 @@ function $digest($cd, onFinishLoop) {
     });
     if(loop < 0) console.error('Infinity changes: ', w);
 };
-
-
-export {$$htmlToFragment, $$removeItem, $$childNodes, $watch, $ChangeDetector, $digest, $$compareDeep};

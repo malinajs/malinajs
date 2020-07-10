@@ -33,7 +33,7 @@ export function makeEachBlock(data, topElementName) {
             srcNode=srcNode.firstChild;
 
             let mapping = new Map();
-            $cd.wa(() => (${arrayName}), (array) => {
+            $watch($cd, () => (${arrayName}), (array) => {
                 if(!array || !Array.isArray(array)) array = [];
                 let prevNode = top;
                 let newMapping = new Map();
@@ -92,9 +92,7 @@ export function makeEachBlock(data, topElementName) {
                 };
                 mapping.clear();
                 mapping = newMapping;
-
-            });
-
+            }, {cmp: $$compareArray});
         }
         ${eachBlockName}($cd, ${topElementName});
     `);
