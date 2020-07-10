@@ -19,7 +19,11 @@ export function $watch(cd, fn, callback, w) {
     w.value = void 0;
     cd.watchers.push(w);
     return w;
-}
+};
+
+export function $watchReadOnly(cd, fn, callback) {
+    return $watch(cd, fn, callback, {ro: true});
+};
 
 export function $ChangeDetector(root) {
     if(root) this.root = root;
@@ -38,9 +42,6 @@ Object.assign($ChangeDetector.prototype, {
         var cd = new $ChangeDetector(this);
         this.children.push(cd);
         return cd;
-    },
-    wf: function(fn, callback) {
-        $watch(this, fn, callback, {ro: true});
     },
     ev: function(el, event, callback) {
         el.addEventListener(event, callback);

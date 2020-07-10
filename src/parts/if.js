@@ -51,7 +51,7 @@ export function makeifBlock(data, topElementName) {
             elements.length = 0;
         };
 
-        $cd.wf(() => !!(${exp}), (value) => {
+        $watch($cd, () => !!(${exp}), (value) => {
             if(value) {
                 destroy();
                 create(mainfr, ${mainBlock.name});

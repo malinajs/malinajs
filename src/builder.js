@@ -132,7 +132,7 @@ function buildBlock(data, option = {}) {
                     let exp = parseText(n.value);
                     binds.push(`{
                         let $element=${getElementName()};
-                        $cd.wf(() => ${exp}, (value) => {$element.textContent=value;});}`);
+                        $watchReadOnly($cd, () => ${exp}, (value) => {$element.textContent=value;});}`);
                 } else tpl.push(n.value);
                 lastText = tpl.length;
             } else if(n.type === 'style') {

@@ -19,7 +19,7 @@ export function compile(src, option = {}) {
     let code = `
         import {
             $$htmlToFragment, $$removeItem, $$childNodes, $watch, $ChangeDetector,
-            $digest, $$htmlBlock, $$compareDeep, $$compareArray
+            $digest, $$htmlBlock, $$compareDeep, $$compareArray, $watchReadOnly
         } from 'malinajs/runtime.js';
     `;
     code += script.code.split('$$runtime()').join(runtime);

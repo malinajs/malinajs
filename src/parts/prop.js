@@ -45,13 +45,13 @@ export function bindProp(prop, makeEl) {
             return {bind: `{
                     let $element=${makeEl()};
                     $cd.ev($element, 'input', () => { ${exp}=$element.value; $$apply(); });
-                    $cd.wf(() => (${exp}), (value) => { if(value != $element.value) $element.value = value; });
+                    $watchReadOnly($cd, () => (${exp}), (value) => { if(value != $element.value) $element.value = value; });
                 }`};
         } else if(attr == 'checked') {
             return {bind: `{
                     let $element=${makeEl()};
                     $cd.ev($element, 'input', () => { ${exp}=$element.checked; $$apply(); });
-                    $cd.wf(() => !!(${exp}), (value) => { if(value != $element.checked) $element.checked = value; });
+                    $watchReadOnly($cd, () => !!(${exp}), (value) => { if(value != $element.checked) $element.checked = value; });
                 }`};
         } else throw 'Not supported: ' + prop.content;
     } else if(name == 'class' && arg) {
@@ -60,7 +60,7 @@ export function bindProp(prop, makeEl) {
         assert(className, prop.content);
         return {bind: `{
                 let $element = ${makeEl()};
-                $cd.wf(() => !!(${exp}), (value) => { if(value) $element.classList.add("${className}"); else $element.classList.remove("${className}"); });
+                $watchReadOnly($cd, () => !!(${exp}), (value) => { if(value) $element.classList.add("${className}"); else $element.classList.remove("${className}"); });
             }`};
     } else if(name == 'use') {
         if(arg) {
@@ -84,12 +84,12 @@ export function bindProp(prop, makeEl) {
             if(['hidden','checked','value','disabled','selected'].indexOf(name) >= 0) {
                 return {bind: `{
                     let $element=${makeEl()};
-                    $cd.wf(() => (${exp}), (value) => {$element.${name} = value;});
+                    $watchReadOnly($cd, () => (${exp}), (value) => {$element.${name} = value;});
                 }`};
             } else {
                 return {bind: `{
                     let $element=${makeEl()};
-                    $cd.wf(() => (${exp}), (value) => {
+                    $watchReadOnly($cd, () => (${exp}), (value) => {
                         if(value) $element.setAttribute('${name}', value);
                         else $element.removeAttribute('${name}');
                     });
