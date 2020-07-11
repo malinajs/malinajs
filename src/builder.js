@@ -125,7 +125,7 @@ function buildBlock(data, option = {}) {
             return tname;
         };
 
-        let body = data.body.filter(n => n.type != 'script');
+        let body = data.body.filter(n => n.type != 'script' && n.type != 'style');
         let lastText;
         const bindNode = (n) => {
             if(n.type === 'text') {
@@ -138,11 +138,6 @@ function buildBlock(data, option = {}) {
                         $watchReadOnly($cd, () => ${exp}, (value) => {$element.textContent=value;});}`);
                 } else tpl.push(n.value);
                 lastText = tpl.length;
-            } else if(n.type === 'style') {
-                setLvl();
-                tpl.push(n.openTag);
-                tpl.push(n.content);
-                tpl.push('</style>');
             } else if(n.type === 'template') {
                 setLvl();
                 tpl.push(n.openTag);

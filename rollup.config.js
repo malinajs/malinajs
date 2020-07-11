@@ -5,9 +5,9 @@ export default [{
 		sourcemap: true,
 		format: 'cjs',
 		file: './compile.js',
-		globals: ['acorn', 'astring']
+		globals: ['acorn', 'astring', 'css']
     },
-    external: ['fs', 'acorn', 'astring']
+    external: ['fs', 'acorn', 'astring', 'css']
 }, {
 	input: './src/compiler.js',
 	output: {
@@ -17,8 +17,9 @@ export default [{
 		name: 'malina',
 		globals: {
 			acorn: 'acorn',
-			astring: 'astring'
+			astring: 'astring',
+			css: 'css'
 		}
     },
-	external: ['acorn', 'astring']
+	external: ['acorn', 'astring', 'css']
 }];

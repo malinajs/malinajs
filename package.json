@@ -19,6 +19,7 @@
     "uglify-es": "^3.3.9",
     "babel-preset-es2015": "^6.24.1",
     "http-server": "^0.12.3"
+    "css": "^3.0.0",
   },
   "main": "malina",
   "files": [

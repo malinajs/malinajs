@@ -3,6 +3,7 @@ import { assert } from './utils.js'
 import { parse } from './parser';
 import { transformJS } from './code';
 import { buildRuntime } from './builder';
+import { transformStyle } from './style';
 
 export const version = '0.4.15';
 
@@ -14,6 +15,10 @@ export function compile(src, option = {}) {
 
     if(!option.name) option.name = 'widget';
     script = transformJS(script[0]?script[0].content:null, option);
+
+    let style = data.body.filter(n => n.type == 'style');
+    assert(style.length <= 1, 'Only one style section');
+    style = transformStyle(style[0]);
 
     const runtime = buildRuntime(data, option, script);
     let code = `
