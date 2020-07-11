@@ -53,13 +53,7 @@ export function makeEachBlock(data, topElementName) {
                     }
                     mapping.forEach((ctx, item) => {
                         if(arrayAsSet.has(item)) return;
-                        let el = ctx.first;
-                        while(el) {
-                            let next = el.nextSibling;
-                            el.remove();
-                            if(el == ctx.last) break;
-                            el = next;
-                        }
+                        $$removeElements(ctx.first, ctx.last);
                         ctx.cd.destroy();
                         $$removeItem($cd.children, ctx.cd);
                     });

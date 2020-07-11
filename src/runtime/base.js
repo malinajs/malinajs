@@ -1,8 +1,10 @@
 
-export function $$htmlToFragment(html) {
+export function $$htmlToFragment(html, lastNotTag) {
     let t = document.createElement('template');
     t.innerHTML = html;
-    return t.content;
+    let result = t.content;
+    if(lastNotTag && result.lastChild.nodeType == 8) result.appendChild(document.createTextNode(''));
+    return result;
 };
 
 export function $$removeItem(array, item) {
@@ -11,6 +13,16 @@ export function $$removeItem(array, item) {
 };
 
 export const $$childNodes = 'childNodes';
+
+export function $$removeElements(el, last) {
+    let next;
+    while(el) {
+        next = el.nextSibling;
+        el.remove();
+        if(el == last) break;
+        el = next;
+    }
+};
 
 export function $watch(cd, fn, callback, w) {
     if(!w) w = {};

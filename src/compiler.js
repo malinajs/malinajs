@@ -4,7 +4,7 @@ import { parse } from './parser';
 import { transformJS } from './code';
 import { buildRuntime } from './builder';
 
-export const version = '0.4.13';
+export const version = '0.4.14';
 
 export function compile(src, option = {}) {
     const data = parse(src);
@@ -18,8 +18,8 @@ export function compile(src, option = {}) {
     const runtime = buildRuntime(data, option, script);
     let code = `
         import {
-            $$htmlToFragment, $$removeItem, $$childNodes, $watch, $ChangeDetector,
-            $digest, $$htmlBlock, $$compareDeep, $$compareArray, $watchReadOnly
+            $$htmlToFragment, $$removeItem, $$childNodes, $watch, $ChangeDetector, $$removeElements,
+            $digest, $$htmlBlock, $$compareDeep, $$compareArray, $watchReadOnly, $$ifBlock
         } from 'malinajs/runtime.js';
     `;
     code += script.code.split('$$runtime()').join(runtime);
