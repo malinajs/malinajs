@@ -65,13 +65,14 @@ export function bindProp(prop, makeEl) {
     } else if(name == 'use') {
         if(arg) {
             let args = prop.value?getExpression():'';
-            let code = `{let useObject = ${arg}(${makeEl()}${args?', '+args:''});\n if(useObject) {`;
+            let code = `$cd.once(() => {
+                let useObject = ${arg}(${makeEl()}${args?', '+args:''});\n if(useObject) {`;
             if(args) code += `
                 if(useObject.update) {
                     let w = $watch($cd, () => [${args}], (args) => {useObject.update.apply(useObject, args);}, {cmp: $$compareArray});
                     w.value = w.fn();
                 }`;
-            code += `if(useObject.destroy) $cd.d(useObject.destroy);}}`;
+            code += `if(useObject.destroy) $cd.d(useObject.destroy);}});`;
             return {bind: code};
         }
         let exp = getExpression();
