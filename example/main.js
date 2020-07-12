@@ -1,4 +1,3 @@
-
-import App from './App.html';
+import App from "./App.html";
 
 App(document.body);
