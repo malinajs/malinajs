@@ -1,7 +1,7 @@
 export function assert(x, info) {
-  if (!x) throw info;
+    if (!x) throw info;
 }
 
 export function Q(s) {
-  return s.replace(/`/g, "\\`");
+    return s.replace(/`/g, '\\`');
 }

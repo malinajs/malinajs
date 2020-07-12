@@ -1,33 +1,33 @@
-import { assert, Q } from "../utils.js";
+import { assert, Q } from '../utils.js';
 
 let uniqIndex = 0;
 
 export function makeEachBlock(data, topElementName) {
-  let source = [];
+    let source = [];
 
-  let nodeItems = data.body;
-  while (nodeItems.length) {
-    let n = nodeItems[0];
-    if (n.type == "text" && !n.value.trim()) nodeItems.shift();
-    else break;
-  }
-  while (nodeItems.length) {
-    let n = nodeItems[nodeItems.length - 1];
-    if (n.type == "text" && !n.value.trim()) nodeItems.pop();
-    else break;
-  }
-  if (!nodeItems.length) nodeItems = [data.body[0]];
+    let nodeItems = data.body;
+    while (nodeItems.length) {
+        let n = nodeItems[0];
+        if (n.type == 'text' && !n.value.trim()) nodeItems.shift();
+        else break;
+    }
+    while (nodeItems.length) {
+        let n = nodeItems[nodeItems.length - 1];
+        if (n.type == 'text' && !n.value.trim()) nodeItems.pop();
+        else break;
+    }
+    if (!nodeItems.length) nodeItems = [data.body[0]];
 
-  let itemData = this.buildBlock({ body: nodeItems });
+    let itemData = this.buildBlock({ body: nodeItems });
 
-  let rx = data.value.match(/^#each\s+(\S+)\s+as\s+(\w+)\s*$/);
-  assert(rx, "Wrong #each expression");
-  let arrayName = rx[1];
-  let itemName = rx[2];
+    let rx = data.value.match(/^#each\s+(\S+)\s+as\s+(\w+)\s*$/);
+    assert(rx, 'Wrong #each expression');
+    let arrayName = rx[1];
+    let itemName = rx[2];
 
-  let eachBlockName = "eachBlock" + uniqIndex++;
-  source.push(
-    `
+    let eachBlockName = 'eachBlock' + uniqIndex++;
+    source.push(
+        `
         function ${eachBlockName} ($cd, top) {
 
             function bind($ctx, $template, ${itemName}, $index) {
@@ -71,8 +71,8 @@ export function makeEachBlock(data, topElementName) {
                             let insert = true;
 
                 ` +
-      (nodeItems.length == 1
-        ? `
+            (nodeItems.length == 1
+                ? `
                             if(i + 1 < array.length && prevNode.nextSibling) {
                                 next_ctx = mapping.get(array[i + 1]);
                                 if(prevNode.nextSibling.nextSibling === next_ctx.first) {
@@ -81,8 +81,8 @@ export function makeEachBlock(data, topElementName) {
                                 }
                             }
                 `
-        : ``) +
-      `
+                : ``) +
+            `
                             if(insert) {
                                 let insertBefore = prevNode.nextSibling;
                                 let next, el = ctx.first;
@@ -112,10 +112,10 @@ export function makeEachBlock(data, topElementName) {
             }, {cmp: $$compareArray});
         }
         ${eachBlockName}($cd, ${topElementName});
-    `
-  );
+    `,
+    );
 
-  return {
-    source: source.join("\n"),
-  };
+    return {
+        source: source.join('\n'),
+    };
 }
