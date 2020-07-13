@@ -74,10 +74,13 @@ function makeDom(data) {
             if(e.type != 'node') return;
             let n = new Node(e.name, {__node: e});
             e.attributes.forEach(a => {
-                if(a.name == 'class') n.className = a.value;
+                if(a.name == 'class') n.className += ' ' + a.value;
                 else if(a.name == 'id') n.id = a.value;
-                else n.attributes[a.name] = a.value;
+                else if(a.name.startsWith('class:')) {
+                    n.className += ' ' + a.name.substring(6);
+                } else n.attributes[a.name] = a.value;
             });
+            n.className = n.className.trim();
             parent.appendChild(n);
             if(e.body && e.body.length) build(n, e.body);
         });
