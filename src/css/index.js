@@ -15,11 +15,22 @@ export function processCSS(styleNode, config) {
         self.raw = css.parse(styleNode.content);
         self.raw.stylesheet.rules.forEach(d => {
             assert(d.type == 'rule');
-            d.selectors = d.selectors.map(s => {
-                if(s.indexOf(':') >= 0) throw 'Not implemented';  // FIXME
+            d.selectors = d.selectors.map(fullSelector => {
+                let result = [];
+                let forProcess = [];
 
-                selectors.push(s);
-                return s.split(' ').map(n => n + '.' + id).join(' ');
+                fullSelector.split(/\s+/).forEach(sel => {
+                    let virtual = '', rx = sel.match(/^([^:]*)(:.*)$/)
+                    if(rx) {
+                        sel = rx[1];
+                        virtual = rx[2];
+                    };
+                    forProcess.push(sel);
+                    result.push(sel + '.' + id + virtual);
+                });
+
+                selectors.push(forProcess.join(' '));
+                return result.join(' ');
             })
         });
     }
@@ -64,6 +75,7 @@ function makeDom(data) {
             let n = new Node(e.name, {__node: e});
             e.attributes.forEach(a => {
                 if(a.name == 'class') n.className = a.value;
+                else if(a.name == 'id') n.id = a.value;
                 else n.attributes[a.name] = a.value;
             });
             parent.appendChild(n);
@@ -101,6 +113,7 @@ function Node(name, data, children) {
 
 Node.prototype.getAttribute = function(n) {
     if(n == 'class') return this.className;
+    if(n == 'id') return this.id;
     return this.attributes[n];
 }
 
