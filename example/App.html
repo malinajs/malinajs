@@ -2,6 +2,7 @@
     import Box from './Box.html';
 
     let todos = [];
+    let selected = [];
     let name = '';
     let active = null;
 
@@ -13,15 +14,28 @@
         });
         name = '';
         active = null;
+        count();
     }
 
     function remove(i) {
         todos.splice(i, 1);
+        count();
     }
 
     function select(todo) {
         if(active === todo) active = null;
         else active = todo;
+    }
+
+    function count() {
+      setTimeout(() => {
+        selected = [];
+        todos.map(item => {
+          if (item.done) {
+            selected.push(item);
+          }
+        });
+      }, 50);
     }
 </script>
 
@@ -32,7 +46,7 @@
 <ul>
     {#each todos as todo}
     <li class:active={todo === active}>
-        <input type="checkbox" bind:checked={todo.done} />
+        <input type="checkbox" on:click={count()} bind:checked={todo.done} />
         <span on:click={select(todo)} class:inactive={todo.done} style="cursor: pointer;">{$index}: {todo.name}</span>
         <a href on:click|preventDefault={remove($index)}>[x]</a>
         <Box value={todo.name}></Box>
@@ -43,10 +57,10 @@
 {#if active}
     Edit: <input use={$element.focus()} type="text" on:keydown|enter={active=null} bind:value={active.name} />
 {:else}
-    Select item, total {todos.length}.
+    Selected items {selected.length}, total {todos.length}.
 {/if}
 
 <style>
-    .inactive {text-decoration: line-through; color: gray;}
-    .active {background-color: #b6d3de;}
+  .inactive {text-decoration: line-through; color: gray;}
+  .active {background-color: #b6d3de;}
 </style>

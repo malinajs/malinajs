@@ -1,6 +1,5 @@
 
-import { assert, Q } from './utils.js'
-
+import { assert, arrIncludesX, Q } from './utils.js'
 
 export function parse(source) {
     let index = 0;
@@ -28,8 +27,8 @@ export function parse(source) {
                 q = '"';
                 continue;
             }
-            if(a === '\'') {
-                q = '\'';
+            if(a === "'") {
+                q = "'";
                 continue;
             }
             if(a === '<') {
@@ -70,12 +69,11 @@ export function parse(source) {
                 if(p == '\\') continue;
                 q = null;
                 continue
-            }
-            if(a == '"' || a == '\'' || a == '`') {
+
+            } else if(arrIncludesX(a, ['"', "'", '`'])) {
                 q = a;
                 continue;
-            }
-            if(a == '<') {
+            } else if(a == '<') {
                 if(source.substring(index-1, index + endTag.length - 1) == endTag) {
                     let end = index - 1;
                     index += endTag.length - 1;
@@ -106,7 +104,7 @@ export function parse(source) {
                 q = null;
                 continue
             }
-            if(a == '"' || a == '\'' || a == '`') {
+            if(arrIncludesX(a, ['"', "'", '`'])) {
                 q = a;
                 continue;
             }
@@ -169,10 +167,12 @@ export function parse(source) {
                     tag.type = 'script';
                     tag.content = readScript('script');
                     continue;
+
                 } else if(tag.name === 'template') {
                     tag.type = 'template';
                     tag.content = readScript('template');
                     continue;
+
                 } else if(tag.name === 'style') {
                     tag.type = 'style';
                     tag.content = readStyle();
@@ -191,6 +191,7 @@ export function parse(source) {
                     throw e;
                 }
                 continue;
+
             } else if(a === '{') {
                 if(['#', '/', ':', '@'].indexOf(source[index + 1]) >= 0) {
                     flushText();
@@ -296,27 +297,24 @@ export function parseElement(source) {
     while(index < len) {
         let a = next();
 
-        if(a === '"' || a === "'") {
+        if(arrIncludesX(a, ['"', "'"])) {
             while(a != next());
             continue;
-        }
 
-        if(bind) {
+        } else if(bind) {
             bind = a != '}';
             continue;
-        }
 
-        if(a == '{') {
+        } else if(a == '{') {
             bind = true;
             continue;
-        }
 
-        if(a.match(/^\s$/)) {
+        } else if(a.match(/^\s$/)) {
             flush(-1);
             start = index;
             continue;
-        }
-        if(a == '=' && !eq) {
+
+        } else if(a == '=' && !eq) {
             eq = index;
         }
     }
@@ -349,13 +347,13 @@ export function parseText(source, quotes) {
                 if(a === q) q = null;
                 exp += a;
                 continue;
-            }
-            if(a === '"' || a === "'") {
+
+            } else if(arrIncludesX(a, ['"', "'"])) {
                 q = a;
                 exp += a;
                 continue;
-            }
-            if(a === '}') {
+
+            } else if(a === '}') {
                 step = 0;
                 exp = exp.trim();
                 if(!exp) throw 'Wrong expression';
@@ -365,8 +363,8 @@ export function parseText(source, quotes) {
             }
             exp += a;
             continue;
-        }
-        if(a === '{') {
+
+        } else if(a === '{') {
             if(text) {
                 result.push('`' + Q(text) + '`');
                 text = '';

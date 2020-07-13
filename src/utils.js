@@ -6,3 +6,7 @@ export function assert(x, info) {
 export function Q(s) {
     return s.replace(/`/g, '\\`');
 };
+
+export function arrIncludesX(a, arr=[]) {
+  return arr.includes(a)
+};

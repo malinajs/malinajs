@@ -7,7 +7,8 @@
     "build_runtime": "rollup -c ./rollup.config.runtime.js",
     "build_app": "rollup -c rollup.config.app.js && babel ./example/public/app.js -o ./example/public/app.js && uglifyjs ./example/public/app.js -o ./example/public/app.min.js -m -c",
     "build_app_es5": "babel ./example/public/app.js -o ./example/public/app.es5.js --presets babel-preset-es2015 && uglifyjs ./example/public/app.es5.js -o ./example/public/app.es5.min.js -m -c",
-    "web": "http-server ./example/public"
+    "web": "http-server ./example/public",
+    "build_web": "npm run build; npm run build_runtime; npm run build_app; npm run web"
   },
   "dependencies": {
     "acorn": "^7.3.1",
