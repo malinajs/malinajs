@@ -10,7 +10,8 @@ export default function malinaRollup(option = {}) {
 
             let opts = Object.assign({
                 exportDefault: true,
-                name: id.match(/([^/]+).html$/)[1]
+                name: id.match(/([^/]+).html$/)[1],
+                warning: (w) => console.warn('!', w.message)
             }, option);
             try {
                 result = malina.compile(code, opts);

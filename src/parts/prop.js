@@ -3,7 +3,7 @@ import { assert, Q } from '../utils.js'
 import { parseText } from '../parser.js'
 
 
-export function bindProp(prop, makeEl) {
+export function bindProp(prop, makeEl, node) {
     let arg, name;
     if(prop.name[0] == '@') {
         arg = prop.name.substring(1);
@@ -95,6 +95,15 @@ export function bindProp(prop, makeEl) {
                         else $element.removeAttribute('${name}');
                     });
                 }`};
+            }
+        }
+        if(name == 'class' && node.scopedClass) {
+            let classList = prop.value.trim();
+            if(classList) classList += ' ';
+            classList += this.css.id;
+
+            return {
+                prop: `class="${classList}"`
             }
         }
         return {
