@@ -37,13 +37,12 @@ export function $watchReadOnly(cd, fn, callback) {
     return $watch(cd, fn, callback, {ro: true});
 };
 
-export function $ChangeDetector(root) {
-    if(root) this.root = root;
+export function $ChangeDetector(parent) {
+    if(parent) this.root = parent.root;
     else {
         this.root = this;
         this.onceList = [];
     }
-    this.root = root || this;
     this.children = [];
     this.watchers = [];
     this.destroyList = [];
