@@ -81,7 +81,7 @@ export function bindProp(prop, makeEl, node) {
             $cd.once(() => { $$apply(); ${exp}; });}`};
     } else {
         if(prop.value && prop.value.indexOf('{') >= 0) {
-            let exp = parseText(prop.value, true);
+            let exp = parseText(prop.value);
             if(['hidden','checked','value','disabled','selected'].indexOf(name) >= 0) {
                 return {bind: `{
                     let $element=${makeEl()};

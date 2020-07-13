@@ -9,7 +9,7 @@ export function makeComponent(node, makeEl) {
     props.forEach(prop => {
         assert(prop.value, 'Empty property');
         if(prop.value.indexOf('{') >= 0) {
-            let exp = parseText(prop.value, true);
+            let exp = parseText(prop.value);
             binds.push(`
                 if('${prop.name}' in $component) {
                     $watch($cd, () => (${exp}), (value) => {$component.${prop.name} = value}, {cmp: $$compareDeep, ro: true});
