@@ -1,4 +1,6 @@
 
+import commonjs from '@rollup/plugin-commonjs';
+
 export default [{
 	input: './src/main.js',
 	output: {
@@ -7,7 +9,8 @@ export default [{
 		file: './compile.js',
 		globals: ['acorn', 'astring', 'css']
     },
-    external: ['fs', 'acorn', 'astring', 'css']
+	external: ['fs', 'acorn', 'astring', 'css'],
+	plugins: [commonjs()]
 }, {
 	input: './src/compiler.js',
 	output: {
@@ -21,5 +24,6 @@ export default [{
 			css: 'css'
 		}
     },
-	external: ['acorn', 'astring', 'css']
+	external: ['acorn', 'astring', 'css'],
+	plugins: [commonjs()]
 }];

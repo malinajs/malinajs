@@ -11,7 +11,7 @@ import { makeHtmlBlock } from './parts/html.js'
 let uniqIndex = 0;
 
 
-export function buildRuntime(data, config, script) {
+export function buildRuntime(data, script, css, config) {
     let runtime = [`
         function $$apply() {
             if($$apply._p) return;
@@ -43,6 +43,7 @@ export function buildRuntime(data, config, script) {
     const ctx = {
         config,
         script,
+        css,
         buildBlock,
         bindProp,
         makeEachBlock,
@@ -51,10 +52,14 @@ export function buildRuntime(data, config, script) {
         makeHtmlBlock
     };
 
+    if(css) css.process(data);
+
     let bb = ctx.buildBlock(data);
+
+    let rootTemplate = bb.tpl;
     runtime.push(bb.source);
     runtime.push(`
-        const rootTemplate = \`${Q(bb.tpl)}\`;
+        const rootTemplate = \`${Q(rootTemplate)}\`;
         if($option.afterElement) {
             let tag = $element;
             $element = $$htmlToFragment(rootTemplate);
@@ -80,7 +85,7 @@ export function buildRuntime(data, config, script) {
                 Object.defineProperty($component, '${prop}', {
                     get: function() { return ${prop}; },
                     set: function(${valueName}) {
-                        if(${prop} == ${valueName}) return;
+                        if(${prop} === ${valueName}) return;
                         ${prop} = ${valueName};
                         $$apply();
                     }
@@ -88,6 +93,15 @@ export function buildRuntime(data, config, script) {
             `);
         });
     };
+
+    if(css) runtime.push(`
+        if(!document.head.querySelector('style#${css.id}')) {
+            let style = document.createElement('style');
+            style.id = '${css.id}';
+            style.innerHTML = \`${Q(css.getContent())}\`;
+            document.head.appendChild(style);
+        }
+    `);
 
     runtime.push(`
             $$apply();
@@ -152,18 +166,21 @@ function buildBlock(data, option = {}) {
                     binds.push(b.bind);
                     return;
                 }
-                if(n.openTag.indexOf('{') || n.openTag.indexOf('use:')) {
-                    let r = parseElement(n.openTag);
-                    let el = ['<' + n.name];
-                    r.forEach(p => {
-                        let b = this.bindProp(p, getElementName);
-                        if(b.prop) el.push(b.prop);
-                        if(b.bind) binds.push(b.bind);
-                    });
-                    el = el.join(' ');
-                    el += n.closedTag?'/>':'>';
-                    tpl.push(el);
-                } else tpl.push(n.openTag);
+
+                let hasClass = false;
+                let el = ['<' + n.name];
+                n.attributes.forEach(p => {
+                    if(p.name == 'class') hasClass = true;
+                    let b = this.bindProp(p, getElementName, n);
+                    if(b.prop) el.push(b.prop);
+                    if(b.bind) binds.push(b.bind);
+                });
+                if(n.scopedClass && !hasClass) el.push(`class="${this.css.id}"`);
+
+                el = el.join(' ');
+                el += n.closedTag?'/>':'>';
+                tpl.push(el);
+
                 if(!n.closedTag) {
                     go(level + 1, n);
                     tpl.push(`</${n.name}>`);

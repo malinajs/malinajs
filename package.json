@@ -14,12 +14,13 @@
     "astring": "^1.4.3"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^13.0.1",
     "babel-cli": "^6.26.0",
-    "rollup": "^2.17.1",
-    "uglify-es": "^3.3.9",
     "babel-preset-es2015": "^6.24.1",
-    "http-server": "^0.12.3"
     "css": "^3.0.0",
+    "http-server": "^0.12.3",
+    "rollup": "^2.17.1",
+    "uglify-es": "^3.3.9"
   },
   "main": "malina",
   "files": [

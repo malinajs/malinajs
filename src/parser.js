@@ -178,6 +178,8 @@ export function parse(source) {
                     tag.content = readStyle();
                     continue;
                 };
+                tag.attributes = parseElement(tag.openTag);
+
                 if(tag.closedTag) continue;
 
                 tag.body = [];
@@ -283,7 +285,7 @@ export function parseElement(source) {
         }
         if(eq) {
             prop.name = source.substring(start, eq - 1);
-            prop.value = source.substring(eq, index + shift);
+            prop.value = source.substring(eq, index + shift).match(/^['"]?(.*?)['"]?$/)[1];
             eq = null;
         } else prop.name = prop.content;
         result.push(prop);

@@ -697,14 +697,14 @@
 
   F_INIT = '"use strict";return function Resolver(c,f,x,r)',
 
-  S_HEAD = 'var e,n,o,j=r.length-1,k=-1',
+  S_HEAD = 'var lvl=[],e,n,o,j=r.length-1,k=-1',
   M_HEAD = 'var e,n,o',
 
   S_LOOP = 'main:while((e=c[++k]))',
   N_LOOP = 'main:while((e=c.item(++k)))',
   M_LOOP = 'e=c;',
 
-  S_BODY = 'r[++j]=c[k];',
+  S_BODY = 'r[++j]={node:c[k],lvl:lvl};lvl=[];',
   N_BODY = 'r[++j]=c.item(k);',
   M_BODY = '',
 
@@ -787,7 +787,9 @@
       // isolate selector combinators/components and normalize whitespace
       selector = selector.replace(STD.combinator, '$1');//.replace(STD.whitespace, ' ');
 
+      var index = 0;
       while (selector) {
+        source = 'lvl[' + (index++) + ']=e;' + source;  // collect all related nodes
 
         // get namespace prefix if present or get first char of selector
         symbol = STD.apimethods.test(selector) ? '|' : selector[0];
@@ -1517,6 +1519,8 @@
       // save/reuse factory and closure collection
       selectResolvers[selectors] = collect(expressions, context, callback);
 
+      if(context._extraNodes) return selectResolvers[selectors].extraNodes;
+
       nodes = selectResolvers[selectors].results;
 
       return typeof callback == 'function' ?
@@ -1562,6 +1566,13 @@
           result.concat(htmlset[i]());
       }
 
+      var extraNodes = [];
+      results = results.map(function(i) {
+        if(!i.node) return i;
+        extraNodes.push(i);
+        return i.node;
+      });
+
       if (l > 1) {
         results.sort(documentOrder);
         hasDupes && (results = unique(results));
@@ -1573,7 +1584,8 @@
         factory: factory,
         htmlset: htmlset,
         nodeset: nodeset,
-        results: results
+        results: results,
+        extraNodes: extraNodes
       };
 
     },
