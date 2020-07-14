@@ -14,7 +14,8 @@ function malinaRollup(option = {}) {
             let opts = Object.assign({
                 exportDefault: true,
                 name: id.match(/([^/\\]+).html$/)[1],
-                warning: (w) => console.warn('!', w.message)
+                warning: (w) => console.warn('!', w.message),
+                inlineTemplate: false
             }, option);
             try {
                 result = malina.compile(code, opts);

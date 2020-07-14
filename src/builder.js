@@ -1,6 +1,6 @@
 
-import { Q } from './utils.js'
-import { parseElement, parseText } from './parser.js'
+import * as utils from './utils.js'
+import { parseText } from './parser.js'
 import { makeComponent } from './parts/component.js'
 import { bindProp } from './parts/prop.js'
 import { makeifBlock } from './parts/if.js'
@@ -37,8 +37,10 @@ export function buildRuntime(data, script, css, config) {
             };
     `];
 
+    const Q = config.inlineTemplate?utils.Q2:utils.Q;
     const ctx = {
         uniqIndex: 0,
+        Q,
         config,
         script,
         css,
@@ -47,7 +49,8 @@ export function buildRuntime(data, script, css, config) {
         makeEachBlock,
         makeifBlock,
         makeComponent,
-        makeHtmlBlock
+        makeHtmlBlock,
+        parseText
     };
 
     if(css) css.process(data);
@@ -144,7 +147,7 @@ function buildBlock(data, option = {}) {
                 if(lastText !== tpl.length) setLvl();
                 if(n.value.indexOf('{') >= 0) {
                     tpl.push(' ');
-                    let exp = parseText(n.value);
+                    let exp = this.parseText(n.value);
                     binds.push(`{
                         let $element=${getElementName()};
                         $watchReadOnly($cd, () => ${exp}, (value) => {$element.textContent=value;});}`);
@@ -233,7 +236,7 @@ function buildBlock(data, option = {}) {
     let source = [];
 
     let buildName = '$$build' + (this.uniqIndex++);
-    tpl = Q(tpl.join(''));
+    tpl = this.Q(tpl.join(''));
     source.push(`function ${buildName}($cd, $parentElement) {\n`);
     source.push(targets.join('\n'));
     source.push(binds.join('\n'));

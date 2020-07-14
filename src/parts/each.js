@@ -1,5 +1,5 @@
 
-import { assert, Q } from '../utils.js'
+import { assert } from '../utils.js'
 
 
 export function makeEachBlock(data, topElementName) {
@@ -36,7 +36,7 @@ export function makeEachBlock(data, topElementName) {
             };
 
             let parentNode = top.parentNode;
-            let itemTemplate = $$htmlToFragment(\`${Q(itemData.tpl)}\`);
+            let itemTemplate = $$htmlToFragment(\`${this.Q(itemData.tpl)}\`);
 
             let mapping = new Map();
             $watch($cd, () => (${arrayName}), (array) => {

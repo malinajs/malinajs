@@ -1,5 +1,5 @@
 
-import { assert, Q } from '../utils.js'
+import { assert } from '../utils.js'
 
 
 export function makeifBlock(data, topElementName) {
@@ -16,14 +16,14 @@ export function makeifBlock(data, topElementName) {
         mainBlock = this.buildBlock({body: data.bodyMain});
         elseBlock = this.buildBlock(data);
         source.push(`
-            let elsefr = $$htmlToFragment(\`${Q(elseBlock.tpl)}\`, true);
+            let elsefr = $$htmlToFragment(\`${this.Q(elseBlock.tpl)}\`, true);
             ${elseBlock.source}
         `);
     } else {
         mainBlock = this.buildBlock(data);
     }
     source.push(`
-        let mainfr = $$htmlToFragment(\`${Q(mainBlock.tpl)}\`, true);
+        let mainfr = $$htmlToFragment(\`${this.Q(mainBlock.tpl)}\`, true);
         ${mainBlock.source}
     `);
 

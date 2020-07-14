@@ -1,5 +1,5 @@
 
-import { assert, Q } from './utils.js'
+import { assert } from './utils.js'
 
 
 export function parse(source) {
@@ -359,7 +359,7 @@ export function parseText(source) {
         }
         if(a === '{') {
             if(text) {
-                result.push('`' + Q(text) + '`');
+                result.push('`' + this.Q(text) + '`');
                 text = '';
             }
             step = 1;
@@ -367,7 +367,7 @@ export function parseText(source) {
         }
         text += a;
     }
-    if(text) result.push('`' + Q(text) + '`');
+    if(text) result.push('`' + this.Q(text) + '`');
     assert(step == 0, 'Wrong expression: ' + source);
     return result.join('+');
 };

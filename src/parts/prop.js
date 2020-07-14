@@ -1,6 +1,5 @@
 
-import { assert, Q } from '../utils.js'
-import { parseText } from '../parser.js'
+import { assert } from '../utils.js'
 
 
 export function bindProp(prop, makeEl, node) {
@@ -35,7 +34,7 @@ export function bindProp(prop, makeEl, node) {
         assert(event, prop.content);
         return {bind:`{
             let $element=${makeEl()};
-            $cd.ev($element, "${event}", ($event) => { ${mod} $$apply(); ${Q(exp)}});
+            $cd.ev($element, "${event}", ($event) => { ${mod} $$apply(); ${this.Q(exp)}});
             }`};
     } else if(name == 'bind') {
         let exp = getExpression();
@@ -81,7 +80,7 @@ export function bindProp(prop, makeEl, node) {
             $cd.once(() => { $$apply(); ${exp}; });}`};
     } else {
         if(prop.value && prop.value.indexOf('{') >= 0) {
-            let exp = parseText(prop.value);
+            let exp = this.parseText(prop.value);
             if(['hidden','checked','value','disabled','selected'].indexOf(name) >= 0) {
                 return {bind: `{
                     let $element=${makeEl()};
