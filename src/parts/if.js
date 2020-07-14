@@ -1,8 +1,6 @@
 
 import { assert, Q } from '../utils.js'
 
-let uniqIndex = 0;
-
 
 export function makeifBlock(data, topElementName) {
     let source = [];
@@ -11,7 +9,7 @@ export function makeifBlock(data, topElementName) {
     let exp = r[1];
     assert(exp, 'Wrong binding: ' + data.value);
 
-    let ifBlockName = 'ifBlock' + (uniqIndex++);
+    let ifBlockName = 'ifBlock' + (this.uniqIndex++);
     source.push(`function ${ifBlockName}($cd, $parentElement) {`);
     let mainBlock, elseBlock;
     if(data.bodyMain) {

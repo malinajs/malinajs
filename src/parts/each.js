@@ -1,8 +1,6 @@
 
 import { assert, Q } from '../utils.js'
 
-let uniqIndex = 0;
-
 
 export function makeEachBlock(data, topElementName) {
     let source = [];
@@ -27,7 +25,7 @@ export function makeEachBlock(data, topElementName) {
     let arrayName = rx[1];
     let itemName = rx[2];
 
-    let eachBlockName = 'eachBlock' + (uniqIndex++);
+    let eachBlockName = 'eachBlock' + (this.uniqIndex++);
     source.push(`
         function ${eachBlockName} ($cd, top) {
 

@@ -8,9 +8,6 @@ import { makeEachBlock } from './parts/each.js'
 import { makeHtmlBlock } from './parts/html.js'
 
 
-let uniqIndex = 0;
-
-
 export function buildRuntime(data, script, css, config) {
     let runtime = [`
         function $$apply() {
@@ -41,6 +38,7 @@ export function buildRuntime(data, script, css, config) {
     `];
 
     const ctx = {
+        uniqIndex: 0,
         config,
         script,
         css,
@@ -132,7 +130,7 @@ function buildBlock(data, option = {}) {
 
             let tname = targetMap[name];
             if(!tname) {
-                tname = `el${uniqIndex++}`;
+                tname = `el${this.uniqIndex++}`;
                 targets.push(`let ${tname} = ${name};`);
                 targetMap[name] = tname;
             }
@@ -234,7 +232,7 @@ function buildBlock(data, option = {}) {
 
     let source = [];
 
-    let buildName = '$$build' + (uniqIndex++);
+    let buildName = '$$build' + (this.uniqIndex++);
     tpl = Q(tpl.join(''));
     source.push(`function ${buildName}($cd, $parentElement) {\n`);
     source.push(targets.join('\n'));
