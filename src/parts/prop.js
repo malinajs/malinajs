@@ -88,9 +88,10 @@ export function bindProp(prop, makeEl, node) {
                     $watchReadOnly($cd, () => (${exp}), (value) => {$element.${name} = value;});
                 }`};
             } else {
+                let suffix = this.css?`+' ${this.css.id}'`:'';
                 return {bind: `{
                     let $element=${makeEl()};
-                    $watchReadOnly($cd, () => (${exp}), (value) => {
+                    $watchReadOnly($cd, () => (${exp})${suffix}, (value) => {
                         if(value) $element.setAttribute('${name}', value);
                         else $element.removeAttribute('${name}');
                     });
