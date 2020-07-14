@@ -19,7 +19,10 @@ export default {
         format: 'iife'
     },
     plugins: [
-        malinaRollup({inlineTemplate: true}),
+        malinaRollup({
+            inlineTemplate: true,
+            hideLabel: false
+        }),
         customResolve()
     ]
 }

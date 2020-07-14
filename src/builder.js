@@ -60,14 +60,13 @@ export function buildRuntime(data, script, css, config) {
     let rootTemplate = bb.tpl;
     runtime.push(bb.source);
     runtime.push(`
-        const rootTemplate = \`${Q(rootTemplate)}\`;
+        const rootTemplate = $$htmlToFragment(\`${Q(rootTemplate)}\`);
         if($option.afterElement) {
-            let tag = $element;
-            $element = $$htmlToFragment(rootTemplate);
-            ${bb.name}($cd, $element);
-            tag.parentNode.insertBefore($element, tag.nextSibling);
+            ${bb.name}($cd, rootTemplate);
+            $element.parentNode.insertBefore(rootTemplate, $element.nextSibling);
         } else {
-            $element.innerHTML = rootTemplate;
+            $element.innerHTML = '';
+            $element.appendChild(rootTemplate);
             ${bb.name}($cd, $element);
         }
     `);
@@ -112,7 +111,7 @@ export function buildRuntime(data, script, css, config) {
 }
 
 
-function buildBlock(data, option = {}) {
+function buildBlock(data) {
     let tpl = [];
     let lvl = [];
     let binds = [];
@@ -125,7 +124,6 @@ function buildBlock(data, option = {}) {
 
         const getElementName = () => {
             let l = lvl;
-            if(option.top0) l = l.slice(1);
             let name = '$parentElement';
             l.forEach(n => {
                 name += `[$$childNodes][${n}]`;
@@ -162,7 +160,8 @@ function buildBlock(data, option = {}) {
                 setLvl();
                 if(n.name.match(/^[A-Z]/) && this.script.imports.indexOf(n.name) >= 0) {
                     // component
-                    tpl.push(`<!-- ${n.name} -->`);
+                    if(this.config.hideLabel) tpl.push(`<!---->`);
+                    else tpl.push(`<!-- ${n.name} -->`);
                     let b = this.makeComponent(n, getElementName);
                     binds.push(b.bind);
                     return;
@@ -188,13 +187,15 @@ function buildBlock(data, option = {}) {
                 }
             } else if(n.type === 'each') {
                 setLvl();
-                tpl.push(`<!-- ${n.value} -->`);
+                if(this.config.hideLabel) tpl.push(`<!---->`);
+                else tpl.push(`<!-- ${n.value} -->`);
                 n.parent = data;
                 let eachBlock = this.makeEachBlock(n, getElementName());
                 binds.push(eachBlock.source);
             } else if(n.type === 'if') {
                 setLvl();
-                tpl.push(`<!-- ${n.value} -->`);
+                if(this.config.hideLabel) tpl.push(`<!---->`);
+                else tpl.push(`<!-- ${n.value} -->`);
                 let ifBlock = this.makeifBlock(n, getElementName());
                 binds.push(ifBlock.source);
             } else if(n.type === 'systag') {
@@ -204,7 +205,8 @@ function buildBlock(data, option = {}) {
 
                 if(name == 'html') {
                     setLvl();
-                    tpl.push(`<!-- html -->`);
+                    if(this.config.hideLabel) tpl.push(`<!---->`);
+                    else tpl.push(`<!-- html -->`);
                     binds.push(this.makeHtmlBlock(exp, getElementName()));
                 } else throw 'Wrong tag';
             } else if(n.type === 'comment') {

@@ -7,6 +7,16 @@ export function $$htmlToFragment(html, lastNotTag) {
     return result;
 };
 
+export function $$htmlToFragmentClean(html, lastNotTag) {
+    let result = $$htmlToFragment(html, lastNotTag);
+    let it = document.createNodeIterator(result, 128);
+    let n;
+    while(n = it.nextNode()) {
+        if(!n.nodeValue) n.parentNode.replaceChild(document.createTextNode(''), n);
+    };
+    return result;
+};
+
 export function $$removeItem(array, item) {
     let i = array.indexOf(item);
     if(i>=0) array.splice(i, 1);
