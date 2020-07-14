@@ -5,7 +5,7 @@ import { transformJS } from './code';
 import { buildRuntime } from './builder';
 import { processCSS } from './css/index';
 
-export const version = '0.5.3';
+export const version = '0.5.4';
 
 export function compile(src, option = {}) {
     if(!option.name) option.name = 'widget';
