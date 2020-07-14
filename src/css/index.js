@@ -1,5 +1,5 @@
 
-import css from 'css';
+import csstree from 'css-tree';
 import { assert } from '../utils.js'
 import nwsapi from './ext/nwsapi';
 
@@ -12,39 +12,48 @@ export function processCSS(styleNode, config) {
     let selectors = [];
 
     function transform() {
-        self.raw = css.parse(styleNode.content);
-        self.raw.stylesheet.rules.forEach(d => {
-            assert(d.type == 'rule');
-            d.selectors = d.selectors.map(fullSelector => {
-                let result = [];
-                let forProcess = [];
+        self.ast = csstree.parse(styleNode.content, {parseRulePrelude: false, parseAtrulePrelude: false});
 
-                fullSelector.split(/\s+/).forEach(sel => {
-                    let virtual = '', rx = sel.match(/^([^:]*)(:.*)$/)
-                    if(rx) {
-                        sel = rx[1];
-                        virtual = rx[2];
-                    };
-                    forProcess.push(sel);
-                    result.push(sel + '.' + id + virtual);
-                });
-
-                selectors.push(forProcess.join(' '));
-                return result.join(' ');
-            })
+        csstree.walk(self.ast, function(node) {
+            if (node.type === 'Rule') {
+                assert(node.prelude.type=='Raw');
+                node.prelude.value = node.prelude.value.split(/\s*,\s*/).map(fullSelector => {
+                    let result = [];
+                    let forProcess = [];
+    
+                    fullSelector.split(/\s+/).forEach(sel => {
+                        let virtual = '', rx = sel.match(/^([^:]*)(:.*)$/)
+                        if(rx) {
+                            sel = rx[1];
+                            virtual = rx[2];
+                        };
+                        forProcess.push(sel);
+                        result.push(sel + '.' + id + virtual);
+                    });
+    
+                    selectors.push(forProcess.join(' '));
+                    return result.join(' ');
+                }).join(',');
+            }
         });
     }
 
     self.process = function(data) {
         let dom = makeDom(data);
-
         const nw = nwsapi({
             document: dom,
             DOMException: function() {}
         });
 
         selectors.forEach(s => {
-            let selected = nw.select([s]);
+            let selected;
+            try {
+                selected = nw.select([s]);
+            } catch (_) {
+                let e = new Error(`CSS error: '${s}'`);
+                e.details = `selector: '${s}'`;
+                throw e;
+            }
             if(selected.length) {
                 selected.forEach(s => {
                     s.node.__node.scopedClass = true;
@@ -55,7 +64,7 @@ export function processCSS(styleNode, config) {
     };
 
     self.getContent = function() {
-        return css.stringify(self.raw, {compress: true});
+        return csstree.generate(self.ast);
     }
 
     transform();
