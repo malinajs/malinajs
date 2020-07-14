@@ -77,10 +77,10 @@ function makeDom(data) {
     function build(parent, list) {
         list.forEach(e => {
             if(e.type == 'each' || e.type == 'if') {
+                if(e.bodyMain && e.bodyMain.length) build(parent, e.bodyMain);
                 if(e.body && e.body.length) build(parent, e.body);
                 return;
-            }
-            if(e.type != 'node') return;
+            } else if(e.type != 'node') return;
             let n = new Node(e.name, {__node: e});
             e.attributes.forEach(a => {
                 if(a.name == 'class') n.className += ' ' + a.value;

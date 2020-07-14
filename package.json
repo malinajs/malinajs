@@ -1,6 +1,6 @@
 {
   "name": "malinajs",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "license": "MIT",
   "scripts": {
     "build": "npm run build_runtime && rollup -c",
