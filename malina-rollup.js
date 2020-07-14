@@ -1,7 +1,10 @@
 
-const malina = require('./malina.js')
+const malina = require('malinajs');
 
-export default function malinaRollup(option = {}) {
+module.exports = malinaRollup;
+
+function malinaRollup(option = {}) {
+    if(option.displayVersion !== false) console.log('! Malina.js', malina.version);
     return {
         name: 'malina',
         transform(code, id) {
