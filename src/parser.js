@@ -1,5 +1,5 @@
 
-import { assert, Q } from './utils.js'
+import { assert } from './utils.js'
 
 
 export function parse(source) {
@@ -275,7 +275,7 @@ export function parseElement(source) {
         return source[index++];
     }
     const flush = (shift) => {
-        if(index <= start) return;
+        if(start >= index + shift) return;
         if(first) {
             first = false;
             return;
@@ -285,7 +285,7 @@ export function parseElement(source) {
         }
         if(eq) {
             prop.name = source.substring(start, eq - 1);
-            prop.value = source.substring(eq, index + shift).match(/^['"]?(.*?)['"]?$/)[1];
+            prop.value = source.substring(eq, index + shift).match(/^['"]?([\s\S]*?)['"]?$/)[1];
             eq = null;
         } else prop.name = prop.content;
         result.push(prop);
@@ -325,7 +325,7 @@ export function parseElement(source) {
 };
 
 
-export function parseText(source, quotes) {
+export function parseText(source) {
     let i = 0;
     let step = 0;
     let text = '';
@@ -333,15 +333,6 @@ export function parseText(source, quotes) {
     let result = [];
     let q;
     let len = source.length;
-    if(quotes) {
-        if(source[0] === '{') quotes = false;
-        else {
-            i++;
-            len--;
-            quotes = source[0];
-            assert(quotes === source[len], source);
-        }
-    }
     while(i < len) {
         let a = source[i++];
         if(step == 1) {
@@ -368,7 +359,7 @@ export function parseText(source, quotes) {
         }
         if(a === '{') {
             if(text) {
-                result.push('`' + Q(text) + '`');
+                result.push('`' + this.Q(text) + '`');
                 text = '';
             }
             step = 1;
@@ -376,7 +367,7 @@ export function parseText(source, quotes) {
         }
         text += a;
     }
-    if(text) result.push('`' + Q(text) + '`');
+    if(text) result.push('`' + this.Q(text) + '`');
     assert(step == 0, 'Wrong expression: ' + source);
     return result.join('+');
 };

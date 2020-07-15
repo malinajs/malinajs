@@ -1,7 +1,5 @@
 
-import { assert, Q } from '../utils.js'
-
-let uniqIndex = 0;
+import { assert } from '../utils.js'
 
 
 export function makeifBlock(data, topElementName) {
@@ -11,21 +9,21 @@ export function makeifBlock(data, topElementName) {
     let exp = r[1];
     assert(exp, 'Wrong binding: ' + data.value);
 
-    let ifBlockName = 'ifBlock' + (uniqIndex++);
+    let ifBlockName = 'ifBlock' + (this.uniqIndex++);
     source.push(`function ${ifBlockName}($cd, $parentElement) {`);
     let mainBlock, elseBlock;
     if(data.bodyMain) {
         mainBlock = this.buildBlock({body: data.bodyMain});
         elseBlock = this.buildBlock(data);
         source.push(`
-            let elsefr = $$htmlToFragment(\`${Q(elseBlock.tpl)}\`, true);
+            let elsefr = $$htmlToFragment(\`${this.Q(elseBlock.tpl)}\`, true);
             ${elseBlock.source}
         `);
     } else {
         mainBlock = this.buildBlock(data);
     }
     source.push(`
-        let mainfr = $$htmlToFragment(\`${Q(mainBlock.tpl)}\`, true);
+        let mainfr = $$htmlToFragment(\`${this.Q(mainBlock.tpl)}\`, true);
         ${mainBlock.source}
     `);
 

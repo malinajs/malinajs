@@ -1,9 +1,28 @@
 
+let templatecache = {false: {}, true: {}};
+
 export function $$htmlToFragment(html, lastNotTag) {
+    lastNotTag = !!lastNotTag;
+    if(templatecache[lastNotTag][html]) return templatecache[lastNotTag][html].cloneNode(true);
+
     let t = document.createElement('template');
     t.innerHTML = html;
     let result = t.content;
     if(lastNotTag && result.lastChild.nodeType == 8) result.appendChild(document.createTextNode(''));
+    templatecache[lastNotTag][html] = result.cloneNode(true);
+    return result;
+};
+
+export function $$htmlToFragmentClean(html, lastNotTag) {
+    lastNotTag = !!lastNotTag;
+    if(templatecache[lastNotTag][html]) return templatecache[lastNotTag][html].cloneNode(true);
+    let result = $$htmlToFragment(html, lastNotTag);
+    let it = document.createNodeIterator(result, 128);
+    let n;
+    while(n = it.nextNode()) {
+        if(!n.nodeValue) n.parentNode.replaceChild(document.createTextNode(''), n);
+    };
+    templatecache[lastNotTag][html] = result.cloneNode(true);
     return result;
 };
 

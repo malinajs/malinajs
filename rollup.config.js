@@ -7,9 +7,9 @@ export default [{
 		sourcemap: true,
 		format: 'cjs',
 		file: './compile.js',
-		globals: ['acorn', 'astring', 'css']
+		globals: ['acorn', 'astring', 'css-tree']
     },
-	external: ['fs', 'acorn', 'astring', 'css'],
+	external: ['fs', 'acorn', 'astring', 'css-tree'],
 	plugins: [commonjs()]
 }, {
 	input: './src/compiler.js',
@@ -21,9 +21,9 @@ export default [{
 		globals: {
 			acorn: 'acorn',
 			astring: 'astring',
-			css: 'css'
+			'css-tree': 'css-tree'
 		}
     },
-	external: ['acorn', 'astring', 'css'],
+	external: ['acorn', 'astring', 'css-tree'],
 	plugins: [commonjs()]
 }];

@@ -27,20 +27,33 @@ export function transformJS(code, option={}) {
         ArrowFunctionExpression: 1
     }
 
-    const fix = (node) => {
+    function applyBlock() {
+        return {
+            type: 'ExpressionStatement',
+            expression: {
+                callee: {
+                    type: 'Identifier',
+                    name: '$$apply'
+                },
+                type: 'CallExpression'
+            }
+        }
+    }
+
+    function isInLoop(node) {
+        if(!node._parent || node._parent.type != 'CallExpression') return false;
+        if(node._parent.callee.type != 'MemberExpression') return false;
+        let method = node._parent.callee.property.name;
+        return method == 'forEach' || method == 'map' || method == 'filter';
+    }
+
+    function transformNode(node) {
         if(funcTypes[node.type] && node.body.body && node.body.body.length) {
-            node.body.body.unshift({
-                type: 'ExpressionStatement',
-                expression: {
-                    callee: {
-                        type: 'Identifier',
-                        name: '$$apply'
-                    },
-                    type: 'CallExpression'
-                }
-            });
-        } else if(node.type === 'ArrowFunctionExpression') {
-            if(node.body.type !== 'BlockStatement') {
+            if(!isInLoop(node)) {
+                node.body.body.unshift(applyBlock());
+            }
+        } else if(node.type == 'ArrowFunctionExpression') {
+            if(node.body.type != 'BlockStatement' && !isInLoop(node)) {
                 node.body = {
                     type: 'BlockStatement',
                     body: [{
@@ -48,32 +61,45 @@ export function transformJS(code, option={}) {
                         argument: node.body
                     }]
                 };
-                fix(node);
+                transformNode(node);
             }
-        }
-    }
-
-    const transform = function(node, skipTop) {
-        if(node.type === 'CallExpression' && node.callee && node.callee.property && ['map', 'forEach', 'filter'].indexOf(node.callee.property.name) >=0) {
-            node.arguments.forEach(n => {
-                transform(n, true);
-            });
-        } else {
-            for(let key in node) {
-                let value = node[key];
-                if(typeof value === 'object') {
-                    if(Array.isArray(value)) {
-                        value.forEach(n => transform(n));
-                    } else if(value && value.type) {
-                        transform(value);
+        } else if(node.type == 'AwaitExpression') {
+            if(node._parent && node._parent._parent && node._parent._parent._parent) {
+                if(node._parent.type == 'ExpressionStatement' &&
+                    node._parent._parent.type == 'BlockStatement' &&
+                    node._parent._parent._parent.type == 'FunctionDeclaration' &&
+                    node._parent._parent._parent.async) {
+                        let list = node._parent._parent.body;
+                        let i = list.indexOf(node._parent);
+                        assert(i >= 0);
+                        list.splice(i + 1, 0, applyBlock());
                     }
-                }
             }
         }
-        if(!skipTop) fix(node);
     };
-    
-    transform(ast.body);
+
+    function walk(node, parent) {
+        if(typeof node !== 'object') return;
+
+        node._parent = parent;
+        let forParent = parent;
+        if(node.type) {
+            transformNode(node);
+            forParent = node;
+        }
+        for(let key in node) {
+            let child = node[key];
+            if(key == '_parent') continue;
+            if(!child || typeof child !== 'object') continue;
+
+            if(Array.isArray(child)) {
+                child.forEach(i => walk(i, forParent));
+            } else {
+                walk(child, forParent);
+            }
+        }
+    };
+    walk(ast, null);
 
 
     function makeVariable(name) {

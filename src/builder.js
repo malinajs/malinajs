@@ -1,14 +1,11 @@
 
-import { Q } from './utils.js'
-import { parseElement, parseText } from './parser.js'
+import * as utils from './utils.js'
+import { parseText } from './parser.js'
 import { makeComponent } from './parts/component.js'
 import { bindProp } from './parts/prop.js'
 import { makeifBlock } from './parts/if.js'
 import { makeEachBlock } from './parts/each.js'
 import { makeHtmlBlock } from './parts/html.js'
-
-
-let uniqIndex = 0;
 
 
 export function buildRuntime(data, script, css, config) {
@@ -40,7 +37,10 @@ export function buildRuntime(data, script, css, config) {
             };
     `];
 
+    const Q = config.inlineTemplate?utils.Q2:utils.Q;
     const ctx = {
+        uniqIndex: 0,
+        Q,
         config,
         script,
         css,
@@ -49,7 +49,8 @@ export function buildRuntime(data, script, css, config) {
         makeEachBlock,
         makeifBlock,
         makeComponent,
-        makeHtmlBlock
+        makeHtmlBlock,
+        parseText
     };
 
     if(css) css.process(data);
@@ -59,14 +60,13 @@ export function buildRuntime(data, script, css, config) {
     let rootTemplate = bb.tpl;
     runtime.push(bb.source);
     runtime.push(`
-        const rootTemplate = \`${Q(rootTemplate)}\`;
+        const rootTemplate = $$htmlToFragment(\`${Q(rootTemplate)}\`);
         if($option.afterElement) {
-            let tag = $element;
-            $element = $$htmlToFragment(rootTemplate);
-            ${bb.name}($cd, $element);
-            tag.parentNode.insertBefore($element, tag.nextSibling);
+            ${bb.name}($cd, rootTemplate);
+            $element.parentNode.insertBefore(rootTemplate, $element.nextSibling);
         } else {
-            $element.innerHTML = rootTemplate;
+            $element.innerHTML = '';
+            $element.appendChild(rootTemplate);
             ${bb.name}($cd, $element);
         }
     `);
@@ -111,7 +111,7 @@ export function buildRuntime(data, script, css, config) {
 }
 
 
-function buildBlock(data, option = {}) {
+function buildBlock(data) {
     let tpl = [];
     let lvl = [];
     let binds = [];
@@ -124,7 +124,6 @@ function buildBlock(data, option = {}) {
 
         const getElementName = () => {
             let l = lvl;
-            if(option.top0) l = l.slice(1);
             let name = '$parentElement';
             l.forEach(n => {
                 name += `[$$childNodes][${n}]`;
@@ -132,7 +131,7 @@ function buildBlock(data, option = {}) {
 
             let tname = targetMap[name];
             if(!tname) {
-                tname = `el${uniqIndex++}`;
+                tname = `el${this.uniqIndex++}`;
                 targets.push(`let ${tname} = ${name};`);
                 targetMap[name] = tname;
             }
@@ -146,7 +145,7 @@ function buildBlock(data, option = {}) {
                 if(lastText !== tpl.length) setLvl();
                 if(n.value.indexOf('{') >= 0) {
                     tpl.push(' ');
-                    let exp = parseText(n.value);
+                    let exp = this.parseText(n.value);
                     binds.push(`{
                         let $element=${getElementName()};
                         $watchReadOnly($cd, () => ${exp}, (value) => {$element.textContent=value;});}`);
@@ -161,7 +160,8 @@ function buildBlock(data, option = {}) {
                 setLvl();
                 if(n.name.match(/^[A-Z]/) && this.script.imports.indexOf(n.name) >= 0) {
                     // component
-                    tpl.push(`<!-- ${n.name} -->`);
+                    if(this.config.hideLabel) tpl.push(`<!---->`);
+                    else tpl.push(`<!-- ${n.name} -->`);
                     let b = this.makeComponent(n, getElementName);
                     binds.push(b.bind);
                     return;
@@ -187,13 +187,15 @@ function buildBlock(data, option = {}) {
                 }
             } else if(n.type === 'each') {
                 setLvl();
-                tpl.push(`<!-- ${n.value} -->`);
+                if(this.config.hideLabel) tpl.push(`<!---->`);
+                else tpl.push(`<!-- ${n.value} -->`);
                 n.parent = data;
                 let eachBlock = this.makeEachBlock(n, getElementName());
                 binds.push(eachBlock.source);
             } else if(n.type === 'if') {
                 setLvl();
-                tpl.push(`<!-- ${n.value} -->`);
+                if(this.config.hideLabel) tpl.push(`<!---->`);
+                else tpl.push(`<!-- ${n.value} -->`);
                 let ifBlock = this.makeifBlock(n, getElementName());
                 binds.push(ifBlock.source);
             } else if(n.type === 'systag') {
@@ -203,7 +205,8 @@ function buildBlock(data, option = {}) {
 
                 if(name == 'html') {
                     setLvl();
-                    tpl.push(`<!-- html -->`);
+                    if(this.config.hideLabel) tpl.push(`<!---->`);
+                    else tpl.push(`<!-- html -->`);
                     binds.push(this.makeHtmlBlock(exp, getElementName()));
                 } else throw 'Wrong tag';
             } else if(n.type === 'comment') {
@@ -234,8 +237,8 @@ function buildBlock(data, option = {}) {
 
     let source = [];
 
-    let buildName = '$$build' + (uniqIndex++);
-    tpl = Q(tpl.join(''));
+    let buildName = '$$build' + (this.uniqIndex++);
+    tpl = this.Q(tpl.join(''));
     source.push(`function ${buildName}($cd, $parentElement) {\n`);
     source.push(targets.join('\n'));
     source.push(binds.join('\n'));
