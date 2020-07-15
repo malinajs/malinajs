@@ -12,28 +12,42 @@ export function processCSS(styleNode, config) {
     let selectors = [];
 
     function transform() {
-        self.ast = csstree.parse(styleNode.content, {parseRulePrelude: false, parseAtrulePrelude: false});
+        self.ast = csstree.parse(styleNode.content);
 
         csstree.walk(self.ast, function(node) {
             if (node.type === 'Rule') {
-                assert(node.prelude.type=='Raw');
-                node.prelude.value = node.prelude.value.split(/\s*,\s*/).map(fullSelector => {
+                assert(node.prelude.type=='SelectorList');
+
+                node.prelude.children.forEach(fullSelector => {
+                    assert(fullSelector.type == 'Selector');
+                    let proc = [];
+                    let selector = fullSelector.children.toArray();
                     let result = [];
-                    let forProcess = [];
-    
-                    fullSelector.split(/\s+/).forEach(sel => {
-                        let virtual = '', rx = sel.match(/^([^:]*)(:.*)$/)
-                        if(rx) {
-                            sel = rx[1];
-                            virtual = rx[2];
-                        };
-                        forProcess.push(sel);
-                        result.push(sel + '.' + id + virtual);
+                    let inserted = false;
+                    for(let i=0;i<selector.length;i++) {
+                        let sel = selector[i];
+
+                        if(sel.type == 'PseudoClassSelector' || sel.type == 'PseudoElementSelector') {
+                            if(!inserted) result.push({type: "ClassSelector", loc: null, name: id});
+                            inserted = true;
+                        } else {
+                            proc.push(Object.assign({}, sel));
+                        }
+                        if(sel.type == 'Combinator') {
+                            if(!inserted) result.push({type: "ClassSelector", loc: null, name: id});
+                            inserted = false;
+                        }
+                        result.push(sel);
+                    }
+                    if(!inserted) result.push({type: "ClassSelector", loc: null, name: id});
+
+                    fullSelector.children = result;
+                    proc = csstree.generate({
+                        type: 'Selector',
+                        children: proc
                     });
-    
-                    selectors.push(forProcess.join(' '));
-                    return result.join(' ');
-                }).join(',');
+                    selectors.push(proc);
+                });
             }
         });
     }
