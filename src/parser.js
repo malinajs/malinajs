@@ -259,7 +259,6 @@ export function parse(source) {
 
 
 export function parseElement(source) {
-    // TODO: parse '/>' at the end
     let len = source.length - 1;
     assert(source[0] === '<');
     assert(source[len] === '>');
@@ -288,7 +287,13 @@ export function parseElement(source) {
             prop.name = source.substring(start, eq - 1);
             prop.value = source.substring(eq, index + shift).match(/^['"]?([\s\S]*?)['"]?$/)[1];
             eq = null;
-        } else prop.name = prop.content;
+        } else {
+            let rx = prop.content.match(/^\{(.*)\}$/);
+            if(rx) {
+                prop.name = rx[1];
+                prop.value = prop.content;
+            } else prop.name = prop.content
+        };
         result.push(prop);
     };
 
