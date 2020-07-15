@@ -2,7 +2,7 @@
     import Box from './Box.html';
 
     let todos = [];
-    let selected = 0;
+    let totalSelected = 0;
     let name = '';
     let active = null;
 
@@ -29,7 +29,7 @@
 
     function count() {
       setTimeout(() => {
-        selected = todos.filter(item => item.done).length || 0;
+        totalSelected = todos.filter(item => item.done).length || 0;
       }, 50);
     }
 </script>
@@ -52,7 +52,7 @@
 {#if active}
     Edit: <input use={$element.focus()} type="text" on:keydown|enter={active=null} bind:value={active.name} />
 {:else}
-    Selected items {selected}, total {todos.length}.
+    Selected items {totalSelected}, total {todos.length}.
 {/if}
 
 <style>
