@@ -8,7 +8,21 @@ export function makeComponent(node, makeEl) {
     let binds = [];
     props.forEach(prop => {
         assert(prop.value, 'Empty property');
-        if(prop.value.indexOf('{') >= 0) {
+        if(prop.name.startsWith('bind:')) {
+            let inner = prop.name.substring(5);
+            let rx = prop.value.match(/^\{(.*)\}$/);
+            assert(rx, 'Wrong property: ' + prop.content)
+            let outer = rx[1];
+            binds.push(`
+                if('${inner}' in $component) {
+                    $watchReadOnly($cd, () => (${outer}), (value) => {$component.${inner} = value});
+                    $watchReadOnly($component.$cd, () => ($component.${inner}), (value) => {
+                        if(${outer} === value) return;
+                        ${outer} = value; $$apply();
+                    });
+                } else console.error("Component ${node.name} doesn't have prop ${inner}");
+            `);
+        } else if(prop.value.indexOf('{') >= 0) {
             let exp = this.parseText(prop.value);
             binds.push(`
                 if('${prop.name}' in $component) {
