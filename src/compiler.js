@@ -5,7 +5,7 @@ import { transformJS } from './code';
 import { buildRuntime } from './builder';
 import { processCSS } from './css/index';
 
-export const version = '0.5.5';
+export const version = '0.5.6';
 
 export function compile(src, config = {}) {
     if(!config.name) config.name = 'widget';
