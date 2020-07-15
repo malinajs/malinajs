@@ -178,7 +178,9 @@ function buildBlock(data) {
                 if(n.scopedClass && !hasClass) el.push(`class="${this.css.id}"`);
 
                 el = el.join(' ');
-                el += n.closedTag?'/>':'>';
+                if(n.closedTag) {
+                    el += n.voidTag ? '/>' : `></${n.name}>`;
+                } else el += '>';
                 tpl.push(el);
 
                 if(!n.closedTag) {

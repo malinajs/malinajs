@@ -39,15 +39,16 @@ export function parse(source) {
             }
             if(a === '>') {
                 const voidTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
-                // source[index-2] == '/'
-                let closedTag = voidTags.indexOf(name) >= 0;
+                let voidTag = voidTags.indexOf(name) >= 0;
+                let closedTag = voidTag || (name.match(/^[A-Z]/) && source[index-2] == '/');
                 return {
                     type: 'node',
                     name: name,
                     openTag: source.substring(start, index),
                     start: start,
                     end: index,
-                    closedTag: closedTag
+                    closedTag,
+                    voidTag
                 }
             }
             if(begin) {
