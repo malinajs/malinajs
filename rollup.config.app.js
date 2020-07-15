@@ -1,14 +1,13 @@
 
-import malinaRollup from './malina-rollup'
+import malinaRollup from 'malinajs/malina-rollup'
 
 
 function customResolve() {
     return {
         resolveId: (moduleName) => {
-            if(moduleName != 'malinajs/runtime.js') return null;
-            return {
-                id: __dirname + '/runtime.js'
-            };
+            if(moduleName == 'malinajs/runtime.js') return {id: __dirname + '/runtime.js'};
+            if(moduleName == 'malinajs') return {id: __dirname + '/malina.js'};
+            return null;
         }
     }
 };
@@ -20,7 +19,10 @@ export default {
         format: 'iife'
     },
     plugins: [
-        malinaRollup(),
+        malinaRollup({
+            inlineTemplate: true,
+            hideLabel: false
+        }),
         customResolve()
     ]
 }

@@ -1,7 +1,10 @@
 
-const malina = require('./malina.js')
+const malina = require('malinajs');
 
-export default function malinaRollup(option = {}) {
+module.exports = malinaRollup;
+
+function malinaRollup(option = {}) {
+    if(option.displayVersion !== false) console.log('! Malina.js', malina.version);
     return {
         name: 'malina',
         transform(code, id) {
@@ -10,8 +13,10 @@ export default function malinaRollup(option = {}) {
 
             let opts = Object.assign({
                 exportDefault: true,
-                name: id.match(/([^/]+).html$/)[1],
-                warning: (w) => console.warn('!', w.message)
+                name: id.match(/([^/\\]+).html$/)[1],
+                warning: (w) => console.warn('!', w.message),
+                inlineTemplate: false,
+                hideLabel: false
             }, option);
             try {
                 result = malina.compile(code, opts);

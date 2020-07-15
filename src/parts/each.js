@@ -1,7 +1,5 @@
 
-import { assert, Q } from '../utils.js'
-
-let uniqIndex = 0;
+import { assert } from '../utils.js'
 
 
 export function makeEachBlock(data, topElementName) {
@@ -27,7 +25,7 @@ export function makeEachBlock(data, topElementName) {
     let arrayName = rx[1];
     let itemName = rx[2];
 
-    let eachBlockName = 'eachBlock' + (uniqIndex++);
+    let eachBlockName = 'eachBlock' + (this.uniqIndex++);
     source.push(`
         function ${eachBlockName} ($cd, top) {
 
@@ -38,7 +36,7 @@ export function makeEachBlock(data, topElementName) {
             };
 
             let parentNode = top.parentNode;
-            let itemTemplate = $$htmlToFragment(\`${Q(itemData.tpl)}\`);
+            let itemTemplate = $$htmlToFragment(\`${this.Q(itemData.tpl)}\`);
 
             let mapping = new Map();
             $watch($cd, () => (${arrayName}), (array) => {
