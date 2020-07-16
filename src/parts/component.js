@@ -8,6 +8,12 @@ export function makeComponent(node, makeEl) {
     let binds = [];
     let props = [];
     propList.forEach(prop => {
+        if(prop.name[0] == '#') {
+            assert(!prop.value, node.openTag);
+            let name = prop.name.substring(1);
+            binds.push(`${name} = $component;`);
+            return;
+        }
         assert(prop.value, 'Empty property');
         if(prop.name.startsWith('bind:')) {
             let inner = prop.name.substring(5);
