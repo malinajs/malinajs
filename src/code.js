@@ -175,11 +175,16 @@ export function transformJS(code, option={}) {
             return;
         } else if(n.type == 'ExportNamedDeclaration') {
             assert(n.declaration.type == 'VariableDeclaration', 'Wrong export');
+            let forInit = [];
             n.declaration.declarations.forEach(d => {
                 assert(d.type == 'VariableDeclarator', 'Wrong export');
                 result.props.push(d.id.name);
+                forInit.push(d.id.name);
             });
             resultBody.push(n.declaration);
+            forInit.forEach(n => {
+                resultBody.push(initProp(n));
+            });
             return;
         }
 
@@ -207,6 +212,47 @@ export function transformJS(code, option={}) {
         }
     });
 
+    resultBody.unshift({
+        type: 'IfStatement',
+        test: {
+            type: 'UnaryExpression',
+            operator: '!',
+            prefix: true,
+            argument: {
+                type: 'MemberExpression',
+                object: {
+                    type: 'Identifier',
+                    name: '$option'
+                },
+                property: {
+                    type: 'Identifier',
+                    name: 'props'
+                }
+            }
+        },
+        consequent: {
+            type: 'ExpressionStatement',
+            expression: {
+                type: 'AssignmentExpression',
+                operator: '=',
+                left: {
+                    type: 'MemberExpression',
+                    object: {
+                        type: 'Identifier',
+                        name: '$option'
+                    },
+                    property: {
+                        type: 'Identifier',
+                        name: 'props'
+                    }
+                },
+                right: {
+                    type: 'ObjectExpression',
+                    properties: []
+                }
+            }
+        }
+    });
     resultBody.unshift({
         type: 'IfStatement',
         test: {
@@ -256,4 +302,63 @@ export function transformJS(code, option={}) {
 
     result.code = astring.generate(ast);
     return result;
+}
+
+
+function initProp(name) {
+    return {
+        type: "IfStatement",
+        test: {
+            type: "BinaryExpression",
+            left: {
+                type: "Literal",
+                value: name
+            },
+            operator: "in",
+            right: {
+                type: "MemberExpression",
+                object: {
+                    type: "Identifier",
+                    name: "$option"
+                },
+                property: {
+                    type: "Identifier",
+                    name: "props"
+                },
+                computed: false
+            }
+        },
+        consequent: {
+            type: "ExpressionStatement",
+            expression: {
+                type: "AssignmentExpression",
+                operator: "=",
+                left: {
+                    type: "Identifier",
+                    name: name
+                },
+                right: {
+                    type: "MemberExpression",
+                    object: {
+                        type: "MemberExpression",
+                        object: {
+                            type: "Identifier",
+                            name: "$option"
+                        },
+                        property: {
+                            type: "Identifier",
+                            name: "props"
+                        },
+                        computed: false
+                    },
+                    property: {
+                        type: "Identifier",
+                        name: name
+                    },
+                    computed: false
+                }
+            }
+        },
+        alternate: null
+    };
 }

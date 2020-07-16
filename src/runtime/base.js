@@ -47,7 +47,6 @@ export function $watch(cd, fn, callback, w) {
     if(!w) w = {};
     w.fn = fn;
     w.cb = callback;
-    w.value = void 0;
     cd.watchers.push(w);
     return w;
 };
