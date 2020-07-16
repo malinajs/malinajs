@@ -78,10 +78,16 @@ export function bindProp(prop, makeEl, node) {
     } else if(name == 'class' && arg) {
         let className = arg;
         let exp = prop.value ? getExpression() : className;
-        assert(className, prop.content);
         return {bind: `{
                 let $element = ${makeEl()};
                 $watchReadOnly($cd, () => !!(${exp}), (value) => { if(value) $element.classList.add("${className}"); else $element.classList.remove("${className}"); });
+            }`};
+    } else if(name == 'style' && arg) {
+        let styleName = arg;
+        let exp = prop.value ? getExpression() : styleName;
+        return {bind: `{
+                let $element = ${makeEl()};
+                $watchReadOnly($cd, () => (${exp}), (value) => { $element.style.${styleName} = value; });
             }`};
     } else if(name == 'use') {
         if(arg) {
