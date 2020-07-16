@@ -138,7 +138,22 @@ function buildBlock(data) {
             return tname;
         };
 
-        let body = data.body.filter(n => n.type != 'script' && n.type != 'style');
+        let n, body = data.body.filter(n => n.type != 'script' && n.type != 'style');
+        if(data.type == 'root') {
+            while(n = body[0]) {
+                if(n.type != 'text') break;
+                n.value = n.value.trimLeft();
+                if(n.value) break;
+                else body.shift();
+            }
+            while(n = body[body.length - 1]) {
+                if(n.type != 'text') break;
+                n.value = n.value.trimRight();
+                if(n.value) break;
+                else body.pop();
+            }
+        }
+
         let lastText;
         const bindNode = (n) => {
             if(n.type === 'text') {
