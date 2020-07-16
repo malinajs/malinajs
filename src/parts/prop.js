@@ -65,8 +65,8 @@ export function bindProp(prop, makeEl, node) {
                 }`};
         } else throw 'Not supported: ' + prop.content;
     } else if(name == 'class' && arg) {
-        let exp = getExpression();
         let className = arg;
+        let exp = prop.value ? getExpression() : className;
         assert(className, prop.content);
         return {bind: `{
                 let $element = ${makeEl()};
