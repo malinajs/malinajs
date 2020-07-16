@@ -50,7 +50,7 @@ export function bindProp(prop, makeEl, node) {
         if(prop.value) {
             exp = getExpression();
         } else {
-            handler = opts.shift();
+            handler = opts.pop();
         };
         assert(event, prop.content);
         assert(!handler ^ !exp, prop.content);
