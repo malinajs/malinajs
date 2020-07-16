@@ -1,5 +1,5 @@
 
-import { assert } from '../utils.js'
+import { assert, detectExpressionType } from '../utils.js'
 
 
 export function bindProp(prop, makeEl, node) {
@@ -44,20 +44,66 @@ export function bindProp(prop, makeEl, node) {
         let target = name.substring(1);
         return {bind: `${target}=${makeEl()};`};
     } else if(name == 'on') {
-        let exp = getExpression();
-        let mod = '', opt = arg.split('|');
-        let event = opt[0];
-        opt.slice(1).forEach(opt => {
-            if(opt == 'preventDefault') mod += `$event.preventDefault();`;
-            else if(opt == 'enter') mod += `if($event.keyCode != 13) return; $event.preventDefault();`;
-            else if(opt == 'escape') mod += `if($event.keyCode != 27) return; $event.preventDefault();`;
-            else throw 'Wrong modificator: ' + opt;
-        });
+        let mod = '', opts = arg.split(/[\|:]/);
+        let event = opts.shift();
+        let exp, handler, funcName;
+        if(prop.value) {
+            exp = getExpression();
+        } else {
+            handler = opts.shift();
+        };
         assert(event, prop.content);
-        return {bind:`{
-            let $element=${makeEl()};
-            $cd.ev($element, "${event}", ($event) => { ${mod} $$apply(); ${this.Q(exp)}});
-            }`};
+        assert(!handler ^ !exp, prop.content);
+
+        let needPrevent, preventInserted;
+        opts.forEach(opt => {
+            if(opt == 'preventDefault') {
+                if(preventInserted) return;
+                mod += '$event.preventDefault();';
+                preventInserted = true;
+            } else if(opt == 'enter') {
+                mod += 'if($event.keyCode != 13) return;';
+                needPrevent = true;
+            } else if(opt == 'escape') {
+                mod += 'if($event.keyCode != 27) return;';
+                needPrevent = true;
+            } else throw 'Wrong modificator: ' + opt;
+        });
+        if(needPrevent && !preventInserted) mod += '$event.preventDefault();';
+
+        if(exp) {
+            let type = detectExpressionType(exp);
+            if(type == 'identifier') {
+                handler = exp;
+                exp = null;
+            } else if(type == 'function') {
+                funcName = 'fn' + (this.uniqIndex++);
+            };
+        }
+
+        if(funcName) {
+            return {bind: `
+                {
+                    let $element=${makeEl()};
+                    const ${funcName} = ${exp};
+                    $cd.ev($element, "${event}", ($event) => { ${mod} $$apply(); ${funcName}($event);});
+                }`
+            };
+        } else if(handler) {
+            return {bind: `
+                {
+                    let $element=${makeEl()};
+                    $cd.ev($element, "${event}", ($event) => { ${mod} $$apply(); ${handler}($event);});
+                }`
+            };
+        } else {
+            return {bind: `
+                {
+                    let $element=${makeEl()};
+                    $cd.ev($element, "${event}", ($event) => { ${mod} $$apply(); ${this.Q(exp)}});
+                }`
+            };
+        }
     } else if(name == 'bind') {
         let exp = getExpression();
         let attr = arg;

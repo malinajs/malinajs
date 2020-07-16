@@ -17,6 +17,7 @@ export function parse(source) {
         let q = null;
         let begin = true;
         let name = '';
+        let bind;
         while(true) {
             a = readNext();
             if(q) {
@@ -24,12 +25,16 @@ export function parse(source) {
                 q = null;
                 continue
             }
-            if(a === '"') {
-                q = '"';
+            if(a == '"' || a == "'") {
+                q = a;
                 continue;
             }
-            if(a === '\'') {
-                q = '\'';
+            if(bind) {
+                bind = a != '}';
+                continue;
+            }
+            if(a == '{') {
+                bind = true;
                 continue;
             }
             if(a === '<') {
