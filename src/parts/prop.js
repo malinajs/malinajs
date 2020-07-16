@@ -15,6 +15,17 @@ export function bindProp(prop, makeEl, node) {
             prop.value = prop.name;
         }
     }
+    if(!name && prop.name[0] == ':') {
+        let rx = prop.name.match(/^:\{.*\}$/);
+        if(rx) {
+            assert(prop.value == null, 'wrong binding: ' + prop.content);
+            name = 'use';
+            prop.value = prop.name.substring(1);
+        } else {
+            name = 'use';
+            arg = prop.name.substring(1);
+        }
+    }
     if(!name) {
         let r = prop.name.match(/^(\w+)\:(.*)$/)
         if(r) {
