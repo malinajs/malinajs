@@ -288,11 +288,7 @@ export function parseElement(source) {
             prop.value = source.substring(eq, index + shift).match(/^['"]?([\s\S]*?)['"]?$/)[1];
             eq = null;
         } else {
-            let rx = prop.content.match(/^\{(.*)\}$/);
-            if(rx) {
-                prop.name = rx[1];
-                prop.value = prop.content;
-            } else prop.name = prop.content
+            prop.name = prop.content
         };
         result.push(prop);
     };

@@ -170,10 +170,10 @@ function buildBlock(data) {
                 let hasClass = false;
                 let el = ['<' + n.name];
                 n.attributes.forEach(p => {
-                    if(p.name == 'class') hasClass = true;
                     let b = this.bindProp(p, getElementName, n);
                     if(b.prop) el.push(b.prop);
                     if(b.bind) binds.push(b.bind);
+                    if(b.scopedClass) hasClass = true;
                 });
                 if(n.scopedClass && !hasClass) el.push(`class="${this.css.id}"`);
 

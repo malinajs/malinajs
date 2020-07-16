@@ -3,11 +3,19 @@ import { assert } from '../utils.js'
 
 
 export function bindProp(prop, makeEl, node) {
-    let arg, name;
+    let name, arg;
     if(prop.name[0] == '@') {
         arg = prop.name.substring(1);
         name = 'on';
-    } else {
+    }
+    if(!name && prop.value == null) {
+        let rx = prop.name.match(/^\{(.*)\}$/);
+        if(rx) {
+            name = rx[1];
+            prop.value = prop.name;
+        }
+    }
+    if(!name) {
         let r = prop.name.match(/^(\w+)\:(.*)$/)
         if(r) {
             name = r[1];
@@ -21,7 +29,10 @@ export function bindProp(prop, makeEl, node) {
         return exp;
     }
 
-    if(name == 'on') {
+    if(name[0] == '#') {
+        let target = name.substring(1);
+        return {bind: `${target}=${makeEl()};`};
+    } else if(name == 'on') {
         let exp = getExpression();
         let mod = '', opt = arg.split('|');
         let event = opt[0];
@@ -98,14 +109,18 @@ export function bindProp(prop, makeEl, node) {
                     $watchReadOnly($cd, () => (${exp}), (value) => {$element.${name} = value;});
                 }`};
             } else {
-                let suffix = (name == 'class' && this.css)?`+' ${this.css.id}'`:'';
-                return {bind: `{
-                    let $element=${makeEl()};
-                    $watchReadOnly($cd, () => (${exp})${suffix}, (value) => {
-                        if(value) $element.setAttribute('${name}', value);
-                        else $element.removeAttribute('${name}');
-                    });
-                }`};
+                let scopedClass = name == 'class' && this.css;  // scope any dynamic class
+                let suffix = scopedClass ? `+' ${this.css.id}'` : '';
+                return {
+                    bind: `{
+                        let $element=${makeEl()};
+                        $watchReadOnly($cd, () => (${exp})${suffix}, (value) => {
+                            if(value) $element.setAttribute('${name}', value);
+                            else $element.removeAttribute('${name}');
+                        });
+                    }`,
+                    scopedClass: scopedClass
+                };
             }
         }
         if(name == 'class' && node.scopedClass) {
@@ -114,7 +129,8 @@ export function bindProp(prop, makeEl, node) {
             classList += this.css.id;
 
             return {
-                prop: `class="${classList}"`
+                prop: `class="${classList}"`,
+                scopedClass: true
             }
         }
         return {
