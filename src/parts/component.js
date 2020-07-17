@@ -1,6 +1,6 @@
 
 import { parseElement } from '../parser.js'
-import { assert } from '../utils'
+import { assert, detectExpressionType } from '../utils'
 
 
 export function makeComponent(node, makeEl) {
@@ -8,16 +8,26 @@ export function makeComponent(node, makeEl) {
     let binds = [];
     let props = [];
     propList.forEach(prop => {
-        if(prop.name[0] == '#') {
-            assert(!prop.value, node.openTag);
-            let name = prop.name.substring(1);
+        let name = prop.name;
+        let value = prop.value;
+        if(name[0] == '#') {
+            assert(!value, 'Wrong ref');
+            let name = name.substring(1);
             binds.push(`${name} = $component;`);
             return;
         }
-        assert(prop.value, 'Empty property');
-        if(prop.name.startsWith('bind:')) {
-            let inner = prop.name.substring(5);
-            let rx = prop.value.match(/^\{(.*)\}$/);
+        if(name[0] == '{') {
+            assert(!value, 'Wrong prop');
+            let rx = name.match(/^\{(.*)\}$/);
+            assert(rx, 'Wrong prop');
+            value = name;
+            name = rx[1];
+            assert(detectExpressionType(name) == 'identifier', 'Wrong prop');
+        }
+        assert(value, 'Empty property');
+        if(name.startsWith('bind:')) {
+            let inner = name.substring(5);
+            let rx = value.match(/^\{(.*)\}$/);
             assert(rx, 'Wrong property: ' + prop.content)
             let outer = rx[1];
             props.push(`props.${inner} = ${outer};`);
@@ -30,22 +40,22 @@ export function makeComponent(node, makeEl) {
                     });
                 } else console.error("Component ${node.name} doesn't have prop ${inner}");
         `);
-        } else if(prop.value.indexOf('{') >= 0) {
-            let exp = this.parseText(prop.value);
+        } else if(value.indexOf('{') >= 0) {
+            let exp = this.parseText(value);
             let fname = 'pf' + (this.uniqIndex++);
             let valueName = 'v' + (this.uniqIndex++);
             props.push(`
                 let ${fname} = () => (${exp});
                 let ${valueName} = ${fname}()
-                props.${prop.name} = ${valueName};
+                props.${name} = ${valueName};
             `);
             binds.push(`
-                if('${prop.name}' in $component) {
-                    $watch($cd, ${fname}, (value) => {$component.${prop.name} = value}, {ro: true, value: ${valueName}});
-                } else console.error("Component ${node.name} doesn't have prop ${prop.name}");
+                if('${name}' in $component) {
+                    $watch($cd, ${fname}, (value) => {$component.${name} = value}, {ro: true, value: ${valueName}});
+                } else console.error("Component ${node.name} doesn't have prop ${name}");
             `);
         } else {
-            props.push(`props.${prop.name} = \`${this.Q(prop.value)}\``);
+            props.push(`props.${name} = \`${this.Q(value)}\``);
         }
     });
 
