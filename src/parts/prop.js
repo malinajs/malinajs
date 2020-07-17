@@ -8,15 +8,12 @@ export function bindProp(prop, makeEl, node) {
         arg = prop.name.substring(1);
         name = 'on';
     }
-    if(!name && prop.value == null) {
-        let rx = prop.name.match(/^\{(.*)\}$/);
-        if(rx) {
-            name = rx[1];
-            prop.value = prop.name;
-        }
-    }
     if(!name && prop.name[0] == ':') {
-        let rx = prop.name.match(/^:\{.*\}$/);
+        name = 'bind';
+        arg = prop.name.substring(1);
+    }
+    if(!name && prop.name[0] == '*') {
+        let rx = prop.name.match(/^\*\{.*\}$/);
         if(rx) {
             assert(prop.value == null, 'wrong binding: ' + prop.content);
             name = 'use';
@@ -24,6 +21,13 @@ export function bindProp(prop, makeEl, node) {
         } else {
             name = 'use';
             arg = prop.name.substring(1);
+        }
+    }
+    if(!name && prop.value == null) {
+        let rx = prop.name.match(/^\{(.*)\}$/);
+        if(rx) {
+            name = rx[1];
+            prop.value = prop.name;
         }
     }
     if(!name) {
@@ -105,9 +109,17 @@ export function bindProp(prop, makeEl, node) {
             };
         }
     } else if(name == 'bind') {
-        let exp = getExpression();
-        let attr = arg;
+        let exp;
+        arg = arg.split(/[\:\|]/);
+        let attr = arg.shift();
         assert(attr, prop.content);
+
+        if(prop.value) exp = getExpression();
+        else {
+            if(arg.length) exp = arg.pop();
+            else exp = attr;
+        }
+        assert(arg.length == 0);
         if(attr === 'value') {
             return {bind: `{
                     let $element=${makeEl()};
