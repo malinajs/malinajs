@@ -85,7 +85,6 @@ export function buildRuntime(data, script, css, config) {
                 Object.defineProperty($component, '${prop}', {
                     get: function() { return ${prop}; },
                     set: function(${valueName}) {
-                        if(${prop} === ${valueName}) return;
                         ${prop} = ${valueName};
                         $$apply();
                     }

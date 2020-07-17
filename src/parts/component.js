@@ -33,11 +33,14 @@ export function makeComponent(node, makeEl) {
             props.push(`props.${inner} = ${outer};`);
             binds.push(`
                 if('${inner}' in $component) {
-                    $watch($cd, () => (${outer}), (value) => {$component.${inner} = value}, {ro: true, value: ${outer}});
-                    $watchReadOnly($component.$cd, () => ($component.${inner}), (value) => {
-                        if(${outer} === value) return;
+                    let $$_w0 = $watch($cd, () => (${outer}), (value) => {
+                        $$_w1.value = $$_w0.value;
+                        $component.${inner} = value;
+                    }, {ro: true, cmp: $$compareDeep});
+                    let $$_w1 = $watch($component.$cd, () => ($component.${inner}), (value) => {
+                        $$_w0.value = $$_w1.value;
                         ${outer} = value; $$apply();
-                    });
+                    }, {ro: true, cmp: $$compareDeep});
                 } else console.error("Component ${node.name} doesn't have prop ${inner}");
         `);
         } else if(value.indexOf('{') >= 0) {
@@ -51,7 +54,7 @@ export function makeComponent(node, makeEl) {
             `);
             binds.push(`
                 if('${name}' in $component) {
-                    $watch($cd, ${fname}, (value) => {$component.${name} = value}, {ro: true, value: ${valueName}});
+                    $watch($cd, ${fname}, (value) => {$component.${name} = value}, {ro: true, cmp: $$compareDeep});
                 } else console.error("Component ${node.name} doesn't have prop ${name}");
             `);
         } else {

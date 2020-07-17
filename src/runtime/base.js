@@ -172,7 +172,7 @@ function cloneDeep(d, lvl) {
 export function $$compareDeep(w, value) {
     if(!compareDeep(w.value, value, 10)) return 0;
     w.value = cloneDeep(value, 10);
-    w.cb(w.value);
+    w.cb(value);
     return w.ro?0:1;
 };
 
