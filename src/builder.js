@@ -61,13 +61,12 @@ export function buildRuntime(data, script, css, config) {
     runtime.push(bb.source);
     runtime.push(`
         const rootTemplate = $$htmlToFragment(\`${Q(rootTemplate)}\`);
+        ${bb.name}($cd, rootTemplate);
         if($option.afterElement) {
-            ${bb.name}($cd, rootTemplate);
             $element.parentNode.insertBefore(rootTemplate, $element.nextSibling);
         } else {
             $element.innerHTML = '';
             $element.appendChild(rootTemplate);
-            ${bb.name}($cd, $element);
         }
     `);
     if(script.onMount) runtime.push(`
@@ -114,27 +113,20 @@ function buildBlock(data) {
     let tpl = [];
     let lvl = [];
     let binds = [];
-    let targets = [];
-    let targetMap = {};
+    let DN = {};
 
     const go = (level, data) => {
         let index = 0;
         const setLvl = () => {lvl[level] = index++;}
 
         const getElementName = () => {
-            let l = lvl;
-            let name = '$parentElement';
-            l.forEach(n => {
-                name += `[$$childNodes][${n}]`;
+            let d = DN;
+            lvl.forEach(n => {
+                if(d[n] == null) d[n] = {};
+                d = d[n];
             });
-
-            let tname = targetMap[name];
-            if(!tname) {
-                tname = `el${this.uniqIndex++}`;
-                targets.push(`let ${tname} = ${name};`);
-                targetMap[name] = tname;
-            }
-            return tname;
+            if(!d.name) d.name = `el${this.uniqIndex++}`;
+            return d.name;
         };
 
         let n, body = data.body.filter(n => n.type != 'script' && n.type != 'style');
@@ -252,11 +244,26 @@ function buildBlock(data) {
     go(0, data);
 
     let source = [];
-
     let buildName = '$$build' + (this.uniqIndex++);
     tpl = this.Q(tpl.join(''));
     source.push(`function ${buildName}($cd, $parentElement) {\n`);
-    source.push(targets.join('\n'));
+
+    const buildNodes = (d, lvl) => {
+        let keys = Object.keys(d).filter(k => k != 'name');
+        if(keys.length > 1 && !d.name) d.name = 'el' + (this.uniqIndex++);
+
+        if(d.name) {
+            let line = lvl.join('');
+            source.push(`const ${d.name} = ${line};\n`);
+            lvl = [d.name];
+        }
+
+        keys.forEach(k => {
+            buildNodes(d[k], lvl.concat([`[$$childNodes][${k}]`]))
+        });
+    }
+    buildNodes(DN, ['$parentElement']);
+
     source.push(binds.join('\n'));
     source.push(`};`);
 
