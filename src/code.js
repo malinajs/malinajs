@@ -159,9 +159,13 @@ export function transformJS(code, option={}) {
     let imports = [];
     let resultBody = [];
     let rootVariables = {};
+    let rootFunctions = {};
     ast.body.forEach(n => {
-        if(n.type !== 'VariableDeclaration') return;
-        n.declarations.forEach(i => rootVariables[i.id.name] = true);
+        if(n.type == 'FunctionDeclaration') {
+            rootFunctions[n.id.name] = true;
+        } else if(n.type == 'VariableDeclaration') {
+            n.declarations.forEach(i => rootVariables[i.id.name] = true);
+        }
     });
 
     ast.body.forEach(n => {
@@ -212,48 +216,8 @@ export function transformJS(code, option={}) {
         }
     });
 
-    resultBody.unshift({
-        type: 'IfStatement',
-        test: {
-            type: 'UnaryExpression',
-            operator: '!',
-            prefix: true,
-            argument: {
-                type: 'MemberExpression',
-                object: {
-                    type: 'Identifier',
-                    name: '$option'
-                },
-                property: {
-                    type: 'Identifier',
-                    name: 'props'
-                }
-            }
-        },
-        consequent: {
-            type: 'ExpressionStatement',
-            expression: {
-                type: 'AssignmentExpression',
-                operator: '=',
-                left: {
-                    type: 'MemberExpression',
-                    object: {
-                        type: 'Identifier',
-                        name: '$option'
-                    },
-                    property: {
-                        type: 'Identifier',
-                        name: 'props'
-                    }
-                },
-                right: {
-                    type: 'ObjectExpression',
-                    properties: []
-                }
-            }
-        }
-    });
-    resultBody.unshift({
+    let header = [];
+    header.push({
         type: 'IfStatement',
         test: {
             type: 'BinaryExpression',
@@ -271,6 +235,12 @@ export function transformJS(code, option={}) {
             }
         }
     });
+    if(!rootFunctions.$emit) header.push(makeEmitter());
+    if(result.props.length) header.push(ensureOptionProps());
+    while(header.length) {
+        resultBody.unshift(header.pop());
+    }
+
     let widgetFunc = {
         body: {
             type: 'BlockStatement',
@@ -362,3 +332,63 @@ function initProp(name) {
         alternate: null
     };
 }
+
+function ensureOptionProps() {
+    return {
+        type: 'IfStatement',
+        test: {
+            type: 'UnaryExpression',
+            operator: '!',
+            prefix: true,
+            argument: {
+                type: 'MemberExpression',
+                object: {
+                    type: 'Identifier',
+                    name: '$option'
+                },
+                property: {
+                    type: 'Identifier',
+                    name: 'props'
+                }
+            }
+        },
+        consequent: {
+            type: 'ExpressionStatement',
+            expression: {
+                type: 'AssignmentExpression',
+                operator: '=',
+                left: {
+                    type: 'MemberExpression',
+                    object: {
+                        type: 'Identifier',
+                        name: '$option'
+                    },
+                    property: {
+                        type: 'Identifier',
+                        name: 'props'
+                    }
+                },
+                right: {
+                    type: 'ObjectExpression',
+                    properties: []
+                }
+            }
+        }
+    };
+};
+
+function makeEmitter() {
+    return {
+        type: 'VariableDeclaration',
+        declarations: [{
+            type: 'VariableDeclarator',
+            id: {type: 'Identifier', name: '$emit'},
+            init: {
+                type: 'CallExpression',
+                callee: {type: 'Identifier', name: '$makeEmitter'},
+                arguments: [{type: 'Identifier', name: '$option'}]
+            }
+        }],
+        kind: 'const'
+    };
+};

@@ -216,3 +216,13 @@ export function $digest($cd, onFinishLoop) {
     });
     if(loop < 0) console.error('Infinity changes: ', w);
 };
+
+export function $makeEmitter(option) {
+    return (name, detail) => {
+        let fn = option.events && option.events[name];
+        if(!fn) return;
+        let e = document.createEvent('CustomEvent');
+        e.initCustomEvent(name, false, false, detail);
+        fn(e);
+    };
+};

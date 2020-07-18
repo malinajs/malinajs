@@ -6,7 +6,15 @@ import { assert, detectExpressionType } from '../utils'
 export function makeComponent(node, makeEl) {
     let propList = parseElement(node.openTag);
     let binds = [];
-    let props = [];
+    let head = [];
+    
+    function unwrapExp(e) {
+        assert(e, 'Empty expression');
+        let rx = e.match(/^\{(.*)\}$/);
+        assert(rx, 'Wrong expression: ' + e);
+        return rx[1];
+    };
+    
     propList.forEach(prop => {
         let name = prop.name;
         let value = prop.value;
@@ -15,14 +23,45 @@ export function makeComponent(node, makeEl) {
             let name = name.substring(1);
             binds.push(`${name} = $component;`);
             return;
-        }
-        if(name[0] == '{') {
-            assert(!value, 'Wrong prop');
-            let rx = name.match(/^\{(.*)\}$/);
-            assert(rx, 'Wrong prop');
+        } else if(name[0] == '{') {
             value = name;
-            name = rx[1];
+            name = unwrapExp(name);
             assert(detectExpressionType(name) == 'identifier', 'Wrong prop');
+        } else if(name[0] == '@' || name.startsWith('on:')) {
+            if(name[0] == '@') name = name.substring(1);
+            else name = name.substring(3);
+            let arg = name.split(/[\|:]/);
+            let exp, handler, isFunc, event = arg.shift();
+            assert(event);
+
+            if(value) exp = unwrapExp(value);
+            else {
+                if(!arg.length) {
+                    // forwarding
+                    head.push(`events.${event} = $option.events && $option.events.${event};`);
+                    return;
+                }
+                handler = arg.pop();
+            }
+            assert(arg.length == 0);
+            assert(!handler ^ !exp);
+
+            if(exp) {
+                let type = detectExpressionType(exp);
+                if(type == 'identifier') {
+                    handler = exp;
+                    exp = null;
+                } else isFunc = type == 'function';
+            }
+
+            if(isFunc) {
+                head.push(`events.${event} = ${exp};`);
+            } else if(handler) {
+                head.push(`events.${event} = ${handler};`);
+            } else {
+                head.push(`events.${event} = ($event) => {${this.Q(exp)}};`);
+            }
+            return;
         }
         assert(value, 'Empty property');
         if(name.startsWith('bind:')) {
@@ -30,7 +69,7 @@ export function makeComponent(node, makeEl) {
             let rx = value.match(/^\{(.*)\}$/);
             assert(rx, 'Wrong property: ' + prop.content)
             let outer = rx[1];
-            props.push(`props.${inner} = ${outer};`);
+            head.push(`props.${inner} = ${outer};`);
             binds.push(`
                 if('${inner}' in $component) {
                     let $$_w0 = $watch($cd, () => (${outer}), (value) => {
@@ -47,7 +86,7 @@ export function makeComponent(node, makeEl) {
             let exp = this.parseText(value);
             let fname = 'pf' + (this.uniqIndex++);
             let valueName = 'v' + (this.uniqIndex++);
-            props.push(`
+            head.push(`
                 let ${fname} = () => (${exp});
                 let ${valueName} = ${fname}()
                 props.${name} = ${valueName};
@@ -58,7 +97,7 @@ export function makeComponent(node, makeEl) {
                 } else console.error("Component ${node.name} doesn't have prop ${name}");
             `);
         } else {
-            props.push(`props.${name} = \`${this.Q(value)}\``);
+            head.push(`props.${name} = \`${this.Q(value)}\``);
         }
     });
 
@@ -66,8 +105,9 @@ export function makeComponent(node, makeEl) {
         bind:`
         {
             let props = {};
-            ${props.join('\n')};
-            let $component = ${node.name}(${makeEl()}, {afterElement: true, noMount: true, props});
+            let events = {};
+            ${head.join('\n')};
+            let $component = ${node.name}(${makeEl()}, {afterElement: true, noMount: true, props, events});
             if($component) {
                 if($component.destroy) $cd.d($component.destroy);
                 ${binds.join('\n')};
