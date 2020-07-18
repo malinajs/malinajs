@@ -54,6 +54,15 @@ export function bindProp(prop, makeEl, node) {
         if(prop.value) {
             exp = getExpression();
         } else {
+            if(!opts.length) {
+                // forwarding
+                return {bind: `
+                    $cd.ev(${makeEl()}, "${event}", ($event) => {
+                        const fn = $option.events && $option.events.${event};
+                        if(fn) fn($event);
+                    });\n`
+                };
+            }
             handler = opts.pop();
         };
         assert(event, prop.content);
