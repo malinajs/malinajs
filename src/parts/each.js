@@ -35,8 +35,7 @@ export function makeEachBlock(data, topElementName) {
                 $ctx.reindex = function(i) { $index = i; };
             };
 
-            let parentNode = top.parentNode;
-            let itemTemplate = $$htmlToFragment(\`${this.Q(itemData.tpl)}\`);
+            let itemTemplate = $$htmlToFragment(\`${this.Q(itemData.tpl)}\`, true);
 
             let mapping = new Map();
             $watch($cd, () => (${arrayName}), (array) => {
@@ -58,6 +57,7 @@ export function makeEachBlock(data, topElementName) {
                     arrayAsSet.clear();
                 }
 
+                let parentNode = top.parentNode;
                 let i, item, next_ctx, el, ctx;
                 for(i=0;i<array.length;i++) {
                     item = array[i];
