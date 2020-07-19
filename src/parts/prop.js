@@ -1,5 +1,5 @@
 
-import { assert, detectExpressionType } from '../utils.js'
+import { assert, detectExpressionType, isSimpleName } from '../utils.js'
 
 
 export function bindProp(prop, makeEl, node) {
@@ -46,6 +46,8 @@ export function bindProp(prop, makeEl, node) {
 
     if(name[0] == '#') {
         let target = name.substring(1);
+        assert(isSimpleName(target), target);
+        this.checkRootName(target);
         return {bind: `${target}=${makeEl()};`};
     } else if(name == 'on') {
         let mod = '', opts = arg.split(/[\|:]/);
@@ -103,6 +105,7 @@ export function bindProp(prop, makeEl, node) {
                 }`
             };
         } else if(handler) {
+            this.checkRootName(handler);
             return {bind: `
                 {
                     let $element=${makeEl()};
@@ -129,6 +132,7 @@ export function bindProp(prop, makeEl, node) {
             else exp = attr;
         }
         assert(arg.length == 0);
+        assert(detectExpressionType(exp) == 'identifier', 'Wrong bind name: ' + prop.content);
         if(attr === 'value') {
             return {bind: `{
                     let $element=${makeEl()};
@@ -158,9 +162,11 @@ export function bindProp(prop, makeEl, node) {
             }`};
     } else if(name == 'use') {
         if(arg) {
-            let args = prop.value?getExpression():'';
+            assert(isSimpleName(arg), 'Wrong name: ' + arg);
+            this.checkRootName(arg);
+            let args = prop.value ? getExpression() : '';
             let code = `$cd.once(() => {
-                let useObject = ${arg}(${makeEl()}${args?', '+args:''});\n if(useObject) {`;
+                let useObject = ${arg}(${makeEl()}${args ? ', ' + args : ''});\n if(useObject) {`;
             if(args) code += `
                 if(useObject.update) {
                     let w = $watch($cd, () => [${args}], (args) => {useObject.update.apply(useObject, args);}, {cmp: $$compareArray});

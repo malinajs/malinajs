@@ -1,6 +1,6 @@
 
 import { parseElement } from '../parser.js'
-import { assert, detectExpressionType } from '../utils'
+import { assert, detectExpressionType, isSimpleName } from '../utils'
 
 
 export function makeComponent(node, makeEl) {
@@ -21,6 +21,8 @@ export function makeComponent(node, makeEl) {
         if(name[0] == '#') {
             assert(!value, 'Wrong ref');
             let name = name.substring(1);
+            assert(isSimpleName(name), name);
+            this.checkRootName(name);
             binds.push(`${name} = $component;`);
             return;
         } else if(name[0] == '{') {
@@ -57,6 +59,7 @@ export function makeComponent(node, makeEl) {
             if(isFunc) {
                 head.push(`events.${event} = ${exp};`);
             } else if(handler) {
+                this.checkRootName(handler);
                 head.push(`events.${event} = ${handler};`);
             } else {
                 head.push(`events.${event} = ($event) => {${this.Q(exp)}};`);
@@ -69,6 +72,8 @@ export function makeComponent(node, makeEl) {
             else inner = name.substring(5);
             if(value) outer = unwrapExp(value);
             else outer = inner;
+            assert(isSimpleName(inner), `Wrong property: '${inner}'`);
+            assert(detectExpressionType(outer) == 'identifier', 'Wrong bind name: ' + outer);
             head.push(`props.${inner} = ${outer};`);
             binds.push(`
                 if('${inner}' in $component) {
@@ -85,6 +90,7 @@ export function makeComponent(node, makeEl) {
             return;
         }
         assert(value, 'Empty property');
+        assert(isSimpleName(name), `Wrong property: '${name}'`);
         if(value.indexOf('{') >= 0) {
             let exp = this.parseText(value);
             let fname = 'pf' + (this.uniqIndex++);

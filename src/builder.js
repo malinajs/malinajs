@@ -37,7 +37,7 @@ export function buildRuntime(data, script, css, config) {
             };
     `];
 
-    const Q = config.inlineTemplate?utils.Q2:utils.Q;
+    const Q = config.inlineTemplate ? utils.Q2 : utils.Q;
     const ctx = {
         uniqIndex: 0,
         Q,
@@ -50,7 +50,8 @@ export function buildRuntime(data, script, css, config) {
         makeifBlock,
         makeComponent,
         makeHtmlBlock,
-        parseText
+        parseText,
+        checkRootName: utils.checkRootName
     };
 
     if(css) css.process(data);

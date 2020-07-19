@@ -158,8 +158,8 @@ export function transformJS(code, option={}) {
 
     let imports = [];
     let resultBody = [];
-    let rootVariables = {};
-    let rootFunctions = {};
+    let rootVariables = result.rootVariables = {};
+    let rootFunctions = result.rootFunctions = {};
     ast.body.forEach(n => {
         if(n.type == 'FunctionDeclaration') {
             rootFunctions[n.id.name] = true;

@@ -14,7 +14,13 @@ export function Q2(s) {
     return s.replace(/`/g, '\\`').replace(/\n/g, '\\n');
 };
 
+export function isSimpleName(name) {
+    return !!name.match(/^([\w\$_][\w\d\$_]*)$/);
+}
+
 export function detectExpressionType(name) {
+    if(isSimpleName(name)) return 'identifier';
+
     let ast = acorn.parse(name);
 
     function checkIdentificator(body) {
@@ -46,4 +52,14 @@ export function detectExpressionType(name) {
     if(checkFunction(ast.body)) return 'function';
 
     return;
+};
+
+
+export function checkRootName(name) {
+    let rx = name.match(/^([\w\$_][\w\d\$_]*)/);
+    if(!rx) return this.config.warning({message: 'Error name: ' + name});
+    let root = rx[1];
+
+    if(this.script.rootVariables[root] || this.script.rootFunctions[root]) return true;
+    this.config.warning({message:'No name: ' + name});
 };
