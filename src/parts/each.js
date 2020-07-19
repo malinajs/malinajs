@@ -1,5 +1,5 @@
 
-import { assert } from '../utils.js'
+import { assert, isSimpleName } from '../utils.js'
 
 
 export function makeEachBlock(data, topElementName) {
@@ -20,19 +20,27 @@ export function makeEachBlock(data, topElementName) {
 
     let itemData = this.buildBlock({body: nodeItems});
 
-    let rx = data.value.match(/^#each\s+(\S+)\s+as\s+(\w+)\s*$/);
-    assert(rx, 'Wrong #each expression');
+    // #each items as item, index (key)
+    let rx = data.value.match(/^#each\s+(\S+)\s+as\s+(.+)$/);
+    assert(rx, `Wrong #each expression '${data.value}'`);
     let arrayName = rx[1];
-    let itemName = rx[2];
+
+    rx = rx[2].split(/\s*\,\s*/);
+    assert(rx.length <= 2, `Wrong #each expression '${data.value}'`);
+    let itemName = rx[0];
+    let indexName = rx[1] || '$index';
+    let indexLocName = indexName == 'i' ? '_i' : 'i';
+    assert(isSimpleName(itemName), `Wrong name '${itemName}'`);
+    assert(isSimpleName(indexName), `Wrong name '${indexName}'`);
 
     let eachBlockName = 'eachBlock' + (this.uniqIndex++);
     source.push(`
         function ${eachBlockName} ($cd, top) {
 
-            function bind($ctx, $template, ${itemName}, $index) {
+            function bind($ctx, $template, ${itemName}, ${indexName}) {
                 ${itemData.source};
                 ${itemData.name}($ctx.cd, $template);
-                $ctx.reindex = function(i) { $index = i; };
+                $ctx.reindex = function(${indexLocName}) { ${indexName} = ${indexLocName}; };
             };
 
             let itemTemplate = $$htmlToFragment(\`${this.Q(itemData.tpl)}\`, true);

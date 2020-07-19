@@ -3,7 +3,7 @@ import acorn from 'acorn';
 
 
 export function assert(x, info) {
-    if(!x) throw info;
+    if(!x) throw info || 'AssertError';
 }
 
 export function Q(s) {
