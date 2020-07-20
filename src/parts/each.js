@@ -33,7 +33,7 @@ export function makeEachBlock(data, topElementName) {
         right = rx[1];
         keyName = rx[2];
     }
-    rx = right.split(/\s*\,\s*/);
+    rx = right.trim().split(/\s*\,\s*/);
     assert(rx.length <= 2, `Wrong #each expression '${data.value}'`);
     let itemName = rx[0];
     let indexName = rx[1] || '$index';
