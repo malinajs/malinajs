@@ -65,8 +65,23 @@ export function makeEachBlock(data, topElementName) {
             let itemTemplate = $$htmlToFragment(\`${this.Q(itemData.tpl)}\`, true);
 
             let mapping = new Map();
+            let lineArray = [];
             $watch($cd, () => (${arrayName}), (array) => {
-                if(!array || !Array.isArray(array)) array = [];
+                if(!array) array = [];
+                if(typeof(array) == 'object') {
+                    if(!Array.isArray(array)) array = [];
+                } else {
+                    let count;
+                    if(typeof(array) == 'number') count = array;
+                    else if(typeof(array) == 'string' && /^\\d+$/.test(array)) count = +array;
+                    if(count) {
+                        lineArray.length = count;
+                        count--;
+                        while(count >= 0 && !lineArray[count]) lineArray[count] = count--;
+                        array = lineArray;
+                    } else array = [];
+                }
+
                 let prevNode = top;
                 let newMapping = new Map();
 
