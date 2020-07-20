@@ -77,7 +77,7 @@ export function makeEachBlock(data, topElementName) {
                     if(count) {
                         lineArray.length = count;
                         count--;
-                        while(count >= 0 && !lineArray[count]) lineArray[count] = count--;
+                        while(count >= 0 && !lineArray[count]) lineArray[count] = count-- + 1;
                         array = lineArray;
                     } else array = [];
                 }
