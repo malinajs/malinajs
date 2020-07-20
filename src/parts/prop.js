@@ -134,11 +134,12 @@ export function bindProp(prop, makeEl, node) {
         assert(['value', 'checked', 'valueAsNumber', 'valueAsDate', 'selectedIndex'].includes(attr), 'Not supported: ' + prop.content);
         assert(arg.length == 0);
         assert(detectExpressionType(exp) == 'identifier', 'Wrong bind name: ' + prop.content);
+        let watchExp = attr == 'checked' ? '!!' + exp : exp;
 
         return {bind: `{
             let $element=${makeEl()};
             $cd.ev($element, 'input', () => { ${exp}=$element.${attr}; $$apply(); });
-            $watchReadOnly($cd, () => (${exp}), (value) => { if(value != $element.${attr}) $element.${attr} = value; });
+            $watchReadOnly($cd, () => (${watchExp}), (value) => { if(value != $element.${attr}) $element.${attr} = value; });
         }`};
     } else if(name == 'class' && arg) {
         let className = arg;
