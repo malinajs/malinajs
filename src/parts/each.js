@@ -68,19 +68,12 @@ export function makeEachBlock(data, topElementName) {
             let lineArray = [];
             $watch($cd, () => (${arrayName}), (array) => {
                 if(!array) array = [];
-                if(typeof(array) == 'object') {
-                    if(!Array.isArray(array)) array = [];
-                } else {
-                    let count;
-                    if(typeof(array) == 'number') count = array;
-                    else if(typeof(array) == 'string' && /^\\d+$/.test(array)) count = +array;
-                    if(count) {
-                        lineArray.length = count;
-                        count--;
-                        while(count >= 0 && !lineArray[count]) lineArray[count] = count-- + 1;
-                        array = lineArray;
-                    } else array = [];
-                }
+                if(typeof(array) == 'number') {
+                    lineArray.length = array;
+                    array--;
+                    while(array >= 0 && !lineArray[array]) lineArray[array] = array-- + 1;
+                    array = lineArray;
+                } else if(!Array.isArray(array)) array = [];
 
                 let prevNode = top;
                 let newMapping = new Map();

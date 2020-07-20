@@ -131,21 +131,15 @@ export function bindProp(prop, makeEl, node) {
             if(arg.length) exp = arg.pop();
             else exp = attr;
         }
+        assert(['value', 'checked', 'valueAsNumber', 'valueAsDate', 'selectedIndex'].includes(attr), 'Not supported: ' + prop.content);
         assert(arg.length == 0);
         assert(detectExpressionType(exp) == 'identifier', 'Wrong bind name: ' + prop.content);
-        if(attr === 'value') {
-            return {bind: `{
-                    let $element=${makeEl()};
-                    $cd.ev($element, 'input', () => { ${exp}=$element.value; $$apply(); });
-                    $watchReadOnly($cd, () => (${exp}), (value) => { if(value != $element.value) $element.value = value; });
-                }`};
-        } else if(attr == 'checked') {
-            return {bind: `{
-                    let $element=${makeEl()};
-                    $cd.ev($element, 'input', () => { ${exp}=$element.checked; $$apply(); });
-                    $watchReadOnly($cd, () => !!(${exp}), (value) => { if(value != $element.checked) $element.checked = value; });
-                }`};
-        } else throw 'Not supported: ' + prop.content;
+
+        return {bind: `{
+            let $element=${makeEl()};
+            $cd.ev($element, 'input', () => { ${exp}=$element.${attr}; $$apply(); });
+            $watchReadOnly($cd, () => (${exp}), (value) => { if(value != $element.${attr}) $element.${attr} = value; });
+        }`};
     } else if(name == 'class' && arg) {
         let className = arg;
         let exp = prop.value ? getExpression() : className;
