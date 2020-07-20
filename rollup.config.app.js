@@ -24,5 +24,6 @@ export default {
             hideLabel: false
         }),
         customResolve()
-    ]
+    ],
+    treeshake: true
 }
