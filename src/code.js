@@ -8,7 +8,9 @@ export function transformJS(code, option={}) {
     let result = {
         watchers: [],
         imports: [],
-        props: []
+        props: [],
+        rootVariables: {},
+        rootFunctions: {}
     };
     var ast;
     if(code) {
@@ -20,6 +22,20 @@ export function transformJS(code, option={}) {
             type: "Program"
         };
     }
+
+    let rootVariables = result.rootVariables;
+    let rootFunctions = result.rootFunctions;
+    ast.body.forEach(n => {
+        if(n.type == 'FunctionDeclaration') {
+            rootFunctions[n.id.name] = true;
+        } else if(n.type == 'VariableDeclaration') {
+            n.declarations.forEach(i => rootVariables[i.id.name] = true);
+        }
+    });
+
+    result.onMount = rootFunctions.onMount;
+    result.onDestroy = rootFunctions.onDestroy;
+    let insertOnDestroy = !(rootFunctions.$onDestroy || rootVariables.$onDestroy);
 
     const funcTypes = {
         FunctionDeclaration: 1,
@@ -49,10 +65,12 @@ export function transformJS(code, option={}) {
 
     function transformNode(node) {
         if(funcTypes[node.type] && node.body.body && node.body.body.length) {
+            if(insertOnDestroy && node._parent.type == 'CallExpression' && node._parent.callee.name == '$onDestroy') return 'stop';
             if(!isInLoop(node)) {
                 node.body.body.unshift(applyBlock());
             }
         } else if(node.type == 'ArrowFunctionExpression') {
+            if(insertOnDestroy && node._parent.type == 'CallExpression' && node._parent.callee.name == '$onDestroy') return 'stop';
             if(node.body.type != 'BlockStatement' && !isInLoop(node)) {
                 node.body = {
                     type: 'BlockStatement',
@@ -84,7 +102,7 @@ export function transformJS(code, option={}) {
         node._parent = parent;
         let forParent = parent;
         if(node.type) {
-            transformNode(node);
+            if(transformNode(node) == 'stop') return;
             forParent = node;
         }
         for(let key in node) {
@@ -158,15 +176,6 @@ export function transformJS(code, option={}) {
 
     let imports = [];
     let resultBody = [];
-    let rootVariables = result.rootVariables = {};
-    let rootFunctions = result.rootFunctions = {};
-    ast.body.forEach(n => {
-        if(n.type == 'FunctionDeclaration') {
-            rootFunctions[n.id.name] = true;
-        } else if(n.type == 'VariableDeclaration') {
-            n.declarations.forEach(i => rootVariables[i.id.name] = true);
-        }
-    });
 
     ast.body.forEach(n => {
         if(n.type == 'ImportDeclaration') {
@@ -192,8 +201,6 @@ export function transformJS(code, option={}) {
             return;
         }
 
-        if(n.type == 'FunctionDeclaration' && n.id.name == 'onMount') result.onMount = true;
-        if(n.type == 'FunctionDeclaration' && n.id.name == 'onDestroy') result.onDestroy = true;
         if(n.type == 'LabeledStatement' && n.label.name == '$') {
             try {
                 makeWatch(n);
@@ -236,6 +243,8 @@ export function transformJS(code, option={}) {
         }
     });
     if(!rootFunctions.$emit) header.push(makeEmitter());
+    header.push(parseExp('let $component = { $cd: new $ChangeDetector() }'));
+    if(insertOnDestroy) header.push(parseExp('function $onDestroy(fn) {$component.$cd.d(fn);}'));
     if(result.props.length) header.push(ensureOptionProps());
     while(header.length) {
         resultBody.unshift(header.pop());
@@ -392,3 +401,10 @@ function makeEmitter() {
         kind: 'const'
     };
 };
+
+
+function parseExp(exp) {
+    let ast = acorn.parse(exp);
+    assert(ast.body.length == 1);
+    return ast.body[0];
+}

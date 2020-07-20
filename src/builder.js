@@ -20,9 +20,7 @@ export function buildRuntime(data, script, css, config) {
             }, 1);
         };
         return (function() {
-            let $cd = new $ChangeDetector();
-
-            let $component = {$cd};
+            let $cd = $component.$cd;
             $component.destroy = () => {
                 $cd.destroy();
             };
