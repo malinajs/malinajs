@@ -91,6 +91,7 @@ export function makeComponent(node, makeEl) {
             else outer = inner;
             assert(isSimpleName(inner), `Wrong property: '${inner}'`);
             assert(detectExpressionType(outer) == 'identifier', 'Wrong bind name: ' + outer);
+            let valueName = 'v' + (this.uniqIndex++);
             head.push(`props.${inner} = ${outer};`);
             binds.push(`
                 if('${inner}' in $component) {
@@ -98,9 +99,9 @@ export function makeComponent(node, makeEl) {
                         $$_w1.value = $$_w0.value;
                         $component.${inner} = value;
                     }, {ro: true, cmp: $$compareDeep});
-                    let $$_w1 = $watch($component.$cd, () => ($component.${inner}), (value) => {
+                    let $$_w1 = $watch($component.$cd, () => ($component.${inner}), (${valueName}) => {
                         $$_w0.value = $$_w1.value;
-                        ${outer} = value; $$apply();
+                        ${outer} = ${valueName}; $$apply();
                     }, {ro: true, cmp: $$compareDeep});
                 } else console.error("Component ${node.name} doesn't have prop ${inner}");
             `);
