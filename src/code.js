@@ -224,28 +224,12 @@ export function transformJS(code, option={}) {
     });
 
     let header = [];
-    header.push({
-        type: 'IfStatement',
-        test: {
-            type: 'BinaryExpression',
-            left: {type: 'Identifier', name: '$option'},
-            operator: '==',
-            right: {type: 'Literal', value: null}
-        },
-        consequent: {
-            type: 'ExpressionStatement',
-            expression: {
-                type: 'AssignmentExpression',
-                operator: '=',
-                left: {type: 'Identifier', name: '$option'},
-                right: {type: 'ObjectExpression', properties: []}
-            }
-        }
-    });
+    header.push(parseExp('if(!$option) $option = {}'));
+    header.push(parseExp('if(!$option.events) $option.events = {}'));
+    if(result.props.length) header.push(parseExp('if(!$option.props) $option.props = {}'));
     if(!rootFunctions.$emit) header.push(makeEmitter());
     header.push(parseExp('let $component = { $cd: new $ChangeDetector() }'));
     if(insertOnDestroy) header.push(parseExp('function $onDestroy(fn) {$component.$cd.d(fn);}'));
-    if(result.props.length) header.push(ensureOptionProps());
     while(header.length) {
         resultBody.unshift(header.pop());
     }
@@ -341,50 +325,6 @@ function initProp(name) {
         alternate: null
     };
 }
-
-function ensureOptionProps() {
-    return {
-        type: 'IfStatement',
-        test: {
-            type: 'UnaryExpression',
-            operator: '!',
-            prefix: true,
-            argument: {
-                type: 'MemberExpression',
-                object: {
-                    type: 'Identifier',
-                    name: '$option'
-                },
-                property: {
-                    type: 'Identifier',
-                    name: 'props'
-                }
-            }
-        },
-        consequent: {
-            type: 'ExpressionStatement',
-            expression: {
-                type: 'AssignmentExpression',
-                operator: '=',
-                left: {
-                    type: 'MemberExpression',
-                    object: {
-                        type: 'Identifier',
-                        name: '$option'
-                    },
-                    property: {
-                        type: 'Identifier',
-                        name: 'props'
-                    }
-                },
-                right: {
-                    type: 'ObjectExpression',
-                    properties: []
-                }
-            }
-        }
-    };
-};
 
 function makeEmitter() {
     return {

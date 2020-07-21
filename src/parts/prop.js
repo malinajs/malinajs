@@ -50,6 +50,16 @@ export function bindProp(prop, makeEl, node) {
         this.checkRootName(target);
         return {bind: `${target}=${makeEl()};`};
     } else if(name == 'on') {
+        if(arg == '@') {
+            assert(!prop.value);
+            return {bind: `
+                {
+                    for(let event in $option.events) {
+                        $cd.ev(${makeEl()}, event, $option.events[event]);
+                    }
+                }
+            `};
+        }
         let mod = '', opts = arg.split(/[\|:]/);
         let event = opts.shift();
         let exp, handler, funcName;
@@ -60,7 +70,7 @@ export function bindProp(prop, makeEl, node) {
                 // forwarding
                 return {bind: `
                     $cd.ev(${makeEl()}, "${event}", ($event) => {
-                        const fn = $option.events && $option.events.${event};
+                        const fn = $option.events.${event};
                         if(fn) fn($event);
                     });\n`
                 };

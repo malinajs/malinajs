@@ -40,7 +40,7 @@ export function makeComponent(node, makeEl) {
             else {
                 if(!arg.length) {
                     // forwarding
-                    head.push(`events.${event} = $option.events && $option.events.${event};`);
+                    head.push(`events.${event} = $option.events.${event};`);
                     return;
                 }
                 handler = arg.pop();

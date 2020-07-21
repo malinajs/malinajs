@@ -219,7 +219,7 @@ export function $digest($cd, onFinishLoop) {
 
 export function $makeEmitter(option) {
     return (name, detail) => {
-        let fn = option.events && option.events[name];
+        let fn = option.events[name];
         if(!fn) return;
         let e = document.createEvent('CustomEvent');
         e.initCustomEvent(name, false, false, detail);
