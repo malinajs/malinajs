@@ -7,6 +7,7 @@ export function makeComponent(node, makeEl) {
     let propList = parseElement(node.openTag);
     let binds = [];
     let head = [];
+    let forwardAllEvents = false;
     
     function unwrapExp(e) {
         assert(e, 'Empty expression');
@@ -32,6 +33,10 @@ export function makeComponent(node, makeEl) {
         } else if(name[0] == '@' || name.startsWith('on:')) {
             if(name[0] == '@') name = name.substring(1);
             else name = name.substring(3);
+            if(name == '@') {
+                forwardAllEvents = true;
+                return;
+            };
             let arg = name.split(/[\|:]/);
             let exp, handler, isFunc, event = arg.shift();
             assert(event);
@@ -110,11 +115,13 @@ export function makeComponent(node, makeEl) {
         }
     });
 
+    if(forwardAllEvents) head.unshift('let events = Object.assign({}, $option.events);');
+    else head.unshift('let events = {};');
+
     return {
         bind:`
         {
             let props = {};
-            let events = {};
             ${head.join('\n')};
             let $component = ${node.name}(${makeEl()}, {afterElement: true, noMount: true, props, events});
             if($component) {
