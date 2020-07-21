@@ -226,3 +226,19 @@ export function $makeEmitter(option) {
         fn(e);
     };
 };
+
+export function $$addEvent(list, event, fn) {
+    let prev = list[event];
+    if(prev) {
+        if(prev._list) prev._list.push(fn);
+        else {
+            function handler(e) {
+                handler._list.forEach(fn => {
+                    fn(e);
+                })
+            }
+            handler._list = [prev, fn];
+            list[event] = handler;
+        }
+    } else list[event] = fn;
+};

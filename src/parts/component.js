@@ -16,6 +16,15 @@ export function makeComponent(node, makeEl) {
         return rx[1];
     };
 
+    let boundEvents = {};
+    propList = propList.filter(prop => {
+        if(prop.name == '@@') {
+            forwardAllEvents = true;
+            return false;
+        }
+        return true;
+    });
+
     propList.forEach(prop => {
         let name = prop.name;
         let value = prop.value;
@@ -33,10 +42,6 @@ export function makeComponent(node, makeEl) {
         } else if(name[0] == '@' || name.startsWith('on:')) {
             if(name[0] == '@') name = name.substring(1);
             else name = name.substring(3);
-            if(name == '@') {
-                forwardAllEvents = true;
-                return;
-            };
             let arg = name.split(/[\|:]/);
             let exp, handler, isFunc, event = arg.shift();
             assert(event);
@@ -45,7 +50,9 @@ export function makeComponent(node, makeEl) {
             else {
                 if(!arg.length) {
                     // forwarding
-                    head.push(`events.${event} = $option.events.${event};`);
+                    if(forwardAllEvents || boundEvents[event]) head.push(`$$addEvent(events, '${event}', $option.events.${event});`);
+                    else head.push(`events.${event} = $option.events.${event};`);
+                    boundEvents[event] = true;
                     return;
                 }
                 handler = arg.pop();
@@ -61,14 +68,19 @@ export function makeComponent(node, makeEl) {
                 } else isFunc = type == 'function';
             }
 
+            let callback;
             if(isFunc) {
-                head.push(`events.${event} = ${exp};`);
+                callback = `${exp}`;
             } else if(handler) {
                 this.checkRootName(handler);
-                head.push(`events.${event} = ${handler};`);
+                callback = `${handler}`;
             } else {
-                head.push(`events.${event} = ($event) => {${this.Q(exp)}};`);
+                callback = `($event) => {${this.Q(exp)}}`;
             }
+
+            if(forwardAllEvents || boundEvents[event]) head.push(`$$addEvent(events, '${event}', ${callback});`);
+            else head.push(`events.${event} = ${callback};`);
+            boundEvents[event] = true;
             return;
         }
         if(name[0] == ':' || name.startsWith('bind:')) {
