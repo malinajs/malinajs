@@ -310,6 +310,7 @@ export function $$makeSpreadObject2($cd, props) {
     let index = 0;
     let list = [];
     let self = {};
+    let defaultUsed = {};
 
     const emit = $$groupCall(() => {
         self.build();
@@ -317,7 +318,7 @@ export function $$makeSpreadObject2($cd, props) {
     });
 
     self.build = () => {
-        let obj, name, used = {};
+        let obj, name, used = Object.assign({}, defaultUsed);
         for(let i=index-1; i>=0; i--) {
             obj = list[i];
             for(name in obj) {
@@ -352,13 +353,16 @@ export function $$makeSpreadObject2($cd, props) {
         d[name] = value;
         list[index++] = d;
     }
+    self.except = function(list) {
+        list.forEach(n => defaultUsed[n] = true);
+    }
     return self;
 };
 
 export function $$makeProp($component, $$props, bound, name, getter, setter) {
     let value = $$props[name];
     if(value !== void 0) setter(value);
-    if(bound[name] || bound.$$spreading) $component.push.push(() => setter($$props[name]));
+    if((bound[name] || bound.$$spreading) && (bound[name] !== 2)) $component.push.push(() => setter($$props[name]));
 
     Object.defineProperty($component, name, {
         get: getter,
