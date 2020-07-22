@@ -174,6 +174,13 @@ function buildBlock(data) {
 
                 let hasClass = false;
                 let el = ['<' + n.name];
+                if(n.attributes.some(a => a.name.startsWith('{...'))) {
+                    n.spreadObject = 'spread' + (this.uniqIndex++);
+                    n.scopedClass = !!this.css;
+                    binds.push(`
+                        let ${n.spreadObject} = $$makeSpreadObject($cd, ${getElementName()}, '${this.css && this.css.id}');
+                    `);
+                }
                 n.attributes.forEach(p => {
                     let b = this.bindProp(p, getElementName, n);
                     if(b.prop) el.push(b.prop);

@@ -27,7 +27,16 @@ export function bindProp(prop, makeEl, node) {
         let rx = prop.name.match(/^\{(.*)\}$/);
         if(rx) {
             name = rx[1];
-            prop.value = prop.name;
+            if(name.startsWith('...')) {
+                // spread operator
+                name = name.substring(3);
+                assert(detectExpressionType(name) == 'identifier');
+                return {bind: `
+                    ${node.spreadObject}.spread(() => ${name});
+                `};
+            } else {
+                prop.value = prop.name;
+            }
         }
     }
     if(!name) {
@@ -187,6 +196,12 @@ export function bindProp(prop, makeEl, node) {
     } else {
         if(prop.value && prop.value.indexOf('{') >= 0) {
             let exp = this.parseText(prop.value);
+
+            if(node.spreadObject) {
+                return {bind: `
+                    ${node.spreadObject}.prop('${name}', () => ${exp});
+                `};
+            }
             const propList = {
                 hidden: true,
                 checked: true,
@@ -210,7 +225,7 @@ export function bindProp(prop, makeEl, node) {
                     bind: `{
                         let $element=${makeEl()};
                         $watchReadOnly($cd, () => (${exp})${suffix}, (value) => {
-                            if(value) $element.setAttribute('${name}', value);
+                            if(value != null) $element.setAttribute('${name}', value);
                             else $element.removeAttribute('${name}');
                         });
                     }`,
@@ -218,6 +233,13 @@ export function bindProp(prop, makeEl, node) {
                 };
             }
         }
+
+        if(node.spreadObject) {
+            return {bind: `
+                ${node.spreadObject}.attr('${name}', '${prop.value}');
+            `};
+        }
+
         if(name == 'class' && node.scopedClass) {
             let classList = prop.value.trim();
             if(classList) classList += ' ';
