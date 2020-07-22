@@ -169,6 +169,10 @@ function cloneDeep(d, lvl) {
     return d;
 };
 
+export const $$cloneDeep = function(d) {
+    return cloneDeep(d, 10);
+};
+
 export function $$deepComparator(depth) {
     return function(w, value) {
         if(!compareDeep(w.value, value, depth)) return 0;
@@ -252,11 +256,9 @@ export function $$makeSpreadObject($cd, el, css) {
     let index = 0;
     let list = [];
 
-    let timeout;
     const props = Object.getOwnPropertyDescriptors(el.__proto__);
 
-    function render() {
-        timeout = false;
+    const render = $$groupCall(function() {
         let obj, name, value, used = {};
         for(let i=index-1; i>=0; i--) {
             obj = list[i];
@@ -278,16 +280,14 @@ export function $$makeSpreadObject($cd, el, css) {
                 }
             }
         }
-    };
+    });
 
     return {
         spread: function(fn) {
             let i = index++;
             $watch($cd, fn, value => {
                 list[i] = value;
-                if(timeout) return;
-                timeout = true;
-                setTimeout(render, 1);
+                render();
             }, {ro: true, cmp: $$deepComparator(1)});
         },
         prop: function(name, fn) {
@@ -295,9 +295,7 @@ export function $$makeSpreadObject($cd, el, css) {
             list[i] = {};
             $watch($cd, fn, value => {
                 list[i][name] = value;
-                if(timeout) return;
-                timeout = true;
-                setTimeout(render, 1);
+                render();
             }, {ro: true});
         },
         attr: function(name, value) {
@@ -306,4 +304,78 @@ export function $$makeSpreadObject($cd, el, css) {
             list[index++] = d;
         }
     }
+};
+
+export function $$makeSpreadObject2($cd, props) {
+    let index = 0;
+    let list = [];
+    let self = {};
+
+    const emit = $$groupCall(() => {
+        self.build();
+        self.emit && self.emit();
+    });
+
+    self.build = () => {
+        let obj, name, used = {};
+        for(let i=index-1; i>=0; i--) {
+            obj = list[i];
+            for(name in obj) {
+                if(used[name]) continue;
+                used[name] = true;
+                props[name] = obj[name];
+            }
+        }
+    }
+
+    self.spread = function(fn) {
+        let i = index++;
+        let value = fn();
+        list[i] = value;
+        $watch($cd, fn, value => {
+            list[i] = value;
+            emit();
+        }, {ro: true, cmp: $$compareDeep, value: $$cloneDeep(value)});
+    }
+    self.prop = function(name, fn) {
+        let value = fn();
+        let i = index++;
+        list[i] = {};
+        list[i][name] = value;
+        $watch($cd, fn, value => {
+            list[i][name] = value;
+            emit();
+        }, {ro: true, cmp: $$compareDeep, value: $$cloneDeep(value)});
+    }
+    self.attr = function(name, value) {
+        let d = {};
+        d[name] = value;
+        list[index++] = d;
+    }
+    return self;
+};
+
+export function $$makeProp($component, $$props, bound, name, getter, setter) {
+    let value = $$props[name];
+    if(value !== void 0) setter(value);
+    if(bound[name] || bound.$$spreading) $component.push.push(() => setter($$props[name]));
+
+    Object.defineProperty($component, name, {
+        get: getter,
+        set: setter
+    });
+}
+
+export function $$groupCall(emit) {
+    let timeout;
+    const fn = function() {
+        if(timeout) return;
+        timeout = true;
+        setTimeout(() => {
+            timeout = false;
+            fn.emit && fn.emit();
+        }, 1);
+    };
+    fn.emit = emit;
+    return fn;
 };

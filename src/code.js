@@ -196,7 +196,7 @@ export function transformJS(code, option={}) {
             });
             resultBody.push(n.declaration);
             forInit.forEach(n => {
-                resultBody.push(initProp(n));
+                resultBody.push(parseExp(`$$makeProp($component, $$props, $option.boundProps || {}, '${n}', () => ${n}, _${n} => {${n} = _${n}; $$apply();})`));
             });
             return;
         }
@@ -226,9 +226,13 @@ export function transformJS(code, option={}) {
     let header = [];
     header.push(parseExp('if(!$option) $option = {}'));
     header.push(parseExp('if(!$option.events) $option.events = {}'));
-    if(result.props.length) header.push(parseExp('if(!$option.props) $option.props = {}'));
+    header.push(parseExp('const $$props = $option.props || {}'));
+    if(result.props.length) {
+        header.push(parseExp('let $component = {$cd: new $ChangeDetector(), push: []}'));
+    } else {
+        header.push(parseExp('let $component = {$cd: new $ChangeDetector()}'));
+    }
     if(!rootFunctions.$emit) header.push(makeEmitter());
-    header.push(parseExp('let $component = { $cd: new $ChangeDetector() }'));
     if(insertOnDestroy) header.push(parseExp('function $onDestroy(fn) {$component.$cd.d(fn);}'));
     while(header.length) {
         resultBody.unshift(header.pop());
@@ -265,65 +269,6 @@ export function transformJS(code, option={}) {
 
     result.code = astring.generate(ast);
     return result;
-}
-
-
-function initProp(name) {
-    return {
-        type: "IfStatement",
-        test: {
-            type: "BinaryExpression",
-            left: {
-                type: "Literal",
-                value: name
-            },
-            operator: "in",
-            right: {
-                type: "MemberExpression",
-                object: {
-                    type: "Identifier",
-                    name: "$option"
-                },
-                property: {
-                    type: "Identifier",
-                    name: "props"
-                },
-                computed: false
-            }
-        },
-        consequent: {
-            type: "ExpressionStatement",
-            expression: {
-                type: "AssignmentExpression",
-                operator: "=",
-                left: {
-                    type: "Identifier",
-                    name: name
-                },
-                right: {
-                    type: "MemberExpression",
-                    object: {
-                        type: "MemberExpression",
-                        object: {
-                            type: "Identifier",
-                            name: "$option"
-                        },
-                        property: {
-                            type: "Identifier",
-                            name: "props"
-                        },
-                        computed: false
-                    },
-                    property: {
-                        type: "Identifier",
-                        name: name
-                    },
-                    computed: false
-                }
-            }
-        },
-        alternate: null
-    };
 }
 
 function makeEmitter() {

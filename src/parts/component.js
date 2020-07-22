@@ -8,6 +8,7 @@ export function makeComponent(node, makeEl) {
     let binds = [];
     let head = [];
     let forwardAllEvents = false;
+    let injectGroupCall = false;
     
     function unwrapExp(e) {
         assert(e, 'Empty expression');
@@ -25,6 +26,14 @@ export function makeComponent(node, makeEl) {
         return true;
     });
 
+    let spreading = !!propList.some(prop => prop.name.startsWith('{...'));
+
+    if(spreading) {
+        head.push('let spreadObject = $$makeSpreadObject2($cd, props);');
+        head.push('boundProps.$$spreading = true;');
+        binds.push('spreadObject.emit = $component.push;');
+    }
+
     propList.forEach(prop => {
         let name = prop.name;
         let value = prop.value;
@@ -38,6 +47,12 @@ export function makeComponent(node, makeEl) {
         } else if(name[0] == '{') {
             value = name;
             name = unwrapExp(name);
+            if(name.startsWith('...')) {
+                name = name.substring(3);
+                assert(detectExpressionType(name) == 'identifier', 'Wrong prop');
+                head.push(`spreadObject.spread(() => ${name})`);
+                return;
+            };
             assert(detectExpressionType(name) == 'identifier', 'Wrong prop');
         } else if(name[0] == '@' || name.startsWith('on:')) {
             if(name[0] == '@') name = name.substring(1);
@@ -113,30 +128,49 @@ export function makeComponent(node, makeEl) {
             let exp = this.parseText(value);
             let fname = 'pf' + (this.uniqIndex++);
             let valueName = 'v' + (this.uniqIndex++);
+            if(spreading) {
+                return head.push(`
+                    spreadObject.prop('${name}', () => ${exp});
+                `);
+            }
+            injectGroupCall = true;
             head.push(`
                 let ${fname} = () => (${exp});
                 let ${valueName} = ${fname}()
                 props.${name} = ${valueName};
-            `);
-            binds.push(`
-                if('${name}' in $component) {
-                    $watch($cd, ${fname}, (value) => {$component.${name} = value}, {ro: true, cmp: $$compareDeep});
-                } else console.error("Component ${node.name} doesn't have prop ${name}");
+                boundProps.${name} = 1;
+
+                $watch($cd, ${fname}, _${name} => {
+                    props.${name} = _${name};
+                    groupCall();
+                }, {ro: true, cmp: $$compareDeep, value: $$cloneDeep(${valueName})});
             `);
         } else {
-            head.push(`props.${name} = \`${this.Q(value)}\``);
+            if(spreading) {
+                head.push(`
+                    spreadObject.attr('${name}', \`${this.Q(value)}\`);
+                `);
+            } else {
+                head.push(`props.${name} = \`${this.Q(value)}\``);
+            }
         }
     });
 
     if(forwardAllEvents) head.unshift('let events = Object.assign({}, $option.events);');
     else head.unshift('let events = {};');
+    if(injectGroupCall) {
+        head.push('let groupCall = $$groupCall();');
+        binds.push('groupCall.emit = $component.push;');
+    }
+    if(spreading) head.push('spreadObject.build();');
 
     return {
         bind:`
         {
             let props = {};
+            let boundProps = {};
             ${head.join('\n')};
-            let $component = ${node.name}(${makeEl()}, {afterElement: true, noMount: true, props, events});
+            let $component = ${node.name}(${makeEl()}, {afterElement: true, noMount: true, props, boundProps, events});
             if($component) {
                 if($component.destroy) $cd.d($component.destroy);
                 ${binds.join('\n')};

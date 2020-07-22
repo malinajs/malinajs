@@ -77,19 +77,16 @@ export function buildRuntime(data, script, css, config) {
         runtime.push('$cd.once(() => {\n' + script.watchers.join('\n') + '\n$$apply();\n});');
     }
     if(script.props.length) {
-        script.props.forEach(prop => {
-            let valueName = prop=='value'?'_value':'value';
-            runtime.push(`
-                Object.defineProperty($component, '${prop}', {
-                    get: function() { return ${prop}; },
-                    set: function(${valueName}) {
-                        ${prop} = ${valueName};
-                        $$apply();
-                    }
-                });
-            `);
-        });
-    };
+        runtime.push(`{
+            let list = $component.push;
+            $component.push = () => {
+                list.forEach(fn => fn());
+                $$apply();
+            }
+        }`);
+    } else {
+        runtime.push('$component.push = $$apply;')
+    }
 
     if(css) runtime.push(`
         if(!document.head.querySelector('style#${css.id}')) {
