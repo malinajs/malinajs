@@ -367,7 +367,6 @@ export function $$makeProp($component, $$props, bound, name, getter, setter) {
     let value = $$props[name];
     if(value !== void 0) setter(value);
     if((bound[name] || bound.$$spreading) && (bound[name] !== 2)) $component.push.push(() => setter($$props[name]));
-    if(!$component.exportedProps) $component.exportedProps = {};
     $component.exportedProps[name] = true;
 
     Object.defineProperty($component, name, {
@@ -397,4 +396,49 @@ export function $$groupCall(emit) {
     };
     fn.emit = emit;
     return fn;
+};
+
+export function $$makeApply($cd) {
+    return function apply() {
+        if(apply._p) return;
+        if(apply.planned) return;
+        apply.planned = true;
+        setTimeout(() => {
+            apply.planned = false;
+            try {
+                apply._p = true;
+                $digest($cd, () => apply._p = false);
+            } finally {
+                apply._p = false;
+            }
+        }, 1);
+    };
+}
+
+export function $$makeComponent($element, $option) {
+    let $component = {
+        $cd: new $ChangeDetector(),
+        exportedProps: {},
+        push: []
+    };
+
+    $component.destroy = () => $component.$cd.destroy();
+    $component.$$render = (rootTemplate) => {
+        if ($option.afterElement) {
+            $element.parentNode.insertBefore(rootTemplate, $element.nextSibling);
+        } else {
+            $element.innerHTML = '';
+            $element.appendChild(rootTemplate);
+        }
+    }
+
+    return $component;
+};
+
+export function $$componentCompleteProps($component, $$apply) {
+    let list = $component.push;
+    $component.push = () => {
+        list.forEach(fn => fn());
+        $$apply();
+    };
 };

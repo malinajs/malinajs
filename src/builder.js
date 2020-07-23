@@ -10,29 +10,8 @@ import { makeHtmlBlock } from './parts/html.js'
 
 export function buildRuntime(data, script, css, config) {
     let runtime = [`
-        function $$apply() {
-            if($$apply._p) return;
-            if($$apply.planned) return;
-            $$apply.planned = true;
-            setTimeout(() => {
-                $$apply.planned = false;
-                $$apply.go();
-            }, 1);
-        };
         return (function() {
             let $cd = $component.$cd;
-            $component.destroy = () => {
-                $cd.destroy();
-            };
-
-            $$apply.go = () => {
-                $$apply._p = true;
-                try {
-                    $digest($cd, () => $$apply._p = false);
-                } finally {
-                    $$apply._p = false;
-                }
-            };
     `];
 
     const Q = config.inlineTemplate ? utils.Q2 : utils.Q;
@@ -61,12 +40,7 @@ export function buildRuntime(data, script, css, config) {
     runtime.push(`
         const rootTemplate = $$htmlToFragment(\`${Q(rootTemplate)}\`);
         ${bb.name}($cd, rootTemplate);
-        if($option.afterElement) {
-            $element.parentNode.insertBefore(rootTemplate, $element.nextSibling);
-        } else {
-            $element.innerHTML = '';
-            $element.appendChild(rootTemplate);
-        }
+        $component.$$render(rootTemplate);
     `);
     if(script.onMount) runtime.push(`
         if($option.noMount) $component.onMount = onMount;
@@ -75,18 +49,6 @@ export function buildRuntime(data, script, css, config) {
     if(script.onDestroy) runtime.push(`$cd.d(onDestroy);`);
     if(script.watchers.length) {
         runtime.push('$cd.once(() => {\n' + script.watchers.join('\n') + '\n$$apply();\n});');
-    }
-    if(script.props.length) {
-        runtime.push(`{
-            let list = $component.push;
-            $component.push = () => {
-                list.forEach(fn => fn());
-                $$restProps = $$calcRestProps($component, $$props);
-                $$apply();
-            }
-        }`);
-    } else {
-        runtime.push('$component.push = $$apply;')
     }
 
     if(css) runtime.push(`

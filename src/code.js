@@ -213,9 +213,11 @@ export function transformJS(code, option={}) {
     });
 
     if(result.props.length) {
-        resultBody.push(parseExp('let $$restProps = $$calcRestProps($component, $$props)'))
+        resultBody.push(parseExp('$$componentCompleteProps($component, $$apply)'));
+        resultBody.push(parseExp('let $$restProps = $$calcRestProps($component, $$props)'));
     } else {
-        resultBody.push(parseExp('const $$restProps = $$props'))
+        resultBody.push(parseExp('$component.push = $$apply'));
+        resultBody.push(parseExp('const $$restProps = $$props'));
     }
 
     resultBody.push({
@@ -233,12 +235,8 @@ export function transformJS(code, option={}) {
     header.push(parseExp('if(!$option) $option = {}'));
     header.push(parseExp('if(!$option.events) $option.events = {}'));
     header.push(parseExp('const $$props = $option.props || {}'));
-
-    if(result.props.length) {
-        header.push(parseExp('let $component = {$cd: new $ChangeDetector(), push: []}'));
-    } else {
-        header.push(parseExp('let $component = {$cd: new $ChangeDetector()}'));
-    }
+    header.push(parseExp('const $component = $$makeComponent($element, $option);'));
+    header.push(parseExp('const $$apply = $$makeApply($component.$cd)'));
     if(!rootFunctions.$emit) header.push(makeEmitter());
     if(insertOnDestroy) header.push(parseExp('function $onDestroy(fn) {$component.$cd.d(fn);}'));
     while(header.length) {
