@@ -47,6 +47,7 @@ export function $watch(cd, fn, callback, w) {
     if(!w) w = {};
     w.fn = fn;
     w.cb = callback;
+    if(!('value' in w)) w.value = NaN;
     cd.watchers.push(w);
     return w;
 };

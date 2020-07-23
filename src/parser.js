@@ -236,6 +236,35 @@ export function parse(source) {
                         assert(parent.type === 'if', 'Bind error: :else');
                         parent.bodyMain = parent.body;
                         parent.body = [];
+                    } else if(bind.value.startsWith('#await ')) {
+                        let mainPart = [];
+                        let tag = {
+                            type: 'await',
+                            value: bind.value,
+                            body: mainPart,
+                            parts: {
+                                main: mainPart,
+                                mainValue: bind.value
+                            }
+                        };
+                        parent.body.push(tag);
+                        go(tag);
+                        continue;
+                    } else if(bind.value.match(/^\:then( |$)/)) {
+                        assert(parent.type === 'await', 'Bind error: await-then');
+                        let thenPart = [];
+                        parent.parts.then = thenPart;
+                        parent.parts.thenValue = bind.value;
+                        parent.body = thenPart;
+                    } else if(bind.value.match(/^\:catch( |$)/)) {
+                        assert(parent.type === 'await', 'Bind error: await-catch');
+                        let catchPart = [];
+                        parent.parts.catch = catchPart;
+                        parent.parts.catchValue = bind.value;
+                        parent.body = catchPart;
+                    } else if(bind.value == '/await') {
+                        assert(parent.type === 'await', 'Bind error: /await');
+                        return;
                     } else throw 'Error binding: ' + bind.value;
                 }
             }

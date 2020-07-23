@@ -16,7 +16,7 @@ export function compile(src, config = {}) {
     let script = data.body.filter(n => n.type == 'script');
     assert(script.length <= 1, 'Only one script section');
 
-    script = transformJS(script[0]?script[0].content:null, config);
+    script = transformJS(script[0] ? script[0].content : null, config);
 
     let css = data.body.filter(n => n.type == 'style');
     assert(css.length <= 1, 'Only one style section');
@@ -30,7 +30,8 @@ export function compile(src, config = {}) {
             ${htmlFragment}, $$removeItem, $$childNodes, $watch, $ChangeDetector, $$removeElements,
             $digest, $$htmlBlock, $$compareDeep, $$compareArray, $watchReadOnly, $$ifBlock, $makeEmitter,
             $$addEvent, $$deepComparator, $$makeSpreadObject, $$groupCall, $$makeProp, $$cloneDeep,
-            $$makeSpreadObject2, $$calcRestProps, $$makeApply, $$makeComponent, $$componentCompleteProps
+            $$makeSpreadObject2, $$calcRestProps, $$makeApply, $$makeComponent, $$componentCompleteProps,
+            $$awaitBlock
         } from 'malinajs/runtime.js';
     `;
     code += script.code.split('$$runtime()').join(runtime);

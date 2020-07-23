@@ -6,6 +6,7 @@ import { bindProp } from './parts/prop.js'
 import { makeifBlock } from './parts/if.js'
 import { makeEachBlock } from './parts/each.js'
 import { makeHtmlBlock } from './parts/html.js'
+import { makeAwaitBlock } from './parts/await.js'
 
 
 export function buildRuntime(data, script, css, config) {
@@ -28,6 +29,7 @@ export function buildRuntime(data, script, css, config) {
         makeComponent,
         makeHtmlBlock,
         parseText,
+        makeAwaitBlock,
         checkRootName: utils.checkRootName
     };
 
@@ -183,6 +185,12 @@ function buildBlock(data) {
                     else tpl.push(`<!-- html -->`);
                     binds.push(this.makeHtmlBlock(exp, getElementName()));
                 } else throw 'Wrong tag';
+            } else if(n.type === 'await') {
+                setLvl();
+                if(this.config.hideLabel) tpl.push(`<!---->`);
+                else tpl.push(`<!-- ${n.value} -->`);
+                let block = this.makeAwaitBlock(n, getElementName());
+                binds.push(block.source);
             } else if(n.type === 'comment') {
                 if(!this.config.preserveComments) return;
                 setLvl();
@@ -212,7 +220,10 @@ function buildBlock(data) {
     let source = [];
     let buildName = '$$build' + (this.uniqIndex++);
     tpl = this.Q(tpl.join(''));
-    source.push(`function ${buildName}($cd, $parentElement) {\n`);
+    
+    let args = ['$cd', '$parentElement'];
+    if(data.args) args.push.apply(args, data.args);
+    source.push(`function ${buildName}(${args.join(', ')}) {\n`);
 
     const buildNodes = (d, lvl) => {
         let keys = Object.keys(d).filter(k => k != 'name');
