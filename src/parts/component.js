@@ -8,7 +8,7 @@ export function makeComponent(node, makeEl) {
     let binds = [];
     let head = [];
     let forwardAllEvents = false;
-    let injectGroupCall = false;
+    let injectGroupCall = 0;
     let spreading = false;
     
     function unwrapExp(e) {
@@ -145,7 +145,7 @@ export function makeComponent(node, makeEl) {
                     spreadObject.prop('${name}', () => ${exp});
                 `);
             }
-            injectGroupCall = true;
+            injectGroupCall++;
             head.push(`
                 let ${fname} = () => (${exp});
                 let ${valueName} = ${fname}()
@@ -171,8 +171,13 @@ export function makeComponent(node, makeEl) {
     if(forwardAllEvents) head.unshift('let events = Object.assign({}, $option.events);');
     else head.unshift('let events = {};');
     if(injectGroupCall) {
-        head.push('let groupCall = $$groupCall();');
-        binds.push('groupCall.emit = $component.push;');
+        if(injectGroupCall == 1) {
+            head.push('let groupCall;');
+            binds.push('groupCall = $component.push;');
+        } else {
+            head.push('let groupCall = $$groupCall();');
+            binds.push('groupCall.emit = $component.push;');
+        }
     }
     if(spreading) head.push('spreadObject.build();');
 
