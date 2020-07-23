@@ -6,7 +6,9 @@ import nwsapi from './ext/nwsapi';
 
 export function processCSS(styleNode, config) {
     // TODO: make hash
-    let id = 'm' + Math.floor(Date.now() * Math.random()).toString(36);
+    let id = Math.floor(Date.now() * Math.random()).toString(36);
+    if(id.length > 6) id = id.substring(id.length - 6)
+    id = 'm' + id;
 
     let self = {element: {}, cls: {}, id};
     let selectors = [];
@@ -21,19 +23,31 @@ export function processCSS(styleNode, config) {
                 node.prelude.children.forEach(fullSelector => {
                     assert(fullSelector.type == 'Selector');
                     let proc = [];
-                    let selector = fullSelector.children.toArray();
+                    let selector = [];
+                    fullSelector.children.toArray().forEach(sel => {
+                        if(sel.type == 'PseudoClassSelector' && sel.name == 'global') {
+                            sel = sel.children.first()
+                            assert(sel.type == 'Raw');
+                            let a = csstree.parse(sel.value, {context: 'selector'})
+                            assert(a.type == 'Selector');
+                            a.children.forEach(sel => {
+                                selector.push(Object.assign({__global: true}, sel));
+                            })
+                        } else selector.push(sel);
+                    });
+
                     let result = [];
                     let inserted = false;
                     for(let i=0;i<selector.length;i++) {
                         let sel = selector[i];
-
+                        if(sel.__global) inserted = true;
                         if(sel.type == 'PseudoClassSelector' || sel.type == 'PseudoElementSelector') {
                             if(!inserted) result.push({type: "ClassSelector", loc: null, name: id});
                             inserted = true;
                         } else {
                             proc.push(Object.assign({}, sel));
                         }
-                        if(sel.type == 'Combinator') {
+                        if(sel.type == 'Combinator' || sel.type == 'WhiteSpace') {
                             if(!inserted) result.push({type: "ClassSelector", loc: null, name: id});
                             inserted = false;
                         }
