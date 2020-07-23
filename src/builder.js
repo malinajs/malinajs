@@ -81,6 +81,7 @@ export function buildRuntime(data, script, css, config) {
             let list = $component.push;
             $component.push = () => {
                 list.forEach(fn => fn());
+                $$restProps = $$calcRestProps($component, $$props);
                 $$apply();
             }
         }`);

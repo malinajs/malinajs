@@ -255,11 +255,12 @@ export function $$makeSpreadObject($cd, el, css) {
     let prev = {};
     let index = 0;
     let list = [];
+    let defaultUsed = {};
 
     const props = Object.getOwnPropertyDescriptors(el.__proto__);
 
     const render = $$groupCall(function() {
-        let obj, name, value, used = {};
+        let obj, name, value, used = Object.assign({}, defaultUsed);
         for(let i=index-1; i>=0; i--) {
             obj = list[i];
             for(name in obj) {
@@ -302,6 +303,9 @@ export function $$makeSpreadObject($cd, el, css) {
             let d = {};
             d[name] = value;
             list[index++] = d;
+        },
+        except: function(list) {
+            list.forEach(n => defaultUsed[n] = true);
         }
     }
 };
@@ -363,11 +367,22 @@ export function $$makeProp($component, $$props, bound, name, getter, setter) {
     let value = $$props[name];
     if(value !== void 0) setter(value);
     if((bound[name] || bound.$$spreading) && (bound[name] !== 2)) $component.push.push(() => setter($$props[name]));
+    if(!$component.exportedProps) $component.exportedProps = {};
+    $component.exportedProps[name] = true;
 
     Object.defineProperty($component, name, {
         get: getter,
         set: setter
     });
+}
+
+export function $$calcRestProps($component, props) {
+    let result = {};
+    for(let k in props) {
+        if($component.exportedProps[k]) continue;
+        result[k] = props[k];
+    }
+    return result;
 }
 
 export function $$groupCall(emit) {

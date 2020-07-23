@@ -155,7 +155,11 @@ export function bindProp(prop, makeEl, node) {
         assert(detectExpressionType(exp) == 'identifier', 'Wrong bind name: ' + prop.content);
         let watchExp = attr == 'checked' ? '!!' + exp : exp;
 
+        let spreading;
+        if(node.spreadObject) spreading = `${node.spreadObject}.except(['${attr}']);`;
+
         return {bind: `{
+            ${spreading}
             let $element=${makeEl()};
             $cd.ev($element, 'input', () => { ${exp}=$element.${attr}; $$apply(); });
             $watchReadOnly($cd, () => (${watchExp}), (value) => { if(value != $element.${attr}) $element.${attr} = value; });

@@ -29,7 +29,8 @@ export function compile(src, config = {}) {
         import {
             ${htmlFragment}, $$removeItem, $$childNodes, $watch, $ChangeDetector, $$removeElements,
             $digest, $$htmlBlock, $$compareDeep, $$compareArray, $watchReadOnly, $$ifBlock, $makeEmitter,
-            $$addEvent, $$deepComparator, $$makeSpreadObject, $$groupCall, $$makeProp, $$cloneDeep, $$makeSpreadObject2
+            $$addEvent, $$deepComparator, $$makeSpreadObject, $$groupCall, $$makeProp, $$cloneDeep,
+            $$makeSpreadObject2, $$calcRestProps
         } from 'malinajs/runtime.js';
     `;
     code += script.code.split('$$runtime()').join(runtime);

@@ -212,6 +212,12 @@ export function transformJS(code, option={}) {
         resultBody.push(n);
     });
 
+    if(result.props.length) {
+        resultBody.push(parseExp('let $$restProps = $$calcRestProps($component, $$props)'))
+    } else {
+        resultBody.push(parseExp('const $$restProps = $$props'))
+    }
+
     resultBody.push({
         type: 'ExpressionStatement',
         expression: {
@@ -227,6 +233,7 @@ export function transformJS(code, option={}) {
     header.push(parseExp('if(!$option) $option = {}'));
     header.push(parseExp('if(!$option.events) $option.events = {}'));
     header.push(parseExp('const $$props = $option.props || {}'));
+
     if(result.props.length) {
         header.push(parseExp('let $component = {$cd: new $ChangeDetector(), push: []}'));
     } else {
