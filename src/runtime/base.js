@@ -393,7 +393,7 @@ export function $$groupCall(emit) {
         setTimeout(() => {
             timeout = false;
             fn.emit && fn.emit();
-        }, 1);
+        }, 0);
     };
     fn.emit = emit;
     return fn;
@@ -412,7 +412,7 @@ export function $$makeApply($cd) {
             } finally {
                 apply._p = false;
             }
-        }, 1);
+        }, 0);
     };
 }
 

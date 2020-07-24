@@ -49,7 +49,8 @@ export function makeEachBlock(data, topElementName) {
 
     let eachBlockName = 'eachBlock' + (this.uniqIndex++);
     source.push(`
-        function ${eachBlockName} ($cd, top) {
+        function ${eachBlockName} ($parentCD, top) {
+            let $cd = $parentCD.new();
 
             function bind($ctx, $template, ${itemName}, ${indexName}) {
                 ${itemData.source};
@@ -66,6 +67,7 @@ export function makeEachBlock(data, topElementName) {
 
             let mapping = new Map();
             let lineArray = [];
+            let lastNode;
             $watch($cd, () => (${arrayName}), (array) => {
                 if(!array) array = [];
                 if(typeof(array) == 'number') {
@@ -79,17 +81,28 @@ export function makeEachBlock(data, topElementName) {
                 let newMapping = new Map();
 
                 if(mapping.size) {
-                    let arrayAsSet = new Set();
-                    for(let i=0;i<array.length;i++) {
-                        arrayAsSet.add(getKey(array[i], i));
+                    if(!array.length && lastNode) {
+                        $$removeElements(prevNode.nextSibling, lastNode);
+                        $cd.children.forEach(cd => cd.destroy());
+                        $cd.children.length = 0;
+                        mapping.clear();
+                    } else {
+                        let ctx;
+                        for(let i=0;i<array.length;i++) {
+                            ctx = mapping.get(getKey(array[i], i));
+                            if(ctx) ctx.a = true;
+                        }
+
+                        mapping.forEach((ctx, key) => {
+                            if(ctx.a) {
+                                ctx.a = false;
+                                return;
+                            }
+                            $$removeElements(ctx.first, ctx.last);
+                            ctx.cd.destroy();
+                            $$removeItem($cd.children, ctx.cd);
+                        });
                     }
-                    mapping.forEach((ctx, key) => {
-                        if(arrayAsSet.has(key)) return;
-                        $$removeElements(ctx.first, ctx.last);
-                        ctx.cd.destroy();
-                        $$removeItem($cd.children, ctx.cd);
-                    });
-                    arrayAsSet.clear();
                 }
 
                 let parentNode = top.parentNode;
@@ -137,6 +150,7 @@ export function makeEachBlock(data, topElementName) {
                     prevNode = ctx.last;
                     newMapping.set(getKey(item, i), ctx);
                 };
+                lastNode = prevNode;
                 mapping.clear();
                 mapping = newMapping;
             }, {cmp: $$compareArray});
