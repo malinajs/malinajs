@@ -63,3 +63,101 @@ export function checkRootName(name) {
     if(this.script.rootVariables[root] || this.script.rootFunctions[root]) return true;
     this.config.warning({message:'No name: ' + name});
 };
+
+export function compactDOM(data) {
+    const details = {
+        node: [n => n.body],
+        each: [n => n.body],
+        if: [n => n.body, n => n.bodyMain],
+        await: [n => n.parts.main, n => n.parts.then, n => n.parts.catch]
+    }
+
+    function go(body, parentNode) {
+        let i;
+
+        const getPrev = () => {
+            return i > 0 && body.length ? body[i - 1] : null;
+        }
+
+        const getNext = () => {
+            return i < body.length ? body[i + 1] : null;
+        }
+
+        for(i=0; i<body.length; i++) {
+            let node = body[i];
+            if(node.type == 'text') {
+                let next = getNext();
+                if(next && next.type == 'text') {
+                    node.value += next.value;
+                    body.splice(i + 1, 1);
+                }
+
+                if(node.value) {
+                    if(!node.value.trim()) {
+                        node.value = ' ';
+                    } else {
+                        let rx = node.value.match(/^(\s*)(.*?)(\s*)$/);
+                        if(rx) {
+                            let r = '';
+                            if(rx[1]) r += ' ';
+                            r += rx[2];
+                            if(rx[3]) r += ' ';
+                            node.value = r;
+                        }
+                    }
+                }
+            } else {
+                if(node.type == 'node' && (node.name == 'pre' || node.name == 'textarea')) continue;
+                let keys = details[node.type];
+                keys && keys.forEach(k => {
+                    let body = k(node);
+                    if(body && body.length) go(body, node);
+                })
+            }
+        }
+
+        i = 0;
+        while(i < body.length) {
+            let node = body[i];
+            if(node.type == 'text' && !node.value.trim()) {
+                let prev = getPrev();
+                let next = getNext();
+                if(prev && next) {
+                    if(prev.type == 'node' && next.type == 'node') {
+                        if(prev.name == 'td' && next.name == 'td' ||
+                            prev.name == 'tr' && next.name == 'tr' ||
+                            prev.name == 'li' && next.name == 'li' ||
+                            prev.name == 'div' && next.name == 'div') {
+                                body.splice(i, 1);
+                                continue;
+                            }
+                    }
+                } else if(parentNode) {
+                    let p = prev && prev.type == 'node' && prev.name;
+                    let n = next && next.type == 'node' && next.name;
+
+                    if((p == 'td' || n == 'td') && ((parentNode.type == 'node' && parentNode.name == 'tr') || (parentNode.type == 'each'))) {
+                        body.splice(i, 1);
+                        continue;
+                    }
+                    if((p == 'tbody' || n == 'tbody') && (parentNode.type == 'node' && parentNode.name == 'table')) {
+                        body.splice(i, 1);
+                        continue;
+                    }
+                    if((p == 'li' || n == 'li') && (parentNode.type == 'node' && parentNode.name == 'ul')) {
+                        body.splice(i, 1);
+                        continue;
+                    }
+                    if(parentNode.type == 'node' && parentNode.name == 'div') {
+                        body.splice(i, 1);
+                        continue;
+                    }
+                }
+            }
+            i++;
+        }
+
+    }
+
+    go(data.body);
+};

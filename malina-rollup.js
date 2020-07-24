@@ -16,7 +16,8 @@ function malinaRollup(option = {}) {
                 name: id.match(/([^/\\]+).html$/)[1],
                 warning: (w) => console.warn('!', w.message),
                 inlineTemplate: false,
-                hideLabel: false
+                hideLabel: false,
+                compact: true
             }, option);
             try {
                 result = malina.compile(code, opts);

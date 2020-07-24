@@ -1,5 +1,5 @@
 
-import { assert } from './utils.js'
+import { assert, compactDOM } from './utils.js'
 import { parse } from './parser';
 import { transformJS } from './code';
 import { buildRuntime } from './builder';
@@ -22,6 +22,8 @@ export function compile(src, config = {}) {
     assert(css.length <= 1, 'Only one style section');
     css = css[0] && processCSS(css[0], config);
 
+    data.body = data.body.filter(n => n.type != 'script' && n.type != 'style');
+    if(config.compact) compactDOM(data);
     const runtime = buildRuntime(data, script, css, config);
 
     let htmlFragment = config.hideLabel ? '$$htmlToFragmentClean as $$htmlToFragment' : '$$htmlToFragment';

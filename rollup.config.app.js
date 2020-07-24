@@ -21,7 +21,8 @@ export default {
     plugins: [
         malinaRollup({
             inlineTemplate: true,
-            hideLabel: false
+            hideLabel: false,
+            compact: true
         }),
         customResolve()
     ],
