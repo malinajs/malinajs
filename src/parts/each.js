@@ -28,7 +28,7 @@ export function makeEachBlock(data, topElementName) {
     let keyName;
     let keyFunction;
 
-    rx = right.match(/^(.*)\s+\(\s*([^\(\)]+)\s*\)\s*$/);
+    rx = right.match(/^(.*)\s*\(\s*([^\(\)]+)\s*\)\s*$/);
     if(rx) {
         right = rx[1];
         keyName = rx[2];
