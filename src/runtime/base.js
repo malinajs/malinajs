@@ -405,6 +405,7 @@ export function $$makeApply($cd) {
         if(apply.planned) return;
         apply.planned = true;
         setTimeout(() => {
+            if(apply.planned == 'stop') return apply.planned = false;
             apply.planned = false;
             try {
                 apply._p = true;
