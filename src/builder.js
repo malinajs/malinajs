@@ -7,6 +7,7 @@ import { makeifBlock } from './parts/if.js'
 import { makeEachBlock } from './parts/each.js'
 import { makeHtmlBlock } from './parts/html.js'
 import { makeAwaitBlock } from './parts/await.js'
+import { attachSlot } from './parts/slot.js'
 
 
 export function buildRuntime(data, script, css, config) {
@@ -30,6 +31,7 @@ export function buildRuntime(data, script, css, config) {
         makeHtmlBlock,
         parseText,
         makeAwaitBlock,
+        attachSlot,
         checkRootName: utils.checkRootName
     };
 
@@ -131,6 +133,22 @@ function buildBlock(data) {
                     else tpl.push(`<!-- ${n.name} -->`);
                     let b = this.makeComponent(n, getElementName);
                     binds.push(b.bind);
+                    return;
+                }
+                if(n.name.match(/^slot(\:|$)/)) {
+                    let slotName;
+                    if(n.name == 'slot') slotName = 'default';
+                    else {
+                        let rx = n.name.match(/^slot\:(\S+)(.*)$/);
+                        utils.assert(rx);
+                        slotName = rx[1];
+                        // rx[2];  args
+                    };
+
+                    if(this.config.hideLabel) tpl.push(`<!---->`);
+                    else tpl.push(`<!-- Slot ${slotName} -->`);
+                    let b = this.attachSlot(slotName, getElementName(), n);
+                    binds.push(b.source);
                     return;
                 }
 

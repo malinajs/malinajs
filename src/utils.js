@@ -68,6 +68,7 @@ export function compactDOM(data) {
     const details = {
         node: [n => n.body],
         each: [n => n.body],
+        slot: [n => n.body],
         if: [n => n.body, n => n.bodyMain],
         await: [n => n.parts.main, n => n.parts.then, n => n.parts.catch]
     }

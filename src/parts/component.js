@@ -18,6 +18,47 @@ export function makeComponent(node, makeEl) {
         return rx[1];
     };
 
+    if(node.body && node.body.length) {
+        let slots = {};
+        let defaultSlot = {
+            name: 'default',
+            type: 'slot'
+        }
+        defaultSlot.body = node.body.filter(n => {
+            if(n.type != 'slot') return true;
+            let rx = n.value.match(/^\#slot:([^]+)/)
+            if(rx) n.name = rx[1];
+            else n.name = 'default';
+            assert(!slots[n], 'double slot');
+            slots[n.name] = n;
+        });
+
+        if(!slots.default) slots.default = defaultSlot;
+        // TODO: (else) check if defaultSlot is empty
+
+        Object.values(slots).forEach(slot => {
+            assert(isSimpleName(slot.name));
+            let block = this.buildBlock(slot);
+            head.push(`
+                slots.${slot.name} = function($label) {
+                    let $childCD = $cd.new();
+                    let $tpl = $$htmlToFragment(\`${this.Q(block.tpl)}\`);
+
+                    ${block.source};
+                    ${block.name}($childCD, $tpl);
+                    $label.parentNode.insertBefore($tpl, $label.nextSibling);
+                
+                    return {
+                        destroy: () => {
+                            $$removeItem($cd.children, $childCD);
+                            $childCD.destroy();
+                        }
+                    }
+                }
+            `);
+        });
+    }
+
     let boundEvents = {};
     let twoBinds = [];
     propList = propList.filter(prop => {
@@ -186,8 +227,9 @@ export function makeComponent(node, makeEl) {
         {
             let props = {};
             let boundProps = {};
+            let slots = {};
             ${head.join('\n')};
-            let $component = ${node.name}(${makeEl()}, {afterElement: true, noMount: true, props, boundProps, events});
+            let $component = ${node.name}(${makeEl()}, {afterElement: true, noMount: true, props, boundProps, events, slots});
             if($component) {
                 if($component.destroy) $cd.d($component.destroy);
                 ${binds.join('\n')};

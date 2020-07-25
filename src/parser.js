@@ -45,7 +45,11 @@ export function parse(source) {
             if(a === '>') {
                 const voidTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
                 let voidTag = voidTags.indexOf(name) >= 0;
-                let closedTag = voidTag || (name.match(/^[A-Z]/) && source[index-2] == '/');
+                let closedTag = voidTag;
+                if(!closedTag && source[index-2] == '/') {
+                    if(name.match(/^[A-Z]/)) closedTag = true;
+                    else if(name == 'slot' || name.match(/^slot\:\S/)) closedTag = true;
+                }
                 return {
                     type: 'node',
                     name: name,
@@ -57,7 +61,7 @@ export function parse(source) {
                 }
             }
             if(begin) {
-                if(a.match(/[\da-zA-Z]/)) {
+                if(a.match(/[\da-zA-Z\:]/)) {
                     name += a;
                     continue;
                 } else begin = false;
@@ -264,6 +268,18 @@ export function parse(source) {
                         parent.body = catchPart;
                     } else if(bind.value == '/await') {
                         assert(parent.type === 'await', 'Bind error: /await');
+                        return;
+                    } else if(bind.value.match(/^\#slot(\:| |$)/)) {
+                        let tag = {
+                            type: 'slot',
+                            value: bind.value,
+                            body: []
+                        };
+                        parent.body.push(tag);
+                        go(tag);
+                        continue;
+                    } else if(bind.value == '/slot') {
+                        assert(parent.type === 'slot', 'Slot error: /slot');
                         return;
                     } else throw 'Error binding: ' + bind.value;
                 }
