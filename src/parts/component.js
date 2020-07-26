@@ -1,10 +1,9 @@
 
-import { parseElement } from '../parser.js'
 import { assert, detectExpressionType, isSimpleName, unwrapExp } from '../utils'
 
 
 export function makeComponent(node, makeEl) {
-    let propList = parseElement(node.openTag);
+    let propList = node.attributes;
     let binds = [];
     let head = [];
     let forwardAllEvents = false;
