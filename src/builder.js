@@ -9,6 +9,7 @@ import { makeHtmlBlock } from './parts/html.js'
 import { makeAwaitBlock } from './parts/await.js'
 import { attachSlot } from './parts/slot.js'
 
+const assert = utils.assert;
 
 export function buildRuntime(data, script, css, config) {
     let runtime = [`
@@ -92,26 +93,31 @@ function buildBlock(data) {
             return d.name;
         };
 
-        let n, body = data.body.filter(n => n.type != 'script' && n.type != 'style');
-        if(data.type == 'root') {
-            while(n = body[0]) {
-                if(n.type != 'text') break;
-                n.value = n.value.trimLeft();
-                if(n.value) break;
-                else body.shift();
-            }
-            while(n = body[body.length - 1]) {
-                if(n.type != 'text') break;
-                n.value = n.value.trimRight();
-                if(n.value) break;
-                else body.pop();
+        let n, body = data.body.filter(n => {
+            if(n.type == 'script' || n.type == 'style') return false;
+            if(n.type == 'comment' && !this.config.preserveComments) return false;
+            return true;
+        });
+
+        {
+            let i = 0;
+            while(i < body.length - 1) {
+                let node = body[i];
+                let next = body[i + 1];
+                if(node.type == 'text' && next.type == 'text') {
+                    node.value += next.value;
+                    body.splice(i + 1, 1);
+                    continue;
+                }
+                i++;
             }
         }
 
         let lastText;
         const bindNode = (n) => {
             if(n.type === 'text') {
-                if(lastText !== tpl.length) setLvl();
+                assert(lastText !== tpl.length);
+                setLvl();
                 if(n.value.indexOf('{') >= 0) {
                     tpl.push(' ');
                     let exp = this.parseText(n.value);
@@ -140,7 +146,7 @@ function buildBlock(data) {
                     if(n.name == 'slot') slotName = 'default';
                     else {
                         let rx = n.name.match(/^slot\:(\S+)(.*)$/);
-                        utils.assert(rx);
+                        assert(rx);
                         slotName = rx[1];
                         // rx[2];  args
                     };
@@ -210,7 +216,6 @@ function buildBlock(data) {
                 let block = this.makeAwaitBlock(n, getElementName());
                 binds.push(block.source);
             } else if(n.type === 'comment') {
-                if(!this.config.preserveComments) return;
                 setLvl();
                 tpl.push(n.content);
             }
