@@ -14,35 +14,61 @@ export function parse(source) {
         let start = index;
         let a = readNext();
         assert(a === '<', 'Tag error');
-        let q = null;
+        let attributes = [];
         let begin = true;
         let name = '';
         let bind;
+        let eq, attr_start;
+
+        function flush(shift) {
+            if(!attr_start) return;
+            shift = shift || 0;
+            let end = index - 1 + shift;
+            let a = {
+                content: source.substring(attr_start, end)
+            };
+            if(eq) {
+                a.name = source.substring(attr_start, eq);
+                a.value = source.substring(eq + 1, end);
+                if(a.value[0] == '"' || a.value[0] == '"') a.value = a.value.substring(1);
+                let i = a.value.length - 1;
+                if(a.value[i] == '"' || a.value[i] == '"') a.value = a.value.substring(0, i);
+            } else a.name = a.content;
+            attributes.push(a);
+            attr_start = null;
+            eq = null;
+        };
+
         while(true) {
             a = readNext();
-            if(q) {
-                if(a != q) continue;
-                q = null;
-                continue
-            }
+            if(!begin && !attr_start && a.match(/\S/) && a != '/') attr_start = index - 1;
             if(a == '"' || a == "'") {
-                q = a;
+                while(a != readNext());
                 continue;
             }
             if(bind) {
-                bind = a != '}';
+                if(a == '}') {
+                    bind = false;
+                    flush(1);
+                }
                 continue;
             }
             if(a == '{') {
                 bind = true;
                 continue;
             }
-            if(a === '<') {
+            if(a == '<') {
                 let e = new Error('Wrong tag');
                 e.details = source.substring(start, index);
                 throw e;
             }
-            if(a === '>') {
+            if(a == '/') {
+                a = readNext();
+                assert(a == '>');
+                flush(-1);
+            }
+            if(a == '>') {
+                flush();
                 const voidTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
                 let voidTag = voidTags.indexOf(name) >= 0;
                 let closedTag = voidTag;
@@ -57,7 +83,8 @@ export function parse(source) {
                     start: start,
                     end: index,
                     closedTag,
-                    voidTag
+                    voidTag,
+                    attributes
                 }
             }
             if(begin) {
@@ -65,6 +92,9 @@ export function parse(source) {
                     name += a;
                     continue;
                 } else begin = false;
+            } else if(attr_start) {
+                if(a == '=' && !eq) eq = index - 1;
+                else if(a.match(/\s/)) flush();
             }
         }
     };
@@ -188,7 +218,6 @@ export function parse(source) {
                     tag.content = readStyle();
                     continue;
                 };
-                tag.attributes = parseElement(tag.openTag);
 
                 if(tag.closedTag) continue;
 
@@ -305,75 +334,6 @@ export function parse(source) {
 
 
     return root;
-};
-
-
-export function parseElement(source) {
-    let len = source.length - 1;
-    assert(source[0] === '<');
-    assert(source[len] === '>');
-    if(source[len - 1] == '/') len--;
-
-    let index = 1;
-    let start = 1;
-    let eq;
-    let result = [];
-    let first = true;
-
-    const next = () => {
-        assert(index < source.length, 'EOF');
-        return source[index++];
-    }
-    const flush = (shift) => {
-        if(start >= index + shift) return;
-        if(first) {
-            first = false;
-            return;
-        }
-        let prop = {
-            content: source.substring(start, index + shift)
-        }
-        if(eq) {
-            prop.name = source.substring(start, eq - 1);
-            prop.value = source.substring(eq, index + shift).match(/^['"]?([\s\S]*?)['"]?$/)[1];
-            eq = null;
-        } else {
-            prop.name = prop.content
-        };
-        result.push(prop);
-    };
-
-    let bind = false;
-
-    while(index < len) {
-        let a = next();
-
-        if(a === '"' || a === "'") {
-            while(a != next());
-            continue;
-        }
-
-        if(bind) {
-            bind = a != '}';
-            continue;
-        }
-
-        if(a == '{') {
-            bind = true;
-            continue;
-        }
-
-        if(a.match(/^\s$/)) {
-            flush(-1);
-            start = index;
-            continue;
-        }
-        if(a == '=' && !eq) {
-            eq = index;
-        }
-    }
-    flush(0);
-    return result;
 };
 
 
