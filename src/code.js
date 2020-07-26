@@ -193,6 +193,7 @@ export function transformJS(code, option={}) {
 
     let imports = [];
     let resultBody = [];
+    let lastPropIndex = null;
 
     ast.body.forEach(n => {
         if(n.type == 'ImportDeclaration') {
@@ -213,7 +214,8 @@ export function transformJS(code, option={}) {
             });
             resultBody.push(n.declaration);
             forInit.forEach(n => {
-                resultBody.push(parseExp(`$$makeProp($component, $$props, $option.boundProps || {}, '${n}', () => ${n}, _${n} => {${n} = _${n}; $$apply();})`));
+                resultBody.push(parseExp(`$$makeProp($component, $props, $option.boundProps || {}, '${n}', () => ${n}, _${n} => {${n} = _${n}; $$apply();})`));
+                lastPropIndex = resultBody.length;
             });
             return;
         }
@@ -229,14 +231,6 @@ export function transformJS(code, option={}) {
         resultBody.push(n);
     });
 
-    if(result.props.length) {
-        resultBody.push(parseExp('$$componentCompleteProps($component, $$apply)'));
-        resultBody.push(parseExp('let $$restProps = $$calcRestProps($component, $$props)'));
-    } else {
-        resultBody.push(parseExp('$component.push = $$apply'));
-        resultBody.push(parseExp('const $$restProps = $$props'));
-    }
-
     resultBody.push({
         type: 'ExpressionStatement',
         expression: {
@@ -251,9 +245,17 @@ export function transformJS(code, option={}) {
     let header = [];
     header.push(parseExp('if(!$option) $option = {}'));
     header.push(parseExp('if(!$option.events) $option.events = {}'));
-    header.push(parseExp('const $$props = $option.props || {}'));
+    header.push(parseExp('const $props = $option.props || {}'));
     header.push(parseExp('const $component = $$makeComponent($element, $option);'));
     header.push(parseExp('const $$apply = $$makeApply($component.$cd)'));
+
+    if(lastPropIndex != null) {
+        resultBody.splice(lastPropIndex, 0, parseExp('let $attributes = $$componentCompleteProps($component, $$apply, $props)'));
+    } else {
+        header.push(parseExp('$component.push = $$apply'));
+        header.push(parseExp('const $attributes = $props'));
+    }
+
     if(!rootFunctions.$emit) header.push(makeEmitter());
     if(insertOnDestroy) header.push(parseExp('function $onDestroy(fn) {$component.$cd.d(fn);}'));
     while(header.length) {

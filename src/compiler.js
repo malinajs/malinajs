@@ -32,7 +32,7 @@ export function compile(src, config = {}) {
             ${htmlFragment}, $$removeItem, $$childNodes, $watch, $ChangeDetector, $$removeElements,
             $digest, $$htmlBlock, $$compareDeep, $$compareArray, $watchReadOnly, $$ifBlock, $makeEmitter,
             $$addEvent, $$deepComparator, $$makeSpreadObject, $$groupCall, $$makeProp, $$cloneDeep,
-            $$makeSpreadObject2, $$calcRestProps, $$makeApply, $$makeComponent, $$componentCompleteProps,
+            $$makeSpreadObject2, $$makeApply, $$makeComponent, $$componentCompleteProps,
             $$awaitBlock
         } from 'malinajs/runtime.js';
     `;

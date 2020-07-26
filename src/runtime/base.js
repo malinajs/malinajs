@@ -364,25 +364,16 @@ export function $$makeSpreadObject2($cd, props) {
     return self;
 };
 
-export function $$makeProp($component, $$props, bound, name, getter, setter) {
-    let value = $$props[name];
+export function $$makeProp($component, $props, bound, name, getter, setter) {
+    let value = $props[name];
     if(value !== void 0) setter(value);
-    if((bound[name] || bound.$$spreading) && (bound[name] !== 2)) $component.push.push(() => setter($$props[name]));
+    if((bound[name] || bound.$$spreading) && (bound[name] !== 2)) $component.push.push(() => setter($props[name]));
     $component.exportedProps[name] = true;
 
     Object.defineProperty($component, name, {
         get: getter,
         set: setter
     });
-}
-
-export function $$calcRestProps($component, props) {
-    let result = {};
-    for(let k in props) {
-        if($component.exportedProps[k]) continue;
-        result[k] = props[k];
-    }
-    return result;
 }
 
 export function $$groupCall(emit) {
@@ -437,10 +428,27 @@ export function $$makeComponent($element, $option) {
     return $component;
 };
 
-export function $$componentCompleteProps($component, $$apply) {
+export function $$componentCompleteProps($component, $$apply, $props) {
     let list = $component.push;
+    let recalcAttributes, $attributes = $props;
     $component.push = () => {
         list.forEach(fn => fn());
+        recalcAttributes();
         $$apply();
     };
+
+    $attributes = {};
+    for(let k in $props) {
+        if(!$component.exportedProps[k]) {
+            $attributes[k] = $props[k];
+            recalcAttributes = 1;
+        }
+    }
+    if(recalcAttributes) {
+        recalcAttributes = () => {
+            for(let k in $attributes) $attributes[k] = $props[k];
+        }
+    } else recalcAttributes = () => {};
+
+    return $attributes;
 };
