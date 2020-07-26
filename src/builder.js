@@ -94,7 +94,7 @@ function buildBlock(data) {
         };
 
         let n, body = data.body.filter(n => {
-            if(n.type == 'script' || n.type == 'style') return false;
+            if(n.type == 'script' || n.type == 'style' || n.type == 'slot') return false;
             if(n.type == 'comment' && !this.config.preserveComments) return false;
             return true;
         });

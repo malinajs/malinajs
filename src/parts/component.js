@@ -1,6 +1,6 @@
 
 import { parseElement } from '../parser.js'
-import { assert, detectExpressionType, isSimpleName } from '../utils'
+import { assert, detectExpressionType, isSimpleName, unwrapExp } from '../utils'
 
 
 export function makeComponent(node, makeEl) {
@@ -10,13 +10,6 @@ export function makeComponent(node, makeEl) {
     let forwardAllEvents = false;
     let injectGroupCall = 0;
     let spreading = false;
-    
-    function unwrapExp(e) {
-        assert(e, 'Empty expression');
-        let rx = e.match(/^\{(.*)\}$/);
-        assert(rx, 'Wrong expression: ' + e);
-        return rx[1];
-    };
 
     if(node.body && node.body.length) {
         let slots = {};
@@ -26,7 +19,7 @@ export function makeComponent(node, makeEl) {
         }
         defaultSlot.body = node.body.filter(n => {
             if(n.type != 'slot') return true;
-            let rx = n.value.match(/^\#slot:([^]+)/)
+            let rx = n.value.match(/^\#slot:(\S+)/);
             if(rx) n.name = rx[1];
             else n.name = 'default';
             assert(!slots[n], 'double slot');
@@ -38,21 +31,37 @@ export function makeComponent(node, makeEl) {
 
         Object.values(slots).forEach(slot => {
             assert(isSimpleName(slot.name));
+            let args = '', setters = '';
+            let rx = slot.value && slot.value.match(/^#slot\S*\s+(.*)$/);
+            if(rx) {
+                let props = rx[1].trim().split(/\s*,\s*/);
+                props.forEach(n => {
+                    assert(isSimpleName(n), 'Wrong prop for slot');
+                });
+                args = `let ${props.join(', ')};`;
+                setters = ',' + props.map(name => {
+                    return `set_${name}: (_${name}) => {${name} = _${name}; $$apply();}`;
+                }).join(',\n');
+            }
+
             let block = this.buildBlock(slot);
             head.push(`
                 slots.${slot.name} = function($label) {
                     let $childCD = $cd.new();
                     let $tpl = $$htmlToFragment(\`${this.Q(block.tpl)}\`);
 
+                    ${args}
+
                     ${block.source};
                     ${block.name}($childCD, $tpl);
                     $label.parentNode.insertBefore($tpl, $label.nextSibling);
-                
+
                     return {
                         destroy: () => {
                             $$removeItem($cd.children, $childCD);
                             $childCD.destroy();
                         }
+                        ${setters}
                     }
                 }
             `);

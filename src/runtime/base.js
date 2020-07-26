@@ -137,7 +137,7 @@ const compareDeep = (a, b, lvl) => {
     if(a0 !== a1) return true;
 
     if(a0) {
-        if(a.length !== b.length) return false;
+        if(a.length !== b.length) return true;
         for(let i=0;i<a.length;i++) {
             if(compareDeep(a[i], b[i], lvl-1)) return true;
         }
@@ -162,7 +162,7 @@ function cloneDeep(d, lvl) {
 
     if(typeof(d) == 'object') {
         if(d instanceof Date) return d;
-        if(Array.isArray(d)) return d.map(i => cloneDeep(t, lvl-1));
+        if(Array.isArray(d)) return d.map(i => cloneDeep(i, lvl-1));
         let r = {};
         for(let k in d) r[k] = cloneDeep(d[k], lvl-1);
         return r;

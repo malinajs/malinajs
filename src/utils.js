@@ -3,7 +3,7 @@ import acorn from 'acorn';
 
 
 export function assert(x, info) {
-    if(!x) throw info || 'AssertError';
+    if(!x) throw info || (new Error('AssertError'));
 }
 
 export function Q(s) {
@@ -12,6 +12,13 @@ export function Q(s) {
 
 export function Q2(s) {
     return s.replace(/`/g, '\\`').replace(/\n/g, '\\n');
+};
+
+export function unwrapExp(e) {
+    assert(e, 'Empty expression');
+    let rx = e.match(/^\{(.*)\}$/);
+    assert(rx, 'Wrong expression: ' + e);
+    return rx[1];
 };
 
 export function isSimpleName(name) {
