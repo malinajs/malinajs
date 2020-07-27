@@ -42,7 +42,7 @@ export function parse(source) {
         while(true) {
             a = readNext();
             if(!begin && !attr_start && a.match(/\S/) && a != '/' && a != '>') attr_start = index - 1;
-            if(a == '"' || a == "'") {
+            if(a == '"' || a == "'" || a == '`') {
                 while(a != readNext());
                 continue;
             }
@@ -365,7 +365,7 @@ export function parseText(source) {
                 exp += a;
                 continue;
             }
-            if(a === '"' || a === "'") {
+            if(a === '"' || a === "'" || a === '`') {
                 q = a;
                 exp += a;
                 continue;
