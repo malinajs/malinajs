@@ -104,10 +104,17 @@ function makeDom(data) {
 
     function build(parent, list) {
         list.forEach(e => {
-            if(e.type == 'each' || e.type == 'if') {
+            if(e.type == 'each' || e.type == 'fragment' || e.type == 'slot') {
+                if(e.body && e.body.length) build(parent, e.body);
+                return;
+            } else if(e.type == 'if') {
                 if(e.bodyMain && e.bodyMain.length) build(parent, e.bodyMain);
                 if(e.body && e.body.length) build(parent, e.body);
                 return;
+            } else if(e.type == 'await') {
+                if(e.parts.main && e.parts.main.length) build(parent, e.parts.main);
+                if(e.parts.then && e.parts.then.length) build(parent, e.parts.then);
+                if(e.parts.catch && e.parts.catch.length) build(parent, e.parts.catch);
             } else if(e.type != 'node') return;
             let n = new Node(e.name, {__node: e});
             e.attributes.forEach(a => {

@@ -8,6 +8,7 @@ import { makeEachBlock } from './parts/each.js'
 import { makeHtmlBlock } from './parts/html.js'
 import { makeAwaitBlock } from './parts/await.js'
 import { attachSlot } from './parts/slot.js'
+import { makeFragment, attachFragment } from './parts/fragment.js'
 
 const assert = utils.assert;
 
@@ -33,6 +34,8 @@ export function buildRuntime(data, script, css, config) {
         parseText,
         makeAwaitBlock,
         attachSlot,
+        makeFragment,
+        attachFragment,
         checkRootName: utils.checkRootName
     };
 
@@ -96,6 +99,15 @@ function buildBlock(data) {
         let n, body = data.body.filter(n => {
             if(n.type == 'script' || n.type == 'style' || n.type == 'slot') return false;
             if(n.type == 'comment' && !this.config.preserveComments) return false;
+            if(n.type == 'fragment') {
+                try {
+                    let b = this.makeFragment(n);
+                    binds.push(b.source);
+                } catch (e) {
+                    wrapException(e, n);
+                }
+                return false;
+            }
             return true;
         });
 
@@ -141,19 +153,25 @@ function buildBlock(data) {
                     binds.push(b.bind);
                     return;
                 }
-                if(n.name.match(/^slot(\:|$)/)) {
+                if(n.name.match(/^slot(\:|$| )/)) {
                     let slotName;
                     if(n.name == 'slot') slotName = 'default';
                     else {
                         let rx = n.name.match(/^slot\:(\S+)(.*)$/);
                         assert(rx);
                         slotName = rx[1];
-                        // rx[2];  args
                     };
 
                     if(this.config.hideLabel) tpl.push(`<!---->`);
                     else tpl.push(`<!-- Slot ${slotName} -->`);
                     let b = this.attachSlot(slotName, getElementName(), n);
+                    binds.push(b.source);
+                    return;
+                }
+                if(n.name.match(/^fragment(\:|$| )/)) {
+                    if(this.config.hideLabel) tpl.push(`<!---->`);
+                    else tpl.push(`<!-- Slot ${n.name} -->`);
+                    let b = this.attachFragment(n, getElementName());
                     binds.push(b.source);
                     return;
                 }
@@ -220,19 +238,11 @@ function buildBlock(data) {
                 tpl.push(n.content);
             }
         }
-        body.forEach(n => {
+        body.forEach(node => {
             try {
-                bindNode(n);
+                bindNode(node);
             } catch (e) {
-                if(typeof e === 'string') e = new Error(e);
-                if(!e.details) {
-                    console.log('Node: ', n);
-                    if(n.type == 'text') e.details = n.value.trim();
-                    else if(n.type == 'node') e.details = n.openTag.trim();
-                    else if(n.type == 'each') e.details = n.value.trim();
-                    else if(n.type == 'if') e.details = n.value.trim();
-                }
-                throw e;
+                wrapException(e, node);
             }
         });
 
@@ -273,4 +283,16 @@ function buildBlock(data) {
         source: source.join('')
     }
 
+};
+
+function wrapException(e, n) {
+    if(typeof e === 'string') e = new Error(e);
+    if(!e.details) {
+        console.log('Node: ', n);
+        if(n.type == 'text') e.details = n.value.trim();
+        else if(n.type == 'node') e.details = n.openTag.trim();
+        else if(n.type == 'each') e.details = n.value.trim();
+        else if(n.type == 'if') e.details = n.value.trim();
+    }
+    throw e;
 };

@@ -41,7 +41,7 @@ export function parse(source) {
 
         while(true) {
             a = readNext();
-            if(!begin && !attr_start && a.match(/\S/) && a != '/') attr_start = index - 1;
+            if(!begin && !attr_start && a.match(/\S/) && a != '/' && a != '>') attr_start = index - 1;
             if(a == '"' || a == "'") {
                 while(a != readNext());
                 continue;
@@ -71,10 +71,10 @@ export function parse(source) {
                 flush();
                 const voidTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
                 let voidTag = voidTags.indexOf(name) >= 0;
+                if(name.match(/^fragment($| |\:)/)) voidTag = true;
                 let closedTag = voidTag;
                 if(!closedTag && source[index-2] == '/') {
-                    if(name.match(/^[A-Z]/)) closedTag = true;
-                    else if(name == 'slot' || name.match(/^slot\:\S/)) closedTag = true;
+                    closedTag = !!(name.match(/^[A-Z]/) || name.match(/^slot($| |\:)/));
                 }
                 return {
                     type: 'node',
@@ -309,6 +309,18 @@ export function parse(source) {
                         continue;
                     } else if(bind.value == '/slot') {
                         assert(parent.type === 'slot', 'Slot error: /slot');
+                        return;
+                    } else if(bind.value.match(/^\#fragment\W/)) {
+                        let tag = {
+                            type: 'fragment',
+                            value: bind.value,
+                            body: []
+                        };
+                        parent.body.push(tag);
+                        go(tag);
+                        continue;
+                    } else if(bind.value == '/fragment') {
+                        assert(parent.type === 'fragment', 'Fragment error: /fragment');
                         return;
                     } else throw 'Error binding: ' + bind.value;
                 }

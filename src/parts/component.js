@@ -170,10 +170,10 @@ export function makeComponent(node, makeEl) {
 
             let callback;
             if(isFunc) {
-                callback = `${exp}`;
+                callback = exp;
             } else if(handler) {
                 this.checkRootName(handler);
-                callback = `${handler}`;
+                callback = handler;
             } else {
                 callback = `($event) => {${this.Q(exp)}}`;
             }

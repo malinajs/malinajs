@@ -76,6 +76,7 @@ export function compactDOM(data) {
         node: [n => n.body],
         each: [n => n.body],
         slot: [n => n.body],
+        fragment: [n => n.body],
         if: [n => n.body, n => n.bodyMain],
         await: [n => n.parts.main, n => n.parts.then, n => n.parts.catch]
     }

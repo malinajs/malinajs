@@ -40,7 +40,7 @@ export function attachSlot(slotName, label, node) {
             ${label}.parentNode.insertBefore($tpl, ${label}.nextSibling);
         }`;
     }
-    
+
     return {source: `{
         let $slot = $option.slots && $option.slots.${slotName};
         if($slot) {

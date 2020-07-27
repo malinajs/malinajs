@@ -155,7 +155,7 @@ export function bindProp(prop, makeEl, node) {
         assert(detectExpressionType(exp) == 'identifier', 'Wrong bind name: ' + prop.content);
         let watchExp = attr == 'checked' ? '!!' + exp : exp;
 
-        let spreading;
+        let spreading = '';
         if(node.spreadObject) spreading = `${node.spreadObject}.except(['${attr}']);`;
 
         return {bind: `{
