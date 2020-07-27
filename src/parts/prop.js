@@ -95,6 +95,8 @@ export function bindProp(prop, makeEl, node) {
                 if(preventInserted) return;
                 mod += '$event.preventDefault();';
                 preventInserted = true;
+            } else if(opt == 'stopPropagation') {
+                mod += '$event.stopPropagation();';
             } else if(opt == 'enter') {
                 mod += 'if($event.keyCode != 13) return;';
                 needPrevent = true;
