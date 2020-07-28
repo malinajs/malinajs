@@ -80,7 +80,7 @@ export function transformJS(code, option={}) {
             for(let i=0; i<node.body.body.length; i++) {
                 let n = node.body.body[i];
                 if(!isStopOption(n)) continue;
-                node.body.body[i] = parseExp('if($$apply.planned) $$apply.planned=\'stop\'');
+                node.body.body[i] = parseExp('$$apply(false)');
                 return 'stop';
             }
             if(!isInLoop(node)) {

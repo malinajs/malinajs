@@ -421,11 +421,16 @@ export function $$groupCall(emit) {
 };
 
 export function $$makeApply($cd) {
-    return function apply() {
+    let stop;
+    return function apply(option) {
+        if(option === false) {
+            if(_tick_planned.apply) stop = true;
+            return;
+        }
         if(apply._p) return;
 
         $tick(() => {
-            if(apply.planned == 'stop') return apply.planned = false;
+            if(stop) return stop = false;
             try {
                 apply._p = true;
                 $digest($cd);
