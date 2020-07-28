@@ -241,7 +241,7 @@ export function makeComponent(node, makeEl) {
             if($component) {
                 if($component.destroy) $cd.d($component.destroy);
                 ${binds.join('\n')};
-                if($component.onMount) $cd.once($component.onMount);
+                if($component.onMount) $tick($component.onMount);
             }
     }`};
 };

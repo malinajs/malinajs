@@ -52,11 +52,11 @@ export function buildRuntime(data, script, css, config) {
     `);
     if(script.onMount) runtime.push(`
         if($option.noMount) $component.onMount = onMount;
-        else $cd.once(onMount);
+        else $tick(onMount);
     `);
     if(script.onDestroy) runtime.push(`$cd.d(onDestroy);`);
     if(script.watchers.length) {
-        runtime.push('$cd.once(() => {\n' + script.watchers.join('\n') + '\n$$apply();\n});');
+        runtime.push(script.watchers.join('\n'));
     }
 
     if(css) runtime.push(`

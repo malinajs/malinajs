@@ -185,7 +185,7 @@ export function bindProp(prop, makeEl, node) {
             assert(isSimpleName(arg), 'Wrong name: ' + arg);
             this.checkRootName(arg);
             let args = prop.value ? getExpression() : '';
-            let code = `$cd.once(() => {
+            let code = `$tick(() => {
                 let useObject = ${arg}(${makeEl()}${args ? ', ' + args : ''});\n if(useObject) {`;
             if(args) code += `
                 if(useObject.update) {
@@ -198,7 +198,7 @@ export function bindProp(prop, makeEl, node) {
         let exp = getExpression();
         return {bind: `{
             let $element=${makeEl()};
-            $cd.once(() => { $$apply(); ${exp}; });}`};
+            $tick(() => { $$apply(); ${exp}; });}`};
     } else {
         if(prop.value && prop.value.indexOf('{') >= 0) {
             let exp = this.parseText(prop.value);

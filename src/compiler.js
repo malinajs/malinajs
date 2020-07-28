@@ -33,7 +33,7 @@ export function compile(src, config = {}) {
             $digest, $$htmlBlock, $$compareDeep, $$compareArray, $watchReadOnly, $$ifBlock, $makeEmitter,
             $$addEvent, $$deepComparator, $$makeSpreadObject, $$groupCall, $$makeProp, $$cloneDeep,
             $$makeSpreadObject2, $$makeApply, $$makeComponent, $$componentCompleteProps,
-            $$awaitBlock
+            $$awaitBlock, $tick
         } from 'malinajs/runtime.js';
     `;
     code += script.code.split('$$runtime()').join(runtime);

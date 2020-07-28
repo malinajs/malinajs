@@ -60,7 +60,6 @@ export function $ChangeDetector(parent) {
     if(parent) this.root = parent.root;
     else {
         this.root = this;
-        this.onceList = [];
     }
     this.children = [];
     this.watchers = [];
@@ -98,9 +97,6 @@ Object.assign($ChangeDetector.prototype, {
             cd.destroy();
         });
         this.children.length = 0;
-    },
-    once: function(fn) {
-        this.root.onceList.push(fn);
     }
 });
 
@@ -187,7 +183,31 @@ export function $$deepComparator(depth) {
 
 export const $$compareDeep = $$deepComparator(10);
 
-export function $digest($cd, onFinishLoop) {
+let _tick_list = [];
+let _tick_planned = {};
+export function $tick(fn, uniq) {
+    if(uniq) {
+        if(_tick_planned[uniq]) return;
+        _tick_planned[uniq] = true;
+    }
+    _tick_list.push(fn);
+    if(_tick_planned.$tick) return;
+    _tick_planned.$tick = true;
+    setTimeout(() => {
+        _tick_planned = {};
+        let list = _tick_list;
+        _tick_list = [];
+        list.forEach(fn => {
+            try {
+                fn();
+            } catch (e) {
+                console.error(e);
+            }
+        });
+    }, 0);
+};
+
+export function $digest($cd) {
     let loop = 10;
     let w;
     while(loop >= 0) {
@@ -216,16 +236,6 @@ export function $digest($cd, onFinishLoop) {
         loop--;
         if(!changes) break;
     }
-    onFinishLoop();
-    let once = $cd.onceList;
-    $cd.onceList = [];
-    once.forEach(fn => {
-        try {
-            fn();
-        } catch (e) {
-            console.error(e);
-        }
-    });
     if(loop < 0) console.error('Infinity changes: ', w);
 };
 
@@ -380,14 +390,10 @@ export function $$makeProp($component, $props, bound, name, getter, setter) {
 }
 
 export function $$groupCall(emit) {
-    let timeout;
     const fn = function() {
-        if(timeout) return;
-        timeout = true;
-        setTimeout(() => {
-            timeout = false;
+        $tick(() => {
             fn.emit && fn.emit();
-        }, 0);
+        }, 'groupcall');
     };
     fn.emit = emit;
     return fn;
@@ -396,18 +402,16 @@ export function $$groupCall(emit) {
 export function $$makeApply($cd) {
     return function apply() {
         if(apply._p) return;
-        if(apply.planned) return;
-        apply.planned = true;
-        setTimeout(() => {
+
+        $tick(() => {
             if(apply.planned == 'stop') return apply.planned = false;
-            apply.planned = false;
             try {
                 apply._p = true;
-                $digest($cd, () => apply._p = false);
+                $digest($cd);
             } finally {
                 apply._p = false;
             }
-        }, 0);
+        }, 'apply');
     };
 }
 
