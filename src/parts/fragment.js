@@ -17,7 +17,7 @@ export function makeFragment(node) {
                 let ${name};
                 if($$args.${name} != null) {
                     if(typeof $$args.${name} == 'function') {
-                        $watchReadOnly($cd, $$args.${name}, _${name} => ${name} = _${name});
+                        $cd.prefix.push(() => {${name} = $$args.${name}()});
                     } else ${name} = $$args.${name};
                 }
             `);
