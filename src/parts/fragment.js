@@ -6,20 +6,23 @@ export function makeFragment(node) {
     let rx = node.value.match(/#fragment\:(\S+)(.*)$/);
     assert(rx);
     let name = rx[1];
-    let args = rx[2].trim().split(/\s*,\s*/);
+    let args = rx[2] ? rx[2].trim() : null;
     let head = [];
     assert(isSimpleName(name));
-    args.forEach(name => {
-        assert(isSimpleName(name));
-        head.push(`
-            let ${name};
-            if($$args.${name} != null) {
-                if(typeof $$args.${name} == 'function') {
-                    $watchReadOnly($cd, $$args.${name}, _${name} => ${name} = _${name});
-                } else ${name} = $$args.${name};
-            }
-        `);
-    });
+    if(args) {
+        args = args.split(/\s*,\s*/);
+        args.forEach(name => {
+            assert(isSimpleName(name));
+            head.push(`
+                let ${name};
+                if($$args.${name} != null) {
+                    if(typeof $$args.${name} == 'function') {
+                        $watchReadOnly($cd, $$args.${name}, _${name} => ${name} = _${name});
+                    } else ${name} = $$args.${name};
+                }
+            `);
+        });
+    }
 
     let block;
     if(node.body && node.body.length) block = this.buildBlock(node)
