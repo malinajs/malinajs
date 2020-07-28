@@ -172,7 +172,7 @@ export function transformJS(code, option={}) {
             } else throw 'Error';
             assertExpression(ex.right);
             const exp = code.substring(ex.right.start, ex.right.end);
-            result.watchers.push(`$watch($cd, () => (${exp}), ($value) => {${target}=$value;}, {cmp: $$compareArray});`);
+            result.watchers.push(`$cd.prefix.push(() => {${target} = ${exp};});`);
         } else if(n.body.expression.type == 'SequenceExpression') {
             const ex = n.body.expression.expressions;
             const handler = ex[ex.length - 1];
