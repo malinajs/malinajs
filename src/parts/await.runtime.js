@@ -7,7 +7,6 @@ export function $$awaitBlock($cd, label, fn, $$apply, build_main, build_then, bu
 
     function remove() {
         if(!childCD) return;
-        $$removeItem($cd.children, childCD);
         childCD.destroy();
         childCD = null;
         $$removeElements(first, last);

@@ -61,16 +61,26 @@ export function $ChangeDetector(parent) {
     else {
         this.root = this;
     }
-    this.children = [];
     this.watchers = [];
     this.destroyList = [];
     this.prefix = [];
+
+    this.parent = null;
+    this.first = null;
+    this.last = null;
+    this.prev = null;
+    this.next = null;
 };
 
 Object.assign($ChangeDetector.prototype, {
     new: function() {
         var cd = new $ChangeDetector(this);
-        this.children.push(cd);
+        let prev = this.last;
+        if(prev) prev.next = cd;
+        cd.prev = prev;
+        cd.parent = this;
+        this.last = cd;
+        if(!this.first) this.first = cd;
         return cd;
     },
     ev: function(el, event, callback) {
@@ -93,10 +103,18 @@ Object.assign($ChangeDetector.prototype, {
             }
         });
         this.destroyList.length = 0;
-        this.children.forEach(cd => {
+        if(this.prev) this.prev.next = this.next;
+        if(this.next) this.next.prev = this.prev;
+        if(this.parent) {
+            if(this.parent.first === this) this.parent.first = this.next;
+            if(this.parent.last === this) this.parent.last = this.prev;
+        }
+        let cd = this.first;
+        while(cd) {
             cd.destroy();
-        });
-        this.children.length = 0;
+            cd = cd.next;
+        }
+        this.first = this.last = this.prev = this.next = this.parent = null;
     }
 });
 
@@ -209,13 +227,12 @@ export function $tick(fn, uniq) {
 
 export function $digest($cd) {
     let loop = 10;
-    let w;
+    let w, next;
     while(loop >= 0) {
         let changes = 0;
-        let index = 0;
-        let queue = [];
         let i, value, cd = $cd;
-        while(cd) {
+        top:
+        do {
             for(i=0;i<cd.prefix.length;i++) cd.prefix[i]();
             for(i=0;i<cd.watchers.length;i++) {
                 w = cd.watchers[i];
@@ -230,9 +247,13 @@ export function $digest($cd) {
                     }
                 }
             };
-            if(cd.children.length) queue.push.apply(queue, cd.children);
-            cd = queue[index++];
-        }
+            next = cd.first || cd.next;
+            while(!next) {
+                if(cd === $cd) break top;
+                cd = cd.parent;
+                next = cd.next;
+            }
+        } while (cd = next);
         loop--;
         if(!changes) break;
     }

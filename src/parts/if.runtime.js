@@ -16,7 +16,6 @@ export function $$ifBlock($cd, $parentElement, fn, tpl, build, tplElse, buildEls
 
     function destroy() {
         if(!childCD) return;
-        $$removeItem($cd.children, childCD);
         childCD.destroy();
         childCD = null;
         $$removeElements(first, last);

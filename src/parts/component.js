@@ -57,7 +57,6 @@ export function makeComponent(node, makeEl) {
 
                     return {
                         destroy: () => {
-                            $$removeItem($cd.children, $childCD);
                             $childCD.destroy();
                         }
                         ${setters}
