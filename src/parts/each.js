@@ -150,7 +150,7 @@ export function makeEachBlock(data, topElementName) {
                 lastNode = prevNode !== top ? prevNode : null;
                 mapping.clear();
                 mapping = newMapping;
-            }, {cmp: $$compareArray});
+            }, {ro: true, cmp: $$compareArray});
         }
         ${eachBlockName}($cd, ${topElementName});
     `);
