@@ -1,6 +1,8 @@
 
 let templatecache = {false: {}, true: {}};
 
+let $$uniqIndex = 1;
+
 export function $$htmlToFragment(html, lastNotTag) {
     lastNotTag = !!lastNotTag;
     if(templatecache[lastNotTag][html]) return templatecache[lastNotTag][html].cloneNode(true);
@@ -411,17 +413,18 @@ export function $$makeProp($component, $props, bound, name, getter, setter) {
 }
 
 export function $$groupCall(emit) {
+    let id = `gc${$$uniqIndex++}`;
     const fn = function() {
         $tick(() => {
             fn.emit && fn.emit();
-        }, 'groupcall');
+        }, id);
     };
     fn.emit = emit;
     return fn;
 };
 
 export function $$makeApply($cd) {
-    let stop;
+    let stop, id = `a${$$uniqIndex++}`;
     return function apply(option) {
         if(option === false) {
             if(_tick_planned.apply) stop = true;
@@ -437,7 +440,7 @@ export function $$makeApply($cd) {
             } finally {
                 apply._p = false;
             }
-        }, 'apply');
+        }, id);
     };
 }
 
