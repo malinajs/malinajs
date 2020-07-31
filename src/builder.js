@@ -60,12 +60,7 @@ export function buildRuntime(data, script, css, config) {
     }
 
     if(css) runtime.push(`
-        if(!document.head.querySelector('style#${css.id}')) {
-            let style = document.createElement('style');
-            style.id = '${css.id}';
-            style.innerHTML = \`${Q(css.getContent())}\`;
-            document.head.appendChild(style);
-        }
+        $runtime.addStyles('${css.id}', \`${Q(css.getContent())}\`);
     `);
 
     runtime.push(`

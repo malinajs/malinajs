@@ -295,3 +295,12 @@ export function $$componentCompleteProps($component, $$apply, $props) {
 
     return $attributes;
 };
+
+
+export const addStyles = (id, content) => {
+    if(document.head.querySelector('style#' + id)) return;
+    let style = document.createElement('style');
+    style.id = id;
+    style.innerHTML = content;
+    document.head.appendChild(style);
+};
