@@ -86,9 +86,13 @@ function buildBlock(data) {
         let index = 0;
         const setLvl = () => {lvl[level] = index++;}
 
-        const getElementName = () => {
+        const getElementName = (shift) => {
+            let cl;
+            if(shift) cl = lvl.slice(0, lvl.length + shift);
+            else cl = lvl.slice();
+
             let d = DN;
-            lvl.forEach(n => {
+            cl.forEach(n => {
                 if(d[n] == null) d[n] = {};
                 d = d[n];
             });
@@ -204,12 +208,28 @@ function buildBlock(data) {
                     tpl.push(`</${n.name}>`);
                 }
             } else if(n.type === 'each') {
-                setLvl();
-                if(this.config.hideLabel) tpl.push(`<!---->`);
-                else tpl.push(`<!-- ${n.value} -->`);
                 n.parent = data;
-                let eachBlock = this.makeEachBlock(n, getElementName());
-                binds.push(eachBlock.source);
+                let onlyChild = !body.some(sibling => {
+                    if(sibling.type == 'text' && !sibling.value.trim()) return false;
+                    if(sibling === n) return false;
+                    return true;
+                });
+
+                if(onlyChild) {
+                    let eachBlock = this.makeEachBlock(n, {
+                        elName: getElementName(-1),
+                        onlyChild: true
+                    });
+                    binds.push(eachBlock.source);
+                    return 'stop';
+                } else {
+                    setLvl();
+                    if(this.config.hideLabel) tpl.push(`<!---->`);
+                    else tpl.push(`<!-- ${n.value} -->`);
+                    n.parent = data;
+                    let eachBlock = this.makeEachBlock(n, {elName: getElementName()});
+                    binds.push(eachBlock.source);
+                }
             } else if(n.type === 'if') {
                 setLvl();
                 if(this.config.hideLabel) tpl.push(`<!---->`);
@@ -238,9 +258,9 @@ function buildBlock(data) {
                 tpl.push(n.content);
             }
         }
-        body.forEach(node => {
+        body.some(node => {
             try {
-                bindNode(node);
+                return bindNode(node) == 'stop';
             } catch (e) {
                 wrapException(e, node);
             }
