@@ -59,30 +59,17 @@ export function $watchReadOnly(cd, fn, callback) {
 };
 
 export function $ChangeDetector(parent) {
-    if(parent) this.root = parent.root;
-    else {
-        this.root = this;
-    }
+    this.parent = parent;
+    this.children = [];
     this.watchers = [];
     this.destroyList = [];
     this.prefix = [];
-
-    this.parent = null;
-    this.first = null;
-    this.last = null;
-    this.prev = null;
-    this.next = null;
 };
 
 Object.assign($ChangeDetector.prototype, {
     new: function() {
         var cd = new $ChangeDetector(this);
-        let prev = this.last;
-        if(prev) prev.next = cd;
-        cd.prev = prev;
-        cd.parent = this;
-        this.last = cd;
-        if(!this.first) this.first = cd;
+        this.children.push(cd);
         return cd;
     },
     ev: function(el, event, callback) {
@@ -94,7 +81,8 @@ Object.assign($ChangeDetector.prototype, {
     d: function(fn) {
         this.destroyList.push(fn);
     },
-    destroy: function() {
+    destroy: function(option) {
+        if(option !== false && this.parent) $$removeItem(this.parent.children, this);
         this.watchers.length = 0;
         this.prefix.length = 0;
         this.destroyList.forEach(fn => {
@@ -105,18 +93,10 @@ Object.assign($ChangeDetector.prototype, {
             }
         });
         this.destroyList.length = 0;
-        if(this.prev) this.prev.next = this.next;
-        if(this.next) this.next.prev = this.prev;
-        if(this.parent) {
-            if(this.parent.first === this) this.parent.first = this.next;
-            if(this.parent.last === this) this.parent.last = this.prev;
-        }
-        let cd = this.first;
-        while(cd) {
-            cd.destroy();
-            cd = cd.next;
-        }
-        this.first = this.last = this.prev = this.next = this.parent = null;
+        this.children.forEach(cd => {
+            cd.destroy(false);
+        });
+        this.children.length = 0;
     }
 });
 
@@ -229,12 +209,13 @@ export function $tick(fn, uniq) {
 
 export function $digest($cd) {
     let loop = 10;
-    let w, next;
+    let w;
     while(loop >= 0) {
         let changes = 0;
+        let index = 0;
+        let queue = [];
         let i, value, cd = $cd;
-        top:
-        do {
+        while(cd) {
             for(i=0;i<cd.prefix.length;i++) cd.prefix[i]();
             for(i=0;i<cd.watchers.length;i++) {
                 w = cd.watchers[i];
@@ -249,13 +230,9 @@ export function $digest($cd) {
                     }
                 }
             };
-            next = cd.first || cd.next;
-            while(!next) {
-                if(cd === $cd) break top;
-                cd = cd.parent;
-                next = cd.next;
-            }
-        } while (cd = next);
+            if(cd.children.length) queue.push.apply(queue, cd.children);
+            cd = queue[index++];
+        }
         loop--;
         if(!changes) break;
     }

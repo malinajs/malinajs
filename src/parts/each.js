@@ -49,7 +49,8 @@ export function makeEachBlock(data, topElementName) {
 
     let eachBlockName = 'eachBlock' + (this.uniqIndex++);
     source.push(`
-        function ${eachBlockName} ($cd, top) {
+        function ${eachBlockName} ($parentCD, top) {
+            let $cd = $parentCD.new();
 
             function bind($ctx, $template, ${itemName}, ${indexName}) {
                 ${itemData.source};
@@ -82,7 +83,8 @@ export function makeEachBlock(data, topElementName) {
                 if(mapping.size) {
                     if(!array.length && lastNode) {
                         $$removeElements(prevNode.nextSibling, lastNode);
-                        while($cd.first) $cd.first.destroy();
+                        $cd.children.forEach(cd => cd.destroy(false));
+                        $cd.children.length = 0;
                         mapping.clear();
                     } else {
                         let ctx;

@@ -1,5 +1,5 @@
 
-import { $watch, $$removeItem, $$removeElements } from '../runtime/base';
+import { $watch, $$removeElements } from '../runtime/base';
 
 export function $$ifBlock($cd, $parentElement, fn, tpl, build, tplElse, buildElse) {
     let childCD;
