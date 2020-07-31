@@ -1,5 +1,6 @@
 
-import { $watchReadOnly, $$removeElements } from '../runtime/base';
+import { $$removeElements } from '../runtime/base';
+import { $watchReadOnly } from '../runtime/cd';
 
 export function $$awaitBlock($cd, label, fn, $$apply, build_main, build_then, build_catch, tpl_main, tpl_then, tpl_catch) {
     let promise, childCD;

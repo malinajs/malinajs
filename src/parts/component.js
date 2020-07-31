@@ -90,18 +90,18 @@ export function makeComponent(node, makeEl) {
             head.push(`boundProps.${inner} = 2;`);
             binds.push(`
                 if('${inner}' in $component) {
-                    let value = $$cloneDeep(props.${inner});
+                    let value = $runtime.$$cloneDeep(props.${inner});
                     let $$_w0 = $watch($cd, () => (${outer}), (value) => {
                         props.${inner} = value;
                         $$_w1.value = $$_w0.value;
                         $component.${inner} = value;
-                    }, {ro: true, cmp: $$compareDeep, value});
+                    }, {ro: true, cmp: $runtime.$$compareDeep, value});
                     let $$_w1 = $watch($component.$cd, () => ($component.${inner}), (${valueName}) => {
                         props.${inner} = ${valueName};
                         $$_w0.value = $$_w1.value;
                         ${outer} = ${valueName};
                         $$apply();
-                    }, {cmp: $$compareDeep, value});
+                    }, {cmp: $runtime.$$compareDeep, value});
                 } else console.error("Component ${node.name} doesn't have prop ${inner}");
             `);
             return false;
@@ -110,7 +110,7 @@ export function makeComponent(node, makeEl) {
     });
 
     if(spreading) {
-        head.push('let spreadObject = $$makeSpreadObject2($cd, props);');
+        head.push('let spreadObject = $runtime.$$makeSpreadObject2($cd, props);');
         head.push('boundProps.$$spreading = true;');
         binds.push('spreadObject.emit = $component.push;');
         if(twoBinds.length) {
@@ -149,7 +149,7 @@ export function makeComponent(node, makeEl) {
             else {
                 if(!arg.length) {
                     // forwarding
-                    if(forwardAllEvents || boundEvents[event]) head.push(`$$addEvent(events, '${event}', $option.events.${event});`);
+                    if(forwardAllEvents || boundEvents[event]) head.push(`$runtime.$$addEventForComponent(events, '${event}', $option.events.${event});`);
                     else head.push(`events.${event} = $option.events.${event};`);
                     boundEvents[event] = true;
                     return;
@@ -177,7 +177,7 @@ export function makeComponent(node, makeEl) {
                 callback = `($event) => {${this.Q(exp)}}`;
             }
 
-            if(forwardAllEvents || boundEvents[event]) head.push(`$$addEvent(events, '${event}', ${callback});`);
+            if(forwardAllEvents || boundEvents[event]) head.push(`$runtime.$$addEventForComponent(events, '${event}', ${callback});`);
             else head.push(`events.${event} = ${callback};`);
             boundEvents[event] = true;
             return;
@@ -203,7 +203,7 @@ export function makeComponent(node, makeEl) {
                 $watch($cd, ${fname}, _${name} => {
                     props.${name} = _${name};
                     groupCall();
-                }, {ro: true, cmp: $$compareDeep, value: $$cloneDeep(${valueName})});
+                }, {ro: true, cmp: $runtime.$$compareDeep, value: $runtime.$$cloneDeep(${valueName})});
             `);
         } else {
             if(spreading) {
@@ -223,7 +223,7 @@ export function makeComponent(node, makeEl) {
             head.push('let groupCall;');
             binds.push('groupCall = $component.push;');
         } else {
-            head.push('let groupCall = $$groupCall();');
+            head.push('let groupCall = $runtime.$$groupCall();');
             binds.push('groupCall.emit = $component.push;');
         }
     }
@@ -238,7 +238,7 @@ export function makeComponent(node, makeEl) {
             ${head.join('\n')};
             let $component = ${node.name}(${makeEl()}, {afterElement: true, noMount: true, props, boundProps, events, slots});
             if($component) {
-                if($component.destroy) $cd.d($component.destroy);
+                if($component.destroy) $runtime.cd_onDestroy($cd, $component.destroy);
                 ${binds.join('\n')};
                 if($component.onMount) $tick($component.onMount);
             }

@@ -64,7 +64,7 @@ export function makeEachBlock(data, option) {
 
             let itemTemplate = $$htmlToFragment(\`${this.Q(itemData.tpl)}\`, true);
 
-            $$eachBlock($cd, ${option.elName}, ${option.onlyChild?1:0}, () => (${arrayName}), getKey, itemTemplate, bind);
+            $runtime.$$eachBlock($cd, ${option.elName}, ${option.onlyChild?1:0}, () => (${arrayName}), getKey, itemTemplate, bind);
         }
     `);
 

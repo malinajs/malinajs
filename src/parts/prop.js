@@ -64,7 +64,7 @@ export function bindProp(prop, makeEl, node) {
             return {bind: `
                 {
                     for(let event in $option.events) {
-                        $cd.ev(${makeEl()}, event, $option.events[event]);
+                        $runtime.addEvent($cd, ${makeEl()}, event, $option.events[event]);
                     }
                 }
             `};
@@ -78,7 +78,7 @@ export function bindProp(prop, makeEl, node) {
             if(!opts.length) {
                 // forwarding
                 return {bind: `
-                    $cd.ev(${makeEl()}, "${event}", ($event) => {
+                    $runtime.addEvent($cd, ${makeEl()}, "${event}", ($event) => {
                         const fn = $option.events.${event};
                         if(fn) fn($event);
                     });\n`
@@ -122,7 +122,7 @@ export function bindProp(prop, makeEl, node) {
                 {
                     let $element=${makeEl()};
                     const ${funcName} = ${exp};
-                    $cd.ev($element, "${event}", ($event) => { ${mod} $$apply(); ${funcName}($event);});
+                    $runtime.addEvent($cd, $element, "${event}", ($event) => { ${mod} $$apply(); ${funcName}($event);});
                 }`
             };
         } else if(handler) {
@@ -130,14 +130,14 @@ export function bindProp(prop, makeEl, node) {
             return {bind: `
                 {
                     let $element=${makeEl()};
-                    $cd.ev($element, "${event}", ($event) => { ${mod} $$apply(); ${handler}($event);});
+                    $runtime.addEvent($cd, $element, "${event}", ($event) => { ${mod} $$apply(); ${handler}($event);});
                 }`
             };
         } else {
             return {bind: `
                 {
                     let $element=${makeEl()};
-                    $cd.ev($element, "${event}", ($event) => { ${mod} $$apply(); ${this.Q(exp)}});
+                    $runtime.addEvent($cd, $element, "${event}", ($event) => { ${mod} $$apply(); ${this.Q(exp)}});
                 }`
             };
         }
@@ -163,7 +163,7 @@ export function bindProp(prop, makeEl, node) {
         return {bind: `{
             ${spreading}
             let $element=${makeEl()};
-            $cd.ev($element, 'input', () => { ${exp}=$element.${attr}; $$apply(); });
+            $runtime.addEvent($cd, $element, 'input', () => { ${exp}=$element.${attr}; $$apply(); });
             $watchReadOnly($cd, () => (${watchExp}), (value) => { if(value != $element.${attr}) $element.${attr} = value; });
         }`};
     } else if(name == 'class' && arg) {
@@ -189,10 +189,10 @@ export function bindProp(prop, makeEl, node) {
                 let useObject = ${arg}(${makeEl()}${args ? ', ' + args : ''});\n if(useObject) {`;
             if(args) code += `
                 if(useObject.update) {
-                    let w = $watch($cd, () => [${args}], (args) => {useObject.update.apply(useObject, args);}, {cmp: $$compareArray});
+                    let w = $watch($cd, () => [${args}], (args) => {useObject.update.apply(useObject, args);}, {cmp: $runtime.$$compareArray});
                     w.value = w.fn();
                 }`;
-            code += `if(useObject.destroy) $cd.d(useObject.destroy);}});`;
+            code += `if(useObject.destroy) $runtime.cd_onDestroy($cd, useObject.destroy);}});`;
             return {bind: code};
         }
         let exp = getExpression();

@@ -54,7 +54,7 @@ export function buildRuntime(data, script, css, config) {
         if($option.noMount) $component.onMount = onMount;
         else $tick(onMount);
     `);
-    if(script.onDestroy) runtime.push(`$cd.d(onDestroy);`);
+    if(script.onDestroy) runtime.push(`$runtime.cd_onDestroy($cd, onDestroy);`);
     if(script.watchers.length) {
         runtime.push(script.watchers.join('\n'));
     }
@@ -186,7 +186,7 @@ function buildBlock(data) {
                     n.spreadObject = 'spread' + (this.uniqIndex++);
                     n.scopedClass = !!this.css;
                     binds.push(`
-                        let ${n.spreadObject} = $$makeSpreadObject($cd, ${getElementName()}, '${this.css && this.css.id}');
+                        let ${n.spreadObject} = $runtime.$$makeSpreadObject($cd, ${getElementName()}, '${this.css && this.css.id}');
                     `);
                 }
                 n.attributes.forEach(p => {
@@ -289,7 +289,7 @@ function buildBlock(data) {
         }
 
         keys.forEach(k => {
-            buildNodes(d[k], lvl.concat([`[$$childNodes][${k}]`]))
+            buildNodes(d[k], lvl.concat([`[$runtime.$$childNodes][${k}]`]))
         });
     }
     buildNodes(DN, ['$parentElement']);

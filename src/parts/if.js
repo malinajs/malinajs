@@ -29,11 +29,11 @@ export function makeifBlock(data, topElementName) {
 
     if(elseBlock) {
         source.push(`
-            $$ifBlock($cd, $parentElement, () => !!(${exp}), mainfr, ${mainBlock.name}, elsefr, ${elseBlock.name});
+            $runtime.$$ifBlock($cd, $parentElement, () => !!(${exp}), mainfr, ${mainBlock.name}, elsefr, ${elseBlock.name});
         `);
     } else {
         source.push(`
-            $$ifBlock($cd, $parentElement, () => !!(${exp}), mainfr, ${mainBlock.name});
+            $runtime.$$ifBlock($cd, $parentElement, () => !!(${exp}), mainfr, ${mainBlock.name});
         `);
     }
     source.push(`};\n ${ifBlockName}($cd, ${topElementName});`);

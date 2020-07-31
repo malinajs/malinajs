@@ -61,7 +61,7 @@ export function makeAwaitBlock(node, elementName) {
     } else tpl_catch = 'null';
 
     source.push(`
-        $$awaitBlock($cd, ${elementName}, () => ${exp}, $$apply, ${build_main}, ${build_then}, ${build_catch}, ${tpl_main}, ${tpl_then}, ${tpl_catch});
+        $runtime.$$awaitBlock($cd, ${elementName}, () => ${exp}, $$apply, ${build_main}, ${build_then}, ${build_catch}, ${tpl_main}, ${tpl_then}, ${tpl_catch});
     `);
 
     return {source: `{

@@ -186,7 +186,7 @@ export function transformJS(code, option={}) {
             } else if(ex.length > 2) {
                 for(let i = 0;i<ex.length-1;i++) assertExpression(ex[i]);
                 let exp = code.substring(ex[0].start, ex[ex.length-2].end);
-                result.watchers.push(`$watch($cd, () => [${exp}], ($args) => { (${callback}).apply(null, $args); }, {cmp: $$compareArray});`);
+                result.watchers.push(`$watch($cd, () => [${exp}], ($args) => { (${callback}).apply(null, $args); }, {cmp: $runtime.$$compareArray});`);
             } else throw 'Error';
         } else throw 'Error';
     }
@@ -214,7 +214,7 @@ export function transformJS(code, option={}) {
             });
             resultBody.push(n.declaration);
             forInit.forEach(n => {
-                resultBody.push(parseExp(`$$makeProp($component, $props, $option.boundProps || {}, '${n}', () => ${n}, _${n} => {${n} = _${n}; $$apply();})`));
+                resultBody.push(parseExp(`$runtime.$$makeProp($component, $props, $option.boundProps || {}, '${n}', () => ${n}, _${n} => {${n} = _${n}; $$apply();})`));
                 lastPropIndex = resultBody.length;
             });
             return;
@@ -246,18 +246,18 @@ export function transformJS(code, option={}) {
     header.push(parseExp('if(!$option) $option = {}'));
     header.push(parseExp('if(!$option.events) $option.events = {}'));
     header.push(parseExp('const $props = $option.props || {}'));
-    header.push(parseExp('const $component = $$makeComponent($element, $option);'));
-    header.push(parseExp('const $$apply = $$makeApply($component.$cd)'));
+    header.push(parseExp('const $component = $runtime.$$makeComponent($element, $option);'));
+    header.push(parseExp('const $$apply = $runtime.$$makeApply($component.$cd)'));
 
     if(lastPropIndex != null) {
-        resultBody.splice(lastPropIndex, 0, parseExp('let $attributes = $$componentCompleteProps($component, $$apply, $props)'));
+        resultBody.splice(lastPropIndex, 0, parseExp('let $attributes = $runtime.$$componentCompleteProps($component, $$apply, $props)'));
     } else {
         header.push(parseExp('$component.push = $$apply'));
         header.push(parseExp('const $attributes = $props'));
     }
 
-    if(!rootFunctions.$emit) header.push(makeEmitter());
-    if(insertOnDestroy) header.push(parseExp('function $onDestroy(fn) {$component.$cd.d(fn);}'));
+    if(!rootFunctions.$emit) header.push(parseExp('const $emit = $runtime.$makeEmitter($option)'));
+    if(insertOnDestroy) header.push(parseExp('function $onDestroy(fn) {$runtime.cd_onDestroy($component.$cd, fn);}'));
     while(header.length) {
         resultBody.unshift(header.pop());
     }
@@ -294,22 +294,6 @@ export function transformJS(code, option={}) {
     result.code = astring.generate(ast);
     return result;
 }
-
-function makeEmitter() {
-    return {
-        type: 'VariableDeclaration',
-        declarations: [{
-            type: 'VariableDeclarator',
-            id: {type: 'Identifier', name: '$emit'},
-            init: {
-                type: 'CallExpression',
-                callee: {type: 'Identifier', name: '$makeEmitter'},
-                arguments: [{type: 'Identifier', name: '$option'}]
-            }
-        }],
-        kind: 'const'
-    };
-};
 
 
 function parseExp(exp) {

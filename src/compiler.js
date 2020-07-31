@@ -26,16 +26,17 @@ export function compile(src, config = {}) {
     if(config.compact) compactDOM(data);
     const runtime = buildRuntime(data, script, css, config);
 
-    let htmlFragment = config.hideLabel ? '$$htmlToFragmentClean as $$htmlToFragment' : '$$htmlToFragment';
     let code = `
-        import {
-            ${htmlFragment}, $$removeItem, $$childNodes, $watch, $ChangeDetector, $$removeElements,
-            $digest, $$htmlBlock, $$compareDeep, $$compareArray, $watchReadOnly, $$ifBlock, $makeEmitter,
-            $$addEvent, $$deepComparator, $$makeSpreadObject, $$groupCall, $$makeProp, $$cloneDeep,
-            $$makeSpreadObject2, $$makeApply, $$makeComponent, $$componentCompleteProps,
-            $$awaitBlock, $tick, $$eachBlock
-        } from 'malinajs/runtime.js';
+        import * as $runtime from 'malinajs/runtime.js';
+        import { $watch, $watchReadOnly, $tick } from 'malinajs/runtime.js';
     `;
+
+    if(config.hideLabel) {
+        code += `import { $$htmlToFragmentClean as $$htmlToFragment } from 'malinajs/runtime.js';\n`;
+    } else {
+        code += `import { $$htmlToFragment } from 'malinajs/runtime.js';\n`;
+    }
+
     code += script.code.split('$$runtime()').join(runtime);
     return code;
 };

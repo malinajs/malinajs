@@ -1,5 +1,6 @@
 
-import { $watch, $$htmlToFragment } from '../runtime/base';
+import { $$htmlToFragment } from '../runtime/base';
+import { $watch } from '../runtime/cd';
 
 export function $$htmlBlock($cd, tag, fn) {
     let lastElement;

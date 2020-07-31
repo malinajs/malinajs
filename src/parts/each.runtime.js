@@ -1,5 +1,6 @@
 
-import { $watch, $$compareArray, $$removeElements } from '../runtime/base';
+import { $$removeElements } from '../runtime/base';
+import { $watch, $$compareArray } from '../runtime/cd';
 
 export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, itemTemplate, bind) {
     let $cd = $parentCD.new();

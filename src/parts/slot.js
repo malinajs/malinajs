@@ -20,7 +20,7 @@ export function attachSlot(slotName, label, node) {
                 value = unwrapExp(value);
                 bind.push(`
                     if('set_${name}' in s) {
-                        $watch($cd, () => (${value}), s.set_${name}, {ro: true, cmp: $$compareDeep});
+                        $watch($cd, () => (${value}), s.set_${name}, {ro: true, cmp: $runtime.$$compareDeep});
                     }
                 `);
             } else {
@@ -45,7 +45,7 @@ export function attachSlot(slotName, label, node) {
         let $slot = $option.slots && $option.slots.${slotName};
         if($slot) {
             let s = $slot(${label});
-            $cd.d(s.destroy);
+            $runtime.cd_onDestroy($cd, s.destroy);
             ${bind.join('\n')}
         } ${placeholder};
     }`};
