@@ -18,8 +18,8 @@ export function transformJS(code, option={}) {
             let rx = line.match(/^(\s*)\/\/(.*)$/);
             if(!rx) return line;
             let code = rx[2].trim()
-            if(code != '!check-stop') return line;
-            return rx[1] + '$$_checkStop;';
+            if(code != '!no-check') return line;
+            return rx[1] + '$$_noCheck;';
         }).join('\n');
         ast = acorn.parse(code, {sourceType: 'module'});
     } else {
@@ -70,8 +70,8 @@ export function transformJS(code, option={}) {
         return method == 'forEach' || method == 'map' || method == 'filter';
     }
 
-    function isStopOption(node) {
-        return node.type == 'ExpressionStatement' && node.expression.type == 'Identifier' && node.expression.name == '$$_checkStop';
+    function isNoCheck(node) {
+        return node.type == 'ExpressionStatement' && node.expression.type == 'Identifier' && node.expression.name == '$$_noCheck';
     };
 
     function transformNode(node) {
@@ -79,8 +79,8 @@ export function transformJS(code, option={}) {
             if(insertOnDestroy && node._parent.type == 'CallExpression' && node._parent.callee.name == '$onDestroy') return 'stop';
             for(let i=0; i<node.body.body.length; i++) {
                 let n = node.body.body[i];
-                if(!isStopOption(n)) continue;
-                node.body.body[i] = parseExp('$$apply(false)');
+                if(!isNoCheck(n)) continue;
+                node.body.body.splice(i, 1);
                 return 'stop';
             }
             if(!isInLoop(node)) {

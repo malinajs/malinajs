@@ -122,7 +122,7 @@ export function bindProp(prop, makeEl, node) {
                 {
                     let $element=${makeEl()};
                     const ${funcName} = ${exp};
-                    $runtime.addEvent($cd, $element, "${event}", ($event) => { ${mod} $$apply(); ${funcName}($event);});
+                    $runtime.addEvent($cd, $element, "${event}", ($event) => { ${mod} ${funcName}($event); $$apply();});
                 }`
             };
         } else if(handler) {
@@ -130,14 +130,14 @@ export function bindProp(prop, makeEl, node) {
             return {bind: `
                 {
                     let $element=${makeEl()};
-                    $runtime.addEvent($cd, $element, "${event}", ($event) => { ${mod} $$apply(); ${handler}($event);});
+                    $runtime.addEvent($cd, $element, "${event}", ($event) => { ${mod} ${handler}($event); $$apply();});
                 }`
             };
         } else {
             return {bind: `
                 {
                     let $element=${makeEl()};
-                    $runtime.addEvent($cd, $element, "${event}", ($event) => { ${mod} $$apply(); ${this.Q(exp)}});
+                    $runtime.addEvent($cd, $element, "${event}", ($event) => { ${mod} ${this.Q(exp)}; $$apply(); });
                 }`
             };
         }
@@ -196,7 +196,7 @@ export function bindProp(prop, makeEl, node) {
         let exp = getExpression();
         return {bind: `{
             let $element=${makeEl()};
-            $tick(() => { $$apply(); ${exp}; });}`};
+            $tick(() => { ${exp}; $$apply(); });}`};
     } else {
         if(prop.value && prop.value.indexOf('{') >= 0) {
             let exp = this.parseText(prop.value);

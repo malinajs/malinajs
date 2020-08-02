@@ -231,16 +231,10 @@ export function $$groupCall(emit) {
 };
 
 export function $$makeApply($cd) {
-    let stop, id = `a${$$uniqIndex++}`;
-    return function apply(option) {
-        if(option === false) {
-            if(_tick_planned.apply) stop = true;
-            return;
-        }
+    let id = `a${$$uniqIndex++}`;
+    return function apply() {
         if(apply._p) return;
-
         $tick(() => {
-            if(stop) return stop = false;
             try {
                 apply._p = true;
                 $digest($cd);
