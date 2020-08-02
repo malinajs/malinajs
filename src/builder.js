@@ -132,9 +132,7 @@ function buildBlock(data) {
                 if(n.value.indexOf('{') >= 0) {
                     tpl.push(' ');
                     let exp = this.parseText(n.value);
-                    binds.push(`{
-                        let $element=${getElementName()};
-                        $watchReadOnly($cd, () => ${exp}, (value) => {$element.textContent=value;});}`);
+                    binds.push(`$runtime.bindText($cd, ${getElementName()}, () => ${exp});`);
                 } else tpl.push(n.value);
                 lastText = tpl.length;
             } else if(n.type === 'template') {

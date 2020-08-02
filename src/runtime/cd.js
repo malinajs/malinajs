@@ -61,9 +61,11 @@ $ChangeDetector.prototype.destroy = function(option) {
 };
 
 
+export const isArray = (a) => Array.isArray(a);
+
 const compareArray = (a, b) => {
-    let a0 = Array.isArray(a);
-    let a1 = Array.isArray(b);
+    let a0 = isArray(a);
+    let a1 = isArray(b);
     if(a0 !== a1) return true;
     if(!a0) return a !== b;
     if(a.length !== b.length) return true;
@@ -76,7 +78,7 @@ const compareArray = (a, b) => {
 
 export function $$compareArray(w, value) {
     if(!compareArray(w.value, value)) return 0;
-    if(Array.isArray(value)) w.value = value.slice();
+    if(isArray(value)) w.value = value.slice();
     else w.value = value;
     w.cb(w.value);
     return w.ro ? 0 : 1;
@@ -90,8 +92,8 @@ const compareDeep = (a, b, lvl) => {
     let o1 = typeof(b) == 'object';
     if(!(o0 && o1)) return a !== b;
 
-    let a0 = Array.isArray(a);
-    let a1 = Array.isArray(b);
+    let a0 = isArray(a);
+    let a1 = isArray(b);
     if(a0 !== a1) return true;
 
     if(a0) {
@@ -120,7 +122,7 @@ function cloneDeep(d, lvl) {
 
     if(typeof(d) == 'object') {
         if(d instanceof Date) return d;
-        if(Array.isArray(d)) return d.map(i => cloneDeep(i, lvl-1));
+        if(isArray(d)) return d.map(i => cloneDeep(i, lvl-1));
         let r = {};
         for(let k in d) r[k] = cloneDeep(d[k], lvl-1);
         return r;

@@ -1,6 +1,6 @@
 
 import { $$removeElements } from '../runtime/base';
-import { $watch, $$compareArray } from '../runtime/cd';
+import { $watch, $$compareArray, isArray } from '../runtime/cd';
 
 export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, itemTemplate, bind) {
     let $cd = $parentCD.new();
@@ -18,7 +18,7 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, itemTemplat
             array--;
             while(array >= 0 && !lineArray[array]) lineArray[array] = array-- + 1;
             array = lineArray;
-        } else if(!Array.isArray(array)) array = [];
+        } else if(!isArray(array)) array = [];
 
         let newMapping = new Map();
         let prevNode, parentNode;

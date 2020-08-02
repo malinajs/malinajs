@@ -1,5 +1,5 @@
 
-import { $watch, $$deepComparator, $$cloneDeep, $ChangeDetector, $digest, $$compareDeep } from './cd';
+import { $watch, $watchReadOnly, $$deepComparator, $$cloneDeep, $ChangeDetector, $digest, $$compareDeep } from './cd';
 
 
 let templatecache = {false: {}, true: {}};
@@ -303,4 +303,19 @@ export const addStyles = (id, content) => {
     style.id = id;
     style.innerHTML = content;
     document.head.appendChild(style);
+};
+
+
+export const bindClass = (cd, element, fn, className) => {
+    $watchReadOnly(cd, fn, value => {
+        if(value) element.classList.add(className);
+        else element.classList.remove(className);
+    });
+}
+
+
+export const bindText = (cd, element, fn) => {
+    $watchReadOnly(cd, fn, value => {
+        element.textContent = value;
+    });
 };
