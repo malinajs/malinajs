@@ -2,7 +2,7 @@
 import { $watch, $watchReadOnly, $$deepComparator, $$cloneDeep, $ChangeDetector, $digest, $$compareDeep } from './cd';
 
 
-let templatecache = {false: {}, true: {}};
+let templatecache = {false: {}, true: {}, svg: {}};
 
 let $$uniqIndex = 1;
 
@@ -30,6 +30,18 @@ export function $$htmlToFragmentClean(html, lastNotTag) {
         if(!n.nodeValue) n.parentNode.replaceChild(document.createTextNode(''), n);
     };
     templatecache[lastNotTag][html] = result.cloneNode(true);
+    return result;
+};
+
+export function svgToFragment(content) {
+    if(templatecache.svg[content]) return templatecache.svg[content].cloneNode(true);
+    let t = document.createElement('template');
+    t.innerHTML = '<svg>' + content + '</svg>';
+
+    let result = document.createDocumentFragment();
+    let svg = t.content.firstChild;
+    while(svg.firstChild) result.appendChild(svg.firstChild);
+    templatecache.svg[content] = result.cloneNode(true);
     return result;
 };
 

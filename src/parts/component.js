@@ -44,10 +44,11 @@ export function makeComponent(node, makeEl) {
             }
 
             let block = this.buildBlock(slot);
+            const convert = block.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
             head.push(`
                 slots.${slot.name} = function($label) {
                     let $childCD = $cd.new();
-                    let $tpl = $$htmlToFragment(\`${this.Q(block.tpl)}\`);
+                    let $tpl = ${convert}(\`${this.Q(block.tpl)}\`);
 
                     ${args}
 

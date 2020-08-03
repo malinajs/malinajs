@@ -15,15 +15,18 @@ export function makeifBlock(data, topElementName) {
     if(data.bodyMain) {
         mainBlock = this.buildBlock({body: data.bodyMain});
         elseBlock = this.buildBlock(data);
+
+        const convert = elseBlock.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
         source.push(`
-            let elsefr = $$htmlToFragment(\`${this.Q(elseBlock.tpl)}\`, true);
+            let elsefr = ${convert}(\`${this.Q(elseBlock.tpl)}\`, true);
             ${elseBlock.source}
         `);
     } else {
         mainBlock = this.buildBlock(data);
     }
+    const convert = mainBlock.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
     source.push(`
-        let mainfr = $$htmlToFragment(\`${this.Q(mainBlock.tpl)}\`, true);
+        let mainfr = ${convert}(\`${this.Q(mainBlock.tpl)}\`, true);
         ${mainBlock.source}
     `);
 

@@ -47,7 +47,7 @@ export function makeEachBlock(data, option) {
     else if(keyName == indexName) keyFunction = 'function getKey(_, i) {return i;}';
     else keyFunction = `function getKey(${itemName}) {return ${keyName};}`;
 
-    let eachBlockName = 'eachBlock' + (this.uniqIndex++);
+    const convert = itemData.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
 
     source.push(`
         {
@@ -62,7 +62,7 @@ export function makeEachBlock(data, option) {
 
             ${keyFunction};
 
-            let itemTemplate = $$htmlToFragment(\`${this.Q(itemData.tpl)}\`, true);
+            let itemTemplate = ${convert}(\`${this.Q(itemData.tpl)}\`, true);
 
             $runtime.$$eachBlock($cd, ${option.elName}, ${option.onlyChild?1:0}, () => (${arrayName}), getKey, itemTemplate, bind);
         }

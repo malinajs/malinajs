@@ -45,8 +45,13 @@ export function buildRuntime(data, script, css, config) {
 
     let rootTemplate = bb.tpl;
     runtime.push(bb.source);
+
+    if(bb.svg) {
+        runtime.push(`const rootTemplate = $runtime.svgToFragment(\`${Q(rootTemplate)}\`);`);
+    } else {
+        runtime.push(`const rootTemplate = $$htmlToFragment(\`${Q(rootTemplate)}\`);`);
+    }
     runtime.push(`
-        const rootTemplate = $$htmlToFragment(\`${Q(rootTemplate)}\`);
         ${bb.name}($cd, rootTemplate);
         $component.$$render(rootTemplate);
     `);
@@ -76,8 +81,9 @@ function buildBlock(data) {
     let lvl = [];
     let binds = [];
     let DN = {};
+    let result = {};
 
-    const go = (level, data) => {
+    const go = (level, data, isRoot) => {
         let index = 0;
         const setLvl = () => {lvl[level] = index++;}
 
@@ -95,7 +101,7 @@ function buildBlock(data) {
             return d.name;
         };
 
-        let n, body = data.body.filter(n => {
+        let body = data.body.filter(n => {
             if(n.type == 'script' || n.type == 'style' || n.type == 'slot') return false;
             if(n.type == 'comment' && !this.config.preserveComments) return false;
             if(n.type == 'fragment') {
@@ -109,6 +115,16 @@ function buildBlock(data) {
             }
             return true;
         });
+
+        if(isRoot) {
+            let svg = false, other = false;
+            body.some(node => {
+                if(node.type != 'node') return;
+                if(node.name == 'g') svg = true;
+                else return other = true;
+            });
+            if(svg && !other) result.svg = true;
+        }
 
         {
             let i = 0;
@@ -261,15 +277,15 @@ function buildBlock(data) {
 
         lvl.length = level;
     };
-    go(0, data);
+    go(0, data, true);
 
     let source = [];
-    let buildName = '$$build' + (this.uniqIndex++);
-    tpl = this.Q(tpl.join(''));
+    result.name = '$$build' + (this.uniqIndex++);
+    result.tpl = this.Q(tpl.join(''));
     
     let args = ['$cd', '$parentElement'];
     if(data.args) args.push.apply(args, data.args);
-    source.push(`function ${buildName}(${args.join(', ')}) {\n`);
+    source.push(`function ${result.name}(${args.join(', ')}) {\n`);
 
     const buildNodes = (d, lvl) => {
         let keys = Object.keys(d).filter(k => k != 'name');
@@ -289,13 +305,8 @@ function buildBlock(data) {
 
     source.push(binds.join('\n'));
     source.push(`};`);
-
-    return {
-        name: buildName,
-        tpl: tpl,
-        source: source.join('')
-    }
-
+    result.source = source.join('');
+    return result;
 };
 
 function wrapException(e, n) {

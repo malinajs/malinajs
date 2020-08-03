@@ -31,13 +31,15 @@ export function makeFragment(node) {
         return {source: `function $fragment_${name}() {};`};
     }
 
+    const convert = block.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
+
     return {source: `
         function $fragment_${name}($cd, label, $option) {
             let $$args = $option.args;
             ${head.join('\n')}
 
             ${block.source};
-            let $tpl = $$htmlToFragment(\`${this.Q(block.tpl)}\`);
+            let $tpl = ${convert}(\`${this.Q(block.tpl)}\`);
             ${block.name}($cd, $tpl);
             label.parentNode.insertBefore($tpl, label.nextSibling);
         };

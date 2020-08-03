@@ -23,7 +23,8 @@ export function makeAwaitBlock(node, elementName) {
         block_main = this.buildBlock({body: node.parts.main});
         source.push(block_main.source);
         build_main = block_main.name;
-        source.push(`const tpl_main = $$htmlToFragment(\`${this.Q(block_main.tpl)}\`, true);`);
+        const convert = block_main.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
+        source.push(`const tpl_main = ${convert}(\`${this.Q(block_main.tpl)}\`, true);`);
         tpl_main = 'tpl_main';
     } else tpl_main = 'null';
     if(node.parts.then && node.parts.then.length) {
@@ -42,7 +43,8 @@ export function makeAwaitBlock(node, elementName) {
         block_then = this.buildBlock({body: node.parts.then, args});
         source.push(block_then.source);
         build_then = block_then.name;
-        source.push(`const tpl_then = $$htmlToFragment(\`${this.Q(block_then.tpl)}\`, true);`);
+        const convert = block_then.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
+        source.push(`const tpl_then = ${convert}(\`${this.Q(block_then.tpl)}\`, true);`);
         tpl_then = 'tpl_then';
     } else tpl_then = 'null';
     if(node.parts.catch && node.parts.catch.length) {
@@ -56,7 +58,8 @@ export function makeAwaitBlock(node, elementName) {
         block_catch = this.buildBlock({body: node.parts.catch, args});
         source.push(block_catch.source);
         build_catch = block_catch.name;
-        source.push(`const tpl_catch = $$htmlToFragment(\`${this.Q(block_catch.tpl)}\`, true);`);
+        const convert = block_catch.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
+        source.push(`const tpl_catch = ${convert}(\`${this.Q(block_catch.tpl)}\`, true);`);
         tpl_catch = 'tpl_catch';
     } else tpl_catch = 'null';
 

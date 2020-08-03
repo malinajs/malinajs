@@ -33,9 +33,10 @@ export function attachSlot(slotName, label, node) {
 
     if(node.body && node.body.length) {
         let block = this.buildBlock(node);
+        const convert = block.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
         placeholder = ` else {
             ${block.source};
-            let $tpl = $$htmlToFragment(\`${this.Q(block.tpl)}\`);
+            let $tpl = ${convert}(\`${this.Q(block.tpl)}\`);
             ${block.name}($cd, $tpl);
             ${label}.parentNode.insertBefore($tpl, ${label}.nextSibling);
         }`;

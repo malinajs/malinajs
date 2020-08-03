@@ -72,10 +72,7 @@ export function parse(source) {
                 const voidTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
                 let voidTag = voidTags.indexOf(name) >= 0;
                 if(name.match(/^fragment($| |\:)/)) voidTag = true;
-                let closedTag = voidTag;
-                if(!closedTag && source[index-2] == '/') {
-                    closedTag = !!(name.match(/^[A-Z]/) || name.match(/^slot($| |\:)/));
-                }
+                let closedTag = voidTag || source[index-2] == '/';
                 return {
                     type: 'node',
                     name: name,

@@ -25,8 +25,5 @@ export default {
             compact: true
         }),
         customResolve()
-    ],
-    treeshake: {
-        propertyReadSideEffects: false
-    }
+    ]
 }
