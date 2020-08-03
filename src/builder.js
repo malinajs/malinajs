@@ -120,7 +120,7 @@ function buildBlock(data) {
             let svg = false, other = false;
             body.some(node => {
                 if(node.type != 'node') return;
-                if(node.name == 'g') svg = true;
+                if(utils.svgElements[node.name]) svg = true;
                 else return other = true;
             });
             if(svg && !other) result.svg = true;
