@@ -1,5 +1,5 @@
 
-import { $watch, $watchReadOnly, $$deepComparator, $$cloneDeep, $ChangeDetector, $digest, $$compareDeep } from './cd';
+import { $watch, $watchReadOnly, $$deepComparator, $$cloneDeep, $ChangeDetector, $digest, $$compareDeep, cd_onDestroy } from './cd';
 
 
 let templatecache = {false: {}, true: {}, svg: {}};
@@ -276,6 +276,13 @@ export function $$makeComponent($element, $option) {
 
     return $component;
 };
+
+export const autoSubscribe = (cd, apply, obj) => {
+    if(obj && 'value' in obj && obj.subscribe) {
+        let unsub = obj.subscribe(apply);
+        if(typeof unsub == 'function') cd_onDestroy(cd);
+    }
+}
 
 export function $$componentCompleteProps($component, $$apply, $props) {
     let list = $component.push;

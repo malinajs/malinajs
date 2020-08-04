@@ -18,7 +18,8 @@ function malinaRollup(option = {}) {
                 warning: (w) => console.warn('!', w.message),
                 inlineTemplate: false,
                 hideLabel: false,
-                compact: true
+                compact: true,
+                autoSubscribe: true
             }, option);
             try {
                 result = malina.compile(code, opts);

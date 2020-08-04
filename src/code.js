@@ -4,10 +4,11 @@ import astring from 'astring';
 import { assert } from './utils.js'
 
 
-export function transformJS(code, option={}) {
+export function transformJS(code, config={}) {
     let result = {
         watchers: [],
         imports: [],
+        importedNames: [],
         props: [],
         rootVariables: {},
         rootFunctions: {}
@@ -199,8 +200,9 @@ export function transformJS(code, option={}) {
         if(n.type == 'ImportDeclaration') {
             imports.push(n);
             n.specifiers.forEach(s => {
-                if(s.type != 'ImportDefaultSpecifier') return;
                 if(s.local.type != 'Identifier') return;
+                result.importedNames.push(s.local.name);
+                if(s.type != 'ImportDefaultSpecifier') return;
                 result.imports.push(s.local.name);
             });
             return;
@@ -256,6 +258,12 @@ export function transformJS(code, option={}) {
         header.push(parseExp('const $attributes = $props'));
     }
 
+    if(config.autoSubscribe) {
+        result.importedNames.forEach(name => {
+            header.push(parseExp(`$runtime.autoSubscribe($component.$cd, $$apply, ${name})`));
+        });
+    }
+
     if(!rootFunctions.$emit) header.push(parseExp('const $emit = $runtime.$makeEmitter($option)'));
     if(insertOnDestroy) header.push(parseExp('function $onDestroy(fn) {$runtime.cd_onDestroy($component.$cd, fn);}'));
     while(header.length) {
@@ -269,7 +277,7 @@ export function transformJS(code, option={}) {
         },
         id: {
             type: 'Identifier"',
-            name: option.name
+            name: config.name
         },
         params: [{
             type: 'Identifier',
@@ -281,7 +289,7 @@ export function transformJS(code, option={}) {
         type: 'FunctionDeclaration'
     };
 
-    if(option.exportDefault) {
+    if(config.exportDefault) {
         widgetFunc = {
             type: 'ExportDefaultDeclaration',
             declaration: widgetFunc
