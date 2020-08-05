@@ -1,20 +1,34 @@
 
 import csstree from 'css-tree';
-import { assert } from '../utils.js'
+import { assert, genId } from '../utils.js'
 import nwsapi from './ext/nwsapi';
 
 
 export function processCSS(styleNode, config) {
     // TODO: make hash
-    let id = Math.floor(Date.now() * Math.random()).toString(36);
-    if(id.length > 6) id = id.substring(id.length - 6)
-    id = 'm' + id;
+    let id = genId();
 
-    let self = {element: {}, cls: {}, id};
+    let simpleClasses = {};
+    let self = {element: {}, cls: {}, id, passed: [], simpleClasses};
     let selectors = [];
 
     function transform() {
-        self.ast = csstree.parse(styleNode.content);
+        let content = styleNode.content;
+
+        let exportBlocks = Array.from(content.matchAll(/\:export\(([^\(\)]+)\)/g));
+        for(let i = exportBlocks.length - 1; i>=0; i--) {
+            let rx = exportBlocks[i];
+            content = content.substring(0, rx.index) + content.substring(rx.index + rx[0].length);
+            rx[1].split(/\s*,\s*/).forEach(sel => {
+                assert(sel.match(/^\.[\w\-]+$/), 'Wrong exported class');
+                selectors.push({
+                    name: sel,
+                    exported: true
+                });
+            })
+        }
+
+        self.ast = csstree.parse(content);
 
         csstree.walk(self.ast, function(node) {
             if (node.type === 'Rule') {
@@ -33,7 +47,9 @@ export function processCSS(styleNode, config) {
                             a.children.forEach(sel => {
                                 selector.push(Object.assign({__global: true}, sel));
                             })
-                        } else selector.push(sel);
+                        } else {
+                            selector.push(sel);
+                        }
                     });
 
                     let result = [];
@@ -56,11 +72,15 @@ export function processCSS(styleNode, config) {
                     if(!inserted) result.push({type: "ClassSelector", loc: null, name: id});
 
                     fullSelector.children = result;
-                    proc = csstree.generate({
+                    let selectorName = csstree.generate({
                         type: 'Selector',
                         children: proc
                     });
-                    selectors.push(proc);
+                    selectors.push({
+                        name: selectorName
+                    });
+                    let rx = selectorName.match(/^\.([\w\-]+)$/);
+                    if(rx) simpleClasses[rx[1]] = node;
                 });
             }
         });
@@ -73,25 +93,49 @@ export function processCSS(styleNode, config) {
             DOMException: function() {}
         });
 
-        selectors.forEach(s => {
+        selectors.forEach(sel => {
             let selected;
             try {
-                selected = nw.select([s]);
+                selected = nw.select([sel.name]);
             } catch (_) {
-                let e = new Error(`CSS error: '${s}'`);
-                e.details = `selector: '${s}'`;
+                let e = new Error(`CSS error: '${sel.name}'`);
+                e.details = `selector: '${sel.name}'`;
                 throw e;
             }
             if(selected.length) {
                 selected.forEach(s => {
-                    s.node.__node.scopedClass = true;
-                    s.lvl.forEach(l => l.__node.scopedClass = true);
+                    if(sel.exported) {
+                        s.node.__node.scopedClassParent = true;
+                        assert(s.lvl.length == 1);
+                    } else {
+                        s.node.__node.scopedClass = true;
+                        s.lvl.forEach(l => l.__node.scopedClass = true);
+                    }
                 })
-            } else config.warning({message: 'No used css-class: ' + s});
+            } else config.warning({message: 'No used css-class: ' + sel.name});
         });
     };
 
     self.getContent = function() {
+        if(self.passed.length) {
+            self.passed.forEach(item => {
+                let node = simpleClasses[item.parent];
+                assert(node, 'No clas to pass ' + item.parent);
+
+                let children = node.prelude.children.toArray ? node.prelude.children.toArray() : node.prelude.children;
+                children.push({
+                    type: 'Selector',
+                    children: [{
+                        type: 'ClassSelector',
+                        name: item.child
+                    }, {
+                        type: 'ClassSelector',
+                        name: item.id
+                    }]
+                });
+                node.prelude.children = children;
+            });
+        }
         return csstree.generate(self.ast);
     }
 

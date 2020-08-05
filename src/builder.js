@@ -198,6 +198,9 @@ function buildBlock(data) {
                         let ${n.spreadObject} = $runtime.$$makeSpreadObject($cd, ${getElementName()}, '${this.css && this.css.id}');
                     `);
                 }
+                if(n.scopedClassParent) {
+                    binds.push(`$runtime.bindParentClass(${getElementName()}, $option);`);
+                }
                 n.attributes.forEach(p => {
                     let b = this.bindProp(p, getElementName, n);
                     if(b.prop) el.push(b.prop);

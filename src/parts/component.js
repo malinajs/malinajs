@@ -1,5 +1,5 @@
 
-import { assert, detectExpressionType, isSimpleName, unwrapExp } from '../utils'
+import { assert, detectExpressionType, isSimpleName, unwrapExp, genId } from '../utils'
 
 
 export function makeComponent(node, makeEl) {
@@ -9,6 +9,7 @@ export function makeComponent(node, makeEl) {
     let forwardAllEvents = false;
     let injectGroupCall = 0;
     let spreading = false;
+    let classId;
 
     if(node.body && node.body.length) {
         let slots = {};
@@ -182,6 +183,23 @@ export function makeComponent(node, makeEl) {
             else head.push(`events.${event} = ${callback};`);
             boundEvents[event] = true;
             return;
+        } else if(name == 'class' || name.startsWith('class:')) {
+            if(!classId) {
+                classId = genId();
+                head.push(`classPrefix = '${classId}';`);
+            }
+            assert(this.css, 'No styles');
+            let args = name.split(':');
+            args.shift();
+            assert(args.length <= 1, 'Wrong class syntax');
+            let child = args[0];
+            let parentClasses = value.split(/\s+/);
+            assert(parentClasses.length);
+            parentClasses.forEach(parent => {
+                assert(this.css.simpleClasses[parent], 'No class to pass');
+                this.css.passed.push({id: classId, child: child || parent, parent});
+            });
+            return;
         }
         assert(value, 'Empty property');
         assert(isSimpleName(name), `Wrong property: '${name}'`);
@@ -236,8 +254,9 @@ export function makeComponent(node, makeEl) {
             let props = {};
             let boundProps = {};
             let slots = {};
+            let classPrefix;
             ${head.join('\n')};
-            let $component = ${node.name}(${makeEl()}, {afterElement: true, noMount: true, props, boundProps, events, slots});
+            let $component = ${node.name}(${makeEl()}, {afterElement: true, noMount: true, props, boundProps, events, slots, classPrefix});
             if($component) {
                 if($component.destroy) $runtime.cd_onDestroy($cd, $component.destroy);
                 ${binds.join('\n')};

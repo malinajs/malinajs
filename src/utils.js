@@ -175,3 +175,9 @@ export function compactDOM(data) {
 
     go(data.body);
 };
+
+export const genId = () => {
+    let id = Math.floor(Date.now() * Math.random()).toString(36);
+    if(id.length > 6) id = id.substring(id.length - 6)
+    return 'm' + id;
+};
