@@ -280,7 +280,7 @@ export function $$makeComponent($element, $option) {
 export const autoSubscribe = (cd, apply, obj) => {
     if(obj && 'value' in obj && obj.subscribe) {
         let unsub = obj.subscribe(apply);
-        if(typeof unsub == 'function') cd_onDestroy(cd);
+        if(typeof unsub == 'function') cd_onDestroy(unsub);
     }
 }
 
