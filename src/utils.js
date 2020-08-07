@@ -11,6 +11,12 @@ export function assert(x, info) {
     if(!x) throw info || (new Error('AssertError'));
 }
 
+export function replace(s, from, to, count) {
+    let d = s.split(from);
+    if(count) assert(d.length === count + 1, 'Replace multi-entry');
+    return d.join(to);
+}
+
 export function Q(s) {
     return s.replace(/`/g, '\\`');
 };

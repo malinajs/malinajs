@@ -1,4 +1,6 @@
 
+import { __app_onerror } from './utils';
+
 export function $watch(cd, fn, callback, w) {
     if(!w) w = {};
     w.fn = fn;
@@ -50,7 +52,7 @@ $ChangeDetector.prototype.destroy = function(option) {
         try {
             fn();
         } catch (e) {
-            console.error(e);
+            __app_onerror(e);
         }
     });
     this.destroyList.length = 0;

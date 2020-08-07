@@ -247,6 +247,7 @@ export function transformJS(code, config={}) {
     let header = [];
     header.push(parseExp('if(!$option) $option = {}'));
     header.push(parseExp('if(!$option.events) $option.events = {}'));
+    header.push(parseExp('$$runtimeHeader()'));
     header.push(parseExp('const $props = $option.props || {}'));
     header.push(parseExp('const $component = $runtime.$$makeComponent($element, $option);'));
     header.push(parseExp('const $$apply = $runtime.$$makeApply($component.$cd)'));

@@ -4,6 +4,7 @@ const malina = require('malinajs');
 module.exports = malinaRollup;
 
 function malinaRollup(option = {}) {
+    option.$context = {};
     if(option.displayVersion !== false) console.log('! Malina.js', malina.version);
     if(!option.extension) option.extension = ['html', 'ma'];
     return {

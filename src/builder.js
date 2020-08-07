@@ -17,6 +17,12 @@ export function buildRuntime(data, script, css, config) {
         return (function() {
             let $cd = $component.$cd;
     `];
+    let runtimeHeader = [];
+
+    if(!config.$context.rootUsed) {
+        config.$context.rootUsed = true;
+        runtimeHeader.push(`$runtime.appConfigure($option);`);
+    }
 
     const Q = config.inlineTemplate ? utils.Q2 : utils.Q;
     const ctx = {
@@ -72,7 +78,10 @@ export function buildRuntime(data, script, css, config) {
             $$apply();
             return $component;
         })();`);
-    return runtime.join('');
+    return {
+        header: runtimeHeader.join('\n'),
+        body: runtime.join('\n')
+    };
 }
 
 

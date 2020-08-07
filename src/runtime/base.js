@@ -1,6 +1,6 @@
 
 import { $watch, $watchReadOnly, $$deepComparator, $$cloneDeep, $ChangeDetector, $digest, $$compareDeep, cd_onDestroy } from './cd';
-
+import { __app_onerror } from './utils';
 
 let templatecache = {false: {}, true: {}, svg: {}};
 
@@ -74,7 +74,7 @@ export function $tick(fn, uniq) {
             try {
                 fn();
             } catch (e) {
-                console.error(e);
+                __app_onerror(e);
             }
         });
     }, 0);
