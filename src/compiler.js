@@ -37,6 +37,8 @@ export function compile(src, config = {}) {
         code += `import { $$htmlToFragment } from 'malinajs/runtime.js';\n`;
     }
 
+    if(config.injectRuntime) code += config.injectRuntime + '\n';
+
     let scriptCode = replace(script.code, '$$runtimeHeader()', runtime.header, 1);
     scriptCode = replace(scriptCode, '$$runtime()', runtime.body, 1);
     return code + scriptCode;
