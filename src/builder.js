@@ -19,11 +19,6 @@ export function buildRuntime(data, script, css, config) {
     `];
     let runtimeHeader = [];
 
-    if(!config.$context.rootUsed) {
-        config.$context.rootUsed = true;
-        runtimeHeader.push(`$runtime.appConfigure($option);`);
-    }
-
     const Q = config.inlineTemplate ? utils.Q2 : utils.Q;
     const ctx = {
         uniqIndex: 0,

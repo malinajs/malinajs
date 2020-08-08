@@ -1,6 +1,6 @@
 
-export let __app_onerror;
+export let __app_onerror = console.error;
 
-export const appConfigure = (option) => {
-    __app_onerror = option.onerror || console.error;
+export const configure = (option) => {
+    __app_onerror = option.onerror;
 };
