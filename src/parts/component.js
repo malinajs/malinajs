@@ -184,6 +184,8 @@ export function makeComponent(node, makeEl) {
             boundEvents[event] = true;
             return;
         } else if(name == 'class' || name.startsWith('class:')) {
+            assert(false, 'Class is not supported');
+        } else if(name == 'bind-class' || name.startsWith('bind-class:')) {
             if(!classId) {
                 classId = genId();
                 head.push(`classPrefix = '${classId}';`);

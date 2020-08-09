@@ -15,15 +15,15 @@ export function processCSS(styleNode, config) {
     function transform() {
         let content = styleNode.content;
 
-        let exportBlocks = Array.from(content.matchAll(/\:export\(([^\(\)]+)\)/g));
-        for(let i = exportBlocks.length - 1; i>=0; i--) {
-            let rx = exportBlocks[i];
+        let boundBlocks = Array.from(content.matchAll(/\:bind\(([^\(\)]+)\)/g));
+        for(let i = boundBlocks.length - 1; i>=0; i--) {
+            let rx = boundBlocks[i];
             content = content.substring(0, rx.index) + content.substring(rx.index + rx[0].length);
             rx[1].split(/\s*,\s*/).forEach(sel => {
-                assert(sel.match(/^\.[\w\-]+$/), 'Wrong exported class');
+                assert(sel.match(/^\.[\w\-]+$/), 'Wrong bound class');
                 selectors.push({
                     name: sel,
-                    exported: true
+                    bound: true
                 });
             })
         }
@@ -104,7 +104,7 @@ export function processCSS(styleNode, config) {
             }
             if(selected.length) {
                 selected.forEach(s => {
-                    if(sel.exported) {
+                    if(sel.bound) {
                         s.node.__node.scopedClassParent = true;
                         assert(s.lvl.length == 1);
                     } else {
@@ -162,10 +162,12 @@ function makeDom(data) {
             } else if(e.type != 'node') return;
             let n = new Node(e.name, {__node: e});
             e.attributes.forEach(a => {
-                if(a.name == 'class') n.className += ' ' + a.value;
+                if(a.name == 'class' || a.name == 'bind-class') n.className += ' ' + a.value;
                 else if(a.name == 'id') n.id = a.value;
                 else if(a.name.startsWith('class:')) {
                     n.className += ' ' + a.name.substring(6);
+                } else if(a.name.startsWith('bind-class:')) {
+                    n.className += ' ' + a.value;
                 } else n.attributes[a.name] = a.value;
             });
             n.className = n.className.trim();
