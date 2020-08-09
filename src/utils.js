@@ -17,6 +17,13 @@ export function replace(s, from, to, count) {
     return d.join(to);
 }
 
+export function toCamelCase(name) {
+    assert(name[name.length - 1] !== '-', 'Wrong name');
+    return name.replace(/(\-\w)/g, function(part) {
+        return part[1].toUpperCase();
+    });
+};
+
 export function Q(s) {
     return s.replace(/`/g, '\\`');
 };

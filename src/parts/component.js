@@ -1,15 +1,18 @@
 
-import { assert, detectExpressionType, isSimpleName, unwrapExp, genId } from '../utils'
+import { assert, detectExpressionType, isSimpleName, unwrapExp, genId, toCamelCase } from '../utils'
 
 
 export function makeComponent(node, makeEl) {
     let propList = node.attributes;
     let binds = [];
     let head = [];
+    let head2 = [];
     let forwardAllEvents = false;
     let injectGroupCall = 0;
     let spreading = false;
     let classId;
+    let defaultClass = false, namedClass = false, namedClassIndex = 1;
+    let options = [];
 
     if(node.body && node.body.length) {
         let slots = {};
@@ -183,12 +186,98 @@ export function makeComponent(node, makeEl) {
             else head.push(`events.${event} = ${callback};`);
             boundEvents[event] = true;
             return;
-        } else if(name == 'class' || name.startsWith('class:')) {
-            assert(false, 'Class is not supported');
+        } else if(name == 'class') {
+            namedClass = true;
+            let index = namedClassIndex++;
+            assert(!defaultClass, 'Double class');
+            defaultClass = true;
+            assert(value, 'Empty class');
+            if(value.indexOf('{') >= 0) {
+                let exp = this.parseText(value);
+                injectGroupCall++;
+                head2.push(`
+                    $class.$default[${index}] = $runtime.watchInit($cd, () => (${exp}), (value) => {
+                        $class.$default[${index}] = value;
+                        groupCall();
+                    });
+                `);
+            } else {
+                head2.push(`$class.$default = \`${this.Q(value)}\`;`);
+            }
+            return;
+        } else if(name.startsWith('class:')) {
+            namedClass = true;
+            let index = namedClassIndex++;
+            let args = name.split(':');
+            assert(args.length == 2);
+            let className = args[1];
+            assert(className);
+            let exp;
+
+            if(value) exp = unwrapExp(value);
+            else exp = className;
+
+            let funcName = `pf${this.uniqIndex++}`;
+            let valueName = `v${this.uniqIndex++}`;
+            injectGroupCall++;
+            head2.push(`
+                const ${funcName} = () => !!(${this.Q(exp)});
+                let ${valueName} = ${funcName}();
+                $class.$default[${index}] = ${valueName} ? '${className}' : ''
+                $watch($cd, ${funcName}, (value) => {
+                    $class.$default[${index}] = value ? '${className}' : '';
+                    groupCall();
+                }, {ro: true, value: ${valueName}});
+            `);
+            return;
+        } else if(name[0] == '.') {
+            namedClass = true;
+            let args = name.substring(1).split(':');
+            let exp, localClass, childClass = args.shift();
+            let hash = this.css ? this.css.id + ' ' : '';
+            assert(childClass);
+            let keyName = toCamelCase(childClass);
+            assert(args.length <= 1);
+            if(args[0] || !value) {
+                if(args[0]) {
+                    localClass = args[0];
+                    if(value) exp = unwrapExp(value);
+                    else exp = localClass;
+                } else {
+                    exp = localClass = childClass;
+                }
+                let funcName = `pf${this.uniqIndex++}`;
+                let valueName = `v${this.uniqIndex++}`;
+                injectGroupCall++;
+                head2.push(`
+                    const ${funcName} = () => !!(${this.Q(exp)});
+                    let ${valueName} = ${funcName}();
+                    $class.${keyName} = ${valueName} ? \`${hash}${localClass}\` : '';
+                    $watch($cd, ${funcName}, (value) => {
+                        $class.${keyName} = value ? \`${hash}${localClass}\` : '';
+                        groupCall();
+                    }, {ro: true, value: ${valueName}});
+                `);
+            } else {
+                if(value.indexOf('{') >= 0) {
+                    let exp = unwrapExp(value);
+                    injectGroupCall++;
+                    head2.push(`
+                        $class.${keyName} = $runtime.watchInit($cd, () => '${hash}' + (${this.Q(exp)}), (value) => {
+                            $class.${keyName} = value;
+                            groupCall();
+                        });
+                    `);
+                } else {
+                    head2.push(`$class.${keyName} = \`${hash}${this.Q(value)}\`;`);
+                }
+            }
+            return;
         } else if(name == 'bind-class' || name.startsWith('bind-class:')) {
             if(!classId) {
                 classId = genId();
-                head.push(`classPrefix = '${classId}';`);
+                head.push(`let classPrefix = '${classId}';`);
+                options.push('classPrefix');
             }
             assert(this.css, 'No styles');
             let args = name.split(':');
@@ -250,15 +339,22 @@ export function makeComponent(node, makeEl) {
     }
     if(spreading) head.push('spreadObject.build();');
 
+    if(namedClass) {
+        head.push(`let $class = $runtime.makeNamedClass('${this.css ? this.css.id : ''}');`);
+        options.push('$class');
+    }
+
+    options.unshift('afterElement: true, noMount: true, props, boundProps, events, slots');
     return {
         bind:`
         {
             let props = {};
             let boundProps = {};
             let slots = {};
-            let classPrefix;
             ${head.join('\n')};
-            let $component = ${node.name}(${makeEl()}, {afterElement: true, noMount: true, props, boundProps, events, slots, classPrefix});
+            let componentOption = {${options.join(', ')}};
+            ${head2.join('\n')};
+            let $component = ${node.name}(${makeEl()}, componentOption);
             if($component) {
                 if($component.destroy) $runtime.cd_onDestroy($cd, $component.destroy);
                 ${binds.join('\n')};

@@ -168,6 +168,13 @@ function makeDom(data) {
                     n.className += ' ' + a.name.substring(6);
                 } else if(a.name.startsWith('bind-class:')) {
                     n.className += ' ' + a.value;
+                } else if(a.name[0] == '.') {
+                    let args = a.name.substring(1).split(':');
+                    if(args.length == 2) n.className += ' ' + args[1];
+                    else if(args.length == 1) {
+                        if(a.value) n.className += ' ' + a.value;
+                        else n.className += ' ' + args[0];
+                    }
                 } else n.attributes[a.name] = a.value;
             });
             n.className = n.className.trim();

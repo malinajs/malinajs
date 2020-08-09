@@ -251,6 +251,7 @@ export function transformJS(code, config={}) {
     header.push(parseExp('const $props = $option.props || {}'));
     header.push(parseExp('const $component = $runtime.$$makeComponent($element, $option);'));
     header.push(parseExp('const $$apply = $runtime.$$makeApply($component.$cd)'));
+    header.push(parseExp('let $class = $option.$class'));
 
     if(lastPropIndex != null) {
         resultBody.splice(lastPropIndex, 0, parseExp('let $attributes = $runtime.$$componentCompleteProps($component, $$apply, $props)'));

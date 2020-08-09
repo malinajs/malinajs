@@ -338,3 +338,11 @@ export const bindParentClass = (el, option) => {
     if(!option.classPrefix) return;
     el.classList.add(option.classPrefix);
 };
+
+
+export const makeNamedClass = (id) => {
+    return {
+        $default: [id],
+        toString: function() {return this.$default.length > 1 ? this.$default.join(' ') : '';}
+    };
+};
