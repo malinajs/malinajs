@@ -11,7 +11,7 @@ export function makeComponent(node, makeEl) {
     let injectGroupCall = 0;
     let spreading = false;
     let classId;
-    let defaultClass = false, namedClass = false, namedClassIndex = 1;
+    let defaultClass = false, defaultClassNeedHash = false, namedClass = false, namedClassIndex = 1;
     let options = [];
 
     if(node.body && node.body.length) {
@@ -202,7 +202,10 @@ export function makeComponent(node, makeEl) {
                     });
                 `);
             } else {
-                head2.push(`$class.$default = \`${this.Q(value)}\`;`);
+                if(!defaultClassNeedHash && this.css) {
+                    defaultClassNeedHash = value.split(/\s+/).some(name => this.css.simpleClasses[name]);
+                }
+                head2.push(`$class.$default[${index}] = \`${this.Q(value)}\`;`);
             }
             return;
         } else if(name.startsWith('class:')) {
@@ -216,6 +219,10 @@ export function makeComponent(node, makeEl) {
 
             if(value) exp = unwrapExp(value);
             else exp = className;
+
+            if(!defaultClassNeedHash && this.css) {
+                defaultClassNeedHash = !!this.css.simpleClasses[className];
+            }
 
             let funcName = `pf${this.uniqIndex++}`;
             let valueName = `v${this.uniqIndex++}`;
@@ -249,6 +256,7 @@ export function makeComponent(node, makeEl) {
                 let funcName = `pf${this.uniqIndex++}`;
                 let valueName = `v${this.uniqIndex++}`;
                 injectGroupCall++;
+                if(!this.css || !this.css.simpleClasses[localClass]) hash = '';
                 head2.push(`
                     const ${funcName} = () => !!(${this.Q(exp)});
                     let ${valueName} = ${funcName}();
@@ -269,6 +277,7 @@ export function makeComponent(node, makeEl) {
                         });
                     `);
                 } else {
+                    if(!this.css || !value.split(/\s+/).some(name => this.css.simpleClasses[name])) hash = '';
                     head2.push(`$class.${keyName} = \`${hash}${this.Q(value)}\`;`);
                 }
             }
@@ -340,7 +349,8 @@ export function makeComponent(node, makeEl) {
     if(spreading) head.push('spreadObject.build();');
 
     if(namedClass) {
-        head.push(`let $class = $runtime.makeNamedClass('${this.css ? this.css.id : ''}');`);
+        let hash = (defaultClassNeedHash && this.css) ? this.css.id : '';
+        head.push(`let $class = $runtime.makeNamedClass('${hash}');`);
         options.push('$class');
     }
 
