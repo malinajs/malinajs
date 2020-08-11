@@ -223,8 +223,11 @@ export function bindProp(prop, makeEl, node) {
                     $watchReadOnly($cd, () => (${exp}), (value) => {$element.${name} = value;});
                 }`};
             } else {
-                let scopedClass = name == 'class' && this.css;  // scope any dynamic class
-                let suffix = scopedClass ? `+' ${this.css.id}'` : '';
+                let suffix = '', scopedClass = name == 'class' && this.css;  // scope any dynamic class
+                if(scopedClass) {
+                    let passed = prop.value.match(/^\{\s*\$class\s*\}$/) || prop.value.match(/^\{\s*\$class\.\w+\s*\}$/)
+                    if(!passed) suffix = `+' ${this.css.id}'`;
+                }
                 return {
                     bind: `{
                         let $element=${makeEl()};
