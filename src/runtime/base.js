@@ -343,6 +343,14 @@ export const bindParentClass = (el, option) => {
 export const makeNamedClass = (id) => {
     return {
         $default: [id],
-        toString: function() {return this.$default.length > 1 ? this.$default.join(' ') : '';}
+        toString: function() {
+            let $default = this.$default;
+            let result = '';
+            for(let i = 1; i < $default.length; i++) {
+                if($default[i]) result += $default[i] + ' ';
+            }
+            if(result) result += $default[0];
+            return result;
+        }
     };
 };

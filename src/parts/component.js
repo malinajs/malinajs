@@ -10,7 +10,7 @@ export function makeComponent(node, makeEl) {
     let forwardAllEvents = false;
     let injectGroupCall = 0;
     let spreading = false;
-    let classId;
+    let classId, boundClasses = {}, defaultClassTransferHash = false;
     let defaultClass = false, defaultClassNeedHash = false, namedClass = false, namedClassIndex = 1;
     let options = [];
 
@@ -110,6 +110,25 @@ export function makeComponent(node, makeEl) {
                 } else console.error("Component ${node.name} doesn't have prop ${inner}");
             `);
             return false;
+        } else if(name == 'bind-class' || name.startsWith('bind-class:')) {
+            if(!classId) {
+                classId = genId();
+                head.push(`let classPrefix = '${classId}';`);
+                options.push('classPrefix');
+            }
+            assert(this.css, 'No styles');
+            let args = name.split(':');
+            args.shift();
+            assert(args.length <= 1, 'Wrong class syntax');
+            let child = args[0];
+            let parentClasses = value.split(/\s+/);
+            assert(parentClasses.length);
+            parentClasses.forEach(parent => {
+                assert(this.css.simpleClasses[parent], 'No class to pass');
+                this.css.passed.push({id: classId, child: child || parent, parent});
+                boundClasses[child || parent] = true;
+            });
+            return false;
         }
         return true;
     });
@@ -193,6 +212,7 @@ export function makeComponent(node, makeEl) {
             defaultClass = true;
             assert(value, 'Empty class');
             if(value.indexOf('{') >= 0) {
+                defaultClassNeedHash = true;
                 let exp = this.parseText(value);
                 injectGroupCall++;
                 head2.push(`
@@ -202,9 +222,10 @@ export function makeComponent(node, makeEl) {
                     });
                 `);
             } else {
-                if(!defaultClassNeedHash && this.css) {
-                    defaultClassNeedHash = value.split(/\s+/).some(name => this.css.simpleClasses[name]);
-                }
+                value.split(/\s+/).forEach(name => {
+                    if(this.css && this.css.simpleClasses[name]) defaultClassNeedHash = true;
+                    if(boundClasses[name]) defaultClassTransferHash = true;
+                });
                 head2.push(`$class.$default[${index}] = \`${this.Q(value)}\`;`);
             }
             return;
@@ -220,9 +241,8 @@ export function makeComponent(node, makeEl) {
             if(value) exp = unwrapExp(value);
             else exp = className;
 
-            if(!defaultClassNeedHash && this.css) {
-                defaultClassNeedHash = !!this.css.simpleClasses[className];
-            }
+            if(!defaultClassNeedHash && this.css) defaultClassNeedHash = !!this.css.simpleClasses[className];
+            if(boundClasses[className]) defaultClassTransferHash = true;
 
             let funcName = `pf${this.uniqIndex++}`;
             let valueName = `v${this.uniqIndex++}`;
@@ -241,7 +261,6 @@ export function makeComponent(node, makeEl) {
             namedClass = true;
             let args = name.substring(1).split(':');
             let exp, localClass, childClass = args.shift();
-            let hash = this.css ? this.css.id + ' ' : '';
             assert(childClass);
             let keyName = toCamelCase(childClass);
             assert(args.length <= 1);
@@ -256,7 +275,9 @@ export function makeComponent(node, makeEl) {
                 let funcName = `pf${this.uniqIndex++}`;
                 let valueName = `v${this.uniqIndex++}`;
                 injectGroupCall++;
-                if(!this.css || !this.css.simpleClasses[localClass]) hash = '';
+                let hash = '';
+                if(this.css && this.css.simpleClasses[localClass]) hash = this.css.id + ' ';
+                if(boundClasses[localClass]) hash += classId + ' ';
                 head2.push(`
                     const ${funcName} = () => !!(${this.Q(exp)});
                     let ${valueName} = ${funcName}();
@@ -268,6 +289,7 @@ export function makeComponent(node, makeEl) {
                 `);
             } else {
                 if(value.indexOf('{') >= 0) {
+                    let hash = this.css ? this.css.id + ' ' : '';
                     let exp = unwrapExp(value);
                     injectGroupCall++;
                     head2.push(`
@@ -277,28 +299,17 @@ export function makeComponent(node, makeEl) {
                         });
                     `);
                 } else {
-                    if(!this.css || !value.split(/\s+/).some(name => this.css.simpleClasses[name])) hash = '';
+                    let hash1, hash2;
+                    value.split(/\s+/).forEach(name => {
+                        if(this.css && this.css.simpleClasses[name]) hash1 = true;
+                        if(boundClasses[name]) hash2 = true;
+                    });
+                    let hash = '';
+                    if(hash1) hash = this.css.id + ' ';
+                    if(hash2) hash += classId + ' ';
                     head2.push(`$class.${keyName} = \`${hash}${this.Q(value)}\`;`);
                 }
             }
-            return;
-        } else if(name == 'bind-class' || name.startsWith('bind-class:')) {
-            if(!classId) {
-                classId = genId();
-                head.push(`let classPrefix = '${classId}';`);
-                options.push('classPrefix');
-            }
-            assert(this.css, 'No styles');
-            let args = name.split(':');
-            args.shift();
-            assert(args.length <= 1, 'Wrong class syntax');
-            let child = args[0];
-            let parentClasses = value.split(/\s+/);
-            assert(parentClasses.length);
-            parentClasses.forEach(parent => {
-                assert(this.css.simpleClasses[parent], 'No class to pass');
-                this.css.passed.push({id: classId, child: child || parent, parent});
-            });
             return;
         }
         assert(value, 'Empty property');
@@ -349,7 +360,9 @@ export function makeComponent(node, makeEl) {
     if(spreading) head.push('spreadObject.build();');
 
     if(namedClass) {
-        let hash = (defaultClassNeedHash && this.css) ? this.css.id : '';
+        let hash = '';
+        if(defaultClassNeedHash && this.css) hash = this.css.id;
+        if(defaultClassTransferHash) hash = (hash ? hash + ' ' : '') + classId;
         head.push(`let $class = $runtime.makeNamedClass('${hash}');`);
         options.push('$class');
     }
