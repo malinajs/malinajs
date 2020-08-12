@@ -20,7 +20,8 @@ function malinaRollup(option = {}) {
                 inlineTemplate: false,
                 hideLabel: false,
                 compact: true,
-                autoSubscribe: true
+                autoSubscribe: true,
+                cssGenId: null
             }, option);
             try {
                 result = malina.compile(code, opts);

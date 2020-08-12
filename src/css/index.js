@@ -6,7 +6,7 @@ import nwsapi from './ext/nwsapi';
 
 export function processCSS(styleNode, config) {
     // TODO: make hash
-    let id = genId();
+    let id = config.cssGenId ? config.cssGenId() : genId();
 
     let simpleClasses = {};
     let self = {element: {}, cls: {}, id, passed: [], simpleClasses};
@@ -103,6 +103,7 @@ export function processCSS(styleNode, config) {
                 throw e;
             }
             if(selected.length) {
+                sel.used = true;
                 selected.forEach(s => {
                     if(sel.bound) {
                         s.node.__node.scopedClassParent = true;
@@ -112,13 +113,15 @@ export function processCSS(styleNode, config) {
                         s.lvl.forEach(l => l.__node.scopedClass = true);
                     }
                 })
-            } else config.warning({message: 'No used css-class: ' + sel.name});
+            }
         });
     };
 
     self.getContent = function() {
+        let passedSelectors = {};
         if(self.passed.length) {
             self.passed.forEach(item => {
+                passedSelectors['.' + item.parent] = true;
                 let node = simpleClasses[item.parent];
                 assert(node, 'No clas to pass ' + item.parent);
 
@@ -136,6 +139,11 @@ export function processCSS(styleNode, config) {
                 node.prelude.children = children;
             });
         }
+
+        selectors.forEach(sel => {
+            if(!passedSelectors[sel.name] && !sel.used) config.warning({message: 'No used css-class: ' + sel.name});
+        })
+
         return csstree.generate(self.ast);
     }
 
@@ -160,21 +168,13 @@ function makeDom(data) {
                 if(e.parts.then && e.parts.then.length) build(parent, e.parts.then);
                 if(e.parts.catch && e.parts.catch.length) build(parent, e.parts.catch);
             } else if(e.type != 'node') return;
+            if(e.name[0].match(/[A-Z]/)) return;
             let n = new Node(e.name, {__node: e});
             e.attributes.forEach(a => {
-                if(a.name == 'class' || a.name == 'bind-class') n.className += ' ' + a.value;
+                if(a.name == 'class') n.className += ' ' + a.value;
                 else if(a.name == 'id') n.id = a.value;
                 else if(a.name.startsWith('class:')) {
                     n.className += ' ' + a.name.substring(6);
-                } else if(a.name.startsWith('bind-class:')) {
-                    n.className += ' ' + a.value;
-                } else if(a.name[0] == '.') {
-                    let args = a.name.substring(1).split(':');
-                    if(args.length == 2) n.className += ' ' + args[1];
-                    else if(args.length == 1) {
-                        if(a.value) n.className += ' ' + a.value;
-                        else n.className += ' ' + args[0];
-                    }
                 } else n.attributes[a.name] = a.value;
             });
             n.className = n.className.trim();

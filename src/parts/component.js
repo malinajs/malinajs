@@ -10,9 +10,18 @@ export function makeComponent(node, makeEl) {
     let forwardAllEvents = false;
     let injectGroupCall = 0;
     let spreading = false;
-    let classId, boundClasses = {}, defaultClassTransferHash = false;
-    let defaultClass = false, defaultClassNeedHash = false, namedClass = false, namedClassIndex = 1;
+    let defaultClass = false, defaultClassNeedHash = false, defaultClassNeedLocalHash = false;
+    let namedClass = false, namedClassIndex = 1;
     let options = [];
+    let __classId;
+
+    const getClassId = () => {
+        if(__classId) return __classId;
+        __classId = this.config.cssGenId ? this.config.cssGenId() : genId();
+        head.push(`let classPrefix = '${__classId}';`);
+        options.push('classPrefix');
+        return __classId;
+    };
 
     if(node.body && node.body.length) {
         let slots = {};
@@ -110,25 +119,6 @@ export function makeComponent(node, makeEl) {
                 } else console.error("Component ${node.name} doesn't have prop ${inner}");
             `);
             return false;
-        } else if(name == 'bind-class' || name.startsWith('bind-class:')) {
-            if(!classId) {
-                classId = genId();
-                head.push(`let classPrefix = '${classId}';`);
-                options.push('classPrefix');
-            }
-            assert(this.css, 'No styles');
-            let args = name.split(':');
-            args.shift();
-            assert(args.length <= 1, 'Wrong class syntax');
-            let child = args[0];
-            let parentClasses = value.split(/\s+/);
-            assert(parentClasses.length);
-            parentClasses.forEach(parent => {
-                assert(this.css.simpleClasses[parent], 'No class to pass');
-                this.css.passed.push({id: classId, child: child || parent, parent});
-                boundClasses[child || parent] = true;
-            });
-            return false;
         }
         return true;
     });
@@ -212,7 +202,7 @@ export function makeComponent(node, makeEl) {
             defaultClass = true;
             assert(value, 'Empty class');
             if(value.indexOf('{') >= 0) {
-                defaultClassNeedHash = true;
+                defaultClassNeedLocalHash = true;
                 let exp = this.parseText(value);
                 injectGroupCall++;
                 head2.push(`
@@ -223,8 +213,10 @@ export function makeComponent(node, makeEl) {
                 `);
             } else {
                 value.split(/\s+/).forEach(name => {
-                    if(this.css && this.css.simpleClasses[name]) defaultClassNeedHash = true;
-                    if(boundClasses[name]) defaultClassTransferHash = true;
+                    if(this.css && this.css.simpleClasses[name]) {
+                        defaultClassNeedHash = true;
+                        this.css.passed.push({id: getClassId(), parent: name, child: name});
+                    }
                 });
                 head2.push(`$class.$default[${index}] = \`${this.Q(value)}\`;`);
             }
@@ -241,8 +233,10 @@ export function makeComponent(node, makeEl) {
             if(value) exp = unwrapExp(value);
             else exp = className;
 
-            if(!defaultClassNeedHash && this.css) defaultClassNeedHash = !!this.css.simpleClasses[className];
-            if(boundClasses[className]) defaultClassTransferHash = true;
+            if(this.css && this.css.simpleClasses[className]) {
+                defaultClassNeedHash = true;
+                this.css.passed.push({id: getClassId(), parent: className, child: className});
+            }
 
             let funcName = `pf${this.uniqIndex++}`;
             let valueName = `v${this.uniqIndex++}`;
@@ -265,6 +259,9 @@ export function makeComponent(node, makeEl) {
             let keyName = toCamelCase(childClass);
             assert(args.length <= 1);
             if(args[0] || !value) {
+                // .header
+                // .header:local
+                // .header:local={cond}
                 if(args[0]) {
                     localClass = args[0];
                     if(value) exp = unwrapExp(value);
@@ -276,8 +273,11 @@ export function makeComponent(node, makeEl) {
                 let valueName = `v${this.uniqIndex++}`;
                 injectGroupCall++;
                 let hash = '';
-                if(this.css && this.css.simpleClasses[localClass]) hash = this.css.id + ' ';
-                if(boundClasses[localClass]) hash += classId + ' ';
+                if(this.css && this.css.simpleClasses[localClass]) {
+                    hash = getClassId() + ' ';
+                    this.css.passed.push({id: getClassId(), parent: localClass, child: localClass});
+                    this.css.passed.push({id: getClassId(), parent: localClass, child: childClass});
+                }
                 head2.push(`
                     const ${funcName} = () => !!(${this.Q(exp)});
                     let ${valueName} = ${funcName}();
@@ -289,6 +289,7 @@ export function makeComponent(node, makeEl) {
                 `);
             } else {
                 if(value.indexOf('{') >= 0) {
+                    // .header="{'local global'}"
                     let hash = this.css ? this.css.id + ' ' : '';
                     let exp = unwrapExp(value);
                     injectGroupCall++;
@@ -299,14 +300,16 @@ export function makeComponent(node, makeEl) {
                         });
                     `);
                 } else {
-                    let hash1, hash2;
-                    value.split(/\s+/).forEach(name => {
-                        if(this.css && this.css.simpleClasses[name]) hash1 = true;
-                        if(boundClasses[name]) hash2 = true;
-                    });
+                    // .header="local global"
                     let hash = '';
-                    if(hash1) hash = this.css.id + ' ';
-                    if(hash2) hash += classId + ' ';
+                    if(this.css) {
+                        value.split(/\s+/).forEach(name => {
+                            if(!this.css.simpleClasses[name]) return;
+                            if(!hash) hash = getClassId() + ' ';
+                            this.css.passed.push({id: getClassId(), parent: name, child: name});
+                            this.css.passed.push({id: getClassId(), parent: name, child: childClass});
+                        });
+                    }
                     head2.push(`$class.${keyName} = \`${hash}${this.Q(value)}\`;`);
                 }
             }
@@ -361,8 +364,8 @@ export function makeComponent(node, makeEl) {
 
     if(namedClass) {
         let hash = '';
-        if(defaultClassNeedHash && this.css) hash = this.css.id;
-        if(defaultClassTransferHash) hash = (hash ? hash + ' ' : '') + classId;
+        if(defaultClassNeedHash && this.css) hash = getClassId();
+        if(defaultClassNeedLocalHash && this.css) hash = (hash ? hash + ' ' : '') + this.css.id;
         head.push(`let $class = $runtime.makeNamedClass('${hash}');`);
         options.push('$class');
     }
