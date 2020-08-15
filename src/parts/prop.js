@@ -180,7 +180,7 @@ export function bindProp(prop, makeEl, node) {
 
             if(c.bound) {
                 let hash = c.useAsBound();
-                bind.push(`$runtime.bindParentClass(${makeEl()}, '${className}', '${hash}', $option)`);
+                bind.push(`$runtime.bindParentClass($cd, ${makeEl()}, '${className}', '${hash}', $option)`);
             }
             if(c.notBound) result[c.useAsLocal()] = true;
 
@@ -280,7 +280,7 @@ export function bindProp(prop, makeEl, node) {
                 if(!c) return;
                 if(c.bound) {
                     let hash = c.useAsBound();
-                    bind.push(`$runtime.bindParentClass(${makeEl()}, '${name}', '${hash}', $option)`);
+                    bind.push(`$runtime.bindParentClass($cd, ${makeEl()}, '${name}', '${hash}', $option)`);
                 }
                 if(c.notBound) result[c.useAsLocal()] = true;
             });

@@ -17,12 +17,11 @@ export function makeComponent(node, makeEl) {
     let namedClass = false, namedClassIndex = 1;
     let defaultClassNeedHash = false, defaultClassNeedLocalHash = false;
     let passedClasses = [];
+    let passedClassDyn = false;
 
     const getClassId = () => {
         if(__classId) return __classId;
         __classId = this.config.cssGenId ? this.config.cssGenId() : genId();
-        head.push(`let classPrefix = '${__classId}';`);
-        options.push('classPrefix');
         return __classId;
     };
 
@@ -239,22 +238,30 @@ export function makeComponent(node, makeEl) {
             if(value) exp = unwrapExp(value);
             else exp = className;
 
-            let classObject = this.css && this.css.simpleClasses[className];
-            if(classObject) {
-                defaultClassNeedHash = true;
-                classObject.useAsPassed(className, getClassId());
-                passedClasses.push({name: className, hash: getClassId()});
-            }
-
             let funcName = `pf${this.uniqIndex++}`;
             let valueName = `v${this.uniqIndex++}`;
+
+            let classObject = this.css && this.css.simpleClasses[className];
+            let hashLine1 = '';
+            let hashLine2 = '';
+            if(classObject) {
+                defaultClassNeedHash = true;
+                passedClassDyn = true;
+                let hash = getClassId();
+                classObject.useAsPassed(className, hash);
+                hashLine1 = `passedClassDyn['${className}'] = ${valueName} ? '${hash}' : '';`;
+                hashLine2 = `passedClassDyn['${className}'] = value ? '${hash}' : '';`;
+            }
+
             injectGroupCall++;
             head2.push(`
                 const ${funcName} = () => !!(${this.Q(exp)});
                 let ${valueName} = ${funcName}();
-                $class.$default[${index}] = ${valueName} ? '${className}' : ''
+                $class.$default[${index}] = ${valueName} ? '${className}' : '';
+                ${hashLine1}
                 $watch($cd, ${funcName}, (value) => {
                     $class.$default[${index}] = value ? '${className}' : '';
+                    ${hashLine2}
                     groupCall();
                 }, {ro: true, value: ${valueName}});
             `);
@@ -281,18 +288,28 @@ export function makeComponent(node, makeEl) {
                 let valueName = `v${this.uniqIndex++}`;
                 injectGroupCall++;
                 let hash = '';
+
+
                 let classObject = this.css && this.css.simpleClasses[localClass];
+                let hashLine1 = '';
+                let hashLine2 = '';
                 if(classObject) {
-                    classObject.useAsPassed(childClass, getClassId());
-                    passedClasses.push({name: childClass, hash: getClassId()});
-                    hash = getClassId() + ' ';
+                    passedClassDyn = true;
+                    let h = getClassId();
+                    classObject.useAsPassed(childClass, h);
+                    hashLine1 = `passedClassDyn['${childClass}'] = ${valueName} ? '${h}' : '';`;
+                    hashLine2 = `passedClassDyn['${childClass}'] = value ? '${h}' : '';`;
+                    hash = h + ' ';
                 }
+
                 head2.push(`
                     const ${funcName} = () => !!(${this.Q(exp)});
                     let ${valueName} = ${funcName}();
                     $class.${keyName} = ${valueName} ? \`${hash}${localClass}\` : '';
+                    ${hashLine1}
                     $watch($cd, ${funcName}, (value) => {
                         $class.${keyName} = value ? \`${hash}${localClass}\` : '';
+                        ${hashLine2}
                         groupCall();
                     }, {ro: true, value: ${valueName}});
                 `);
@@ -386,8 +403,12 @@ export function makeComponent(node, makeEl) {
         let pclass = passedClasses.map(i => {
             return `'${i.name}': '${i.hash}'`;
         }).join(',');
-        head.push(`let $passedClass = \{${pclass}\};`);
-        options.push('$passedClass');
+        head.push(`let passedClass = \{${pclass}\};`);
+        options.push('passedClass');
+    }
+    if(passedClassDyn) {
+        head.push('let passedClassDyn = {};');
+        options.push('passedClassDyn');
     }
 
     options.unshift('afterElement: true, noMount: true, props, boundProps, events, slots');

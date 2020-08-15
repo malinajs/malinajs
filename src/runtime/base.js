@@ -334,8 +334,22 @@ export const bindText = (cd, element, fn) => {
 };
 
 
-export const bindParentClass = (el, className, hash, option) => {
-    el.classList.add(option.$passedClass && option.$passedClass[className] || hash);
+export const bindParentClass = (cd, el, className, hash, option) => {
+    if(option.passedClassDyn && className in option.passedClassDyn) {
+        let prev;
+        $watchReadOnly(cd, () => option.passedClassDyn[className], parentHash => {
+            if(prev) el.classList.remove(prev);
+            if(parentHash) {
+                el.classList.add(parentHash);
+                prev = parentHash;
+            } else {
+                el.classList.add(hash);
+                prev = hash;
+            }
+        });
+    } else {
+        el.classList.add(option.passedClass && option.passedClass[className] || hash);
+    }
 };
 
 
