@@ -334,9 +334,8 @@ export const bindText = (cd, element, fn) => {
 };
 
 
-export const bindParentClass = (el, option) => {
-    if(!option.classPrefix) return;
-    el.classList.add(option.classPrefix);
+export const bindParentClass = (el, className, hash, option) => {
+    el.classList.add(option.$passedClass && option.$passedClass[className] || hash);
 };
 
 

@@ -170,7 +170,26 @@ export function bindProp(prop, makeEl, node) {
         let className = arg;
         let exp = prop.value ? getExpression() : className;
 
-        return {bind: `$runtime.bindClass($cd, ${makeEl()}, () => !!(${exp}), '${className}');`};
+        let bind = [];
+        let returnProp;
+        let c = this.css && this.css.simpleClasses[className];
+        if(c) {
+            let result = {};
+            if(node.injectCssHash) result[this.css.id] = true;
+            node.injectCssHash = false;
+
+            if(c.bound) {
+                let hash = c.useAsBound();
+                bind.push(`$runtime.bindParentClass(${makeEl()}, '${className}', '${hash}', $option)`);
+            }
+            if(c.notBound) result[c.useAsLocal()] = true;
+
+            let propClassName = Object.keys(result).join(' ');
+            returnProp = `class="${propClassName}"`;
+        }
+
+        bind.push(`$runtime.bindClass($cd, ${makeEl()}, () => !!(${exp}), '${className}');`);
+        return {bind: bind.join('\n'), prop: returnProp};
     } else if(name == 'style' && arg) {
         let styleName = arg;
         let exp = prop.value ? getExpression() : styleName;
@@ -247,14 +266,29 @@ export function bindProp(prop, makeEl, node) {
             `};
         }
 
-        if(name == 'class' && node.scopedClass) {
+        if(name == 'class' && this.css) {
             let classList = prop.value.trim();
-            if(classList) classList += ' ';
-            classList += this.css.id;
+            if(!classList) return {};
+
+            let result = {};
+            let bind = [];
+            if(node.injectCssHash) result[this.css.id] = true;
+            node.injectCssHash = false;
+            classList.split(/\s+/).forEach(name => {
+                result[name] = true;
+                let c = this.css.simpleClasses[name];
+                if(!c) return;
+                if(c.bound) {
+                    let hash = c.useAsBound();
+                    bind.push(`$runtime.bindParentClass(${makeEl()}, '${name}', '${hash}', $option)`);
+                }
+                if(c.notBound) result[c.useAsLocal()] = true;
+            });
+            classList = Object.keys(result).join(' ');
 
             return {
                 prop: `class="${classList}"`,
-                scopedClass: true
+                bind: bind.join('\n')
             }
         }
         return {

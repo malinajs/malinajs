@@ -193,25 +193,20 @@ function buildBlock(data) {
                     return;
                 }
 
-                let hasClass = false;
                 let el = ['<' + n.name];
                 if(n.attributes.some(a => a.name.startsWith('{...'))) {
                     n.spreadObject = 'spread' + (this.uniqIndex++);
-                    n.scopedClass = !!this.css;
+                    n.injectCssHash = !!this.css;
                     binds.push(`
                         let ${n.spreadObject} = $runtime.$$makeSpreadObject($cd, ${getElementName()}, '${this.css && this.css.id}');
                     `);
-                }
-                if(n.scopedClassParent) {
-                    binds.push(`$runtime.bindParentClass(${getElementName()}, $option);`);
                 }
                 n.attributes.forEach(p => {
                     let b = this.bindProp(p, getElementName, n);
                     if(b.prop) el.push(b.prop);
                     if(b.bind) binds.push(b.bind);
-                    if(b.scopedClass) hasClass = true;
                 });
-                if(n.scopedClass && !hasClass) el.push(`class="${this.css.id}"`);
+                if(n.injectCssHash) el.push(`class="${this.css.id}"`);
 
                 el = el.join(' ');
                 if(n.closedTag) {

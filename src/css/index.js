@@ -1,32 +1,51 @@
 
 import csstree from 'css-tree';
-import { assert, genId } from '../utils.js'
+import { assert, genId as utilsGenId } from '../utils.js';
 import nwsapi from './ext/nwsapi';
 
 
-export function processCSS(styleNode, config) {
-    // TODO: make hash
-    let id = config.cssGenId ? config.cssGenId() : genId();
+class SelectorObject {
+    constructor(fullSelector, config) {
+        this._id = config.id;
+        this._genId = config.genId;
 
-    let simpleClasses = {};
-    let self = {element: {}, cls: {}, id, passed: [], simpleClasses};
-    let selectors = [];
+        this.fullSelector = fullSelector;
+        this.clearSelector = null;
+        this.nodes = [];
+        this.simpleClass = null;
+        this.bound = false;
+        this.notBound = false;
+        this.used = false;
+
+        this.localHash = null;
+        this.boundHash = null;
+        this.passedHashes = [];
+    }
+    useAsLocal() {
+        this.used = true;
+        this.localHash = this._id;
+        return this.localHash;
+    }
+    useAsBound() {
+        this.used = true;
+        if(!this.boundHash) this.boundHash = this._genId();
+        return this.boundHash;
+    }
+    useAsPassed(childName, hash) {
+        this.used = true;
+        this.passedHashes.push({childName, hash});
+    }
+}
+
+
+export function processCSS(styleNode, config) {
+    const genId = () => config.cssGenId ? config.cssGenId() : utilsGenId();
+
+    let self = {element: {}, cls: {}, passed: [], simpleClasses: {}, id: genId()};
+    let selectors = {};
 
     function transform() {
         let content = styleNode.content;
-
-        let boundBlocks = Array.from(content.matchAll(/\:bind\(([^\(\)]+)\)/g));
-        for(let i = boundBlocks.length - 1; i>=0; i--) {
-            let rx = boundBlocks[i];
-            content = content.substring(0, rx.index) + content.substring(rx.index + rx[0].length);
-            rx[1].split(/\s*,\s*/).forEach(sel => {
-                assert(sel.match(/^\.[\w\-]+$/), 'Wrong bound class');
-                selectors.push({
-                    name: sel,
-                    bound: true
-                });
-            })
-        }
 
         self.ast = csstree.parse(content);
 
@@ -34,54 +53,112 @@ export function processCSS(styleNode, config) {
             if (node.type === 'Rule') {
                 assert(node.prelude.type=='SelectorList');
 
-                node.prelude.children.forEach(fullSelector => {
+                let selectorList = node.prelude.children.toArray();
+                node.prelude.children = selectorList;
+                for(let i=0; i < selectorList.length; i++) {
+                    processSelector(selectorList[i]);
+                }
+
+                function processSelector(fullSelector) {
                     assert(fullSelector.type == 'Selector');
-                    let proc = [];
                     let selector = [];
-                    fullSelector.children.toArray().forEach(sel => {
-                        if(sel.type == 'PseudoClassSelector' && sel.name == 'global') {
-                            sel = sel.children.first()
+                    let fullSelectorChildren = fullSelector.children.toArray();
+                    fullSelectorChildren.forEach(sel => {
+                        if(sel.type == 'PseudoClassSelector' && sel.name == 'export') {
+                            assert(fullSelectorChildren.length == 1);
+                            sel = sel.children.first();
                             assert(sel.type == 'Raw');
-                            let a = csstree.parse(sel.value, {context: 'selector'})
+                            let sl = csstree.parse(sel.value, {context: 'selectorList'})
+                            assert(sl.type == 'SelectorList');
+                            sl.children.forEach(selNode => {
+                                let sel = selNode.children.toArray();
+                                if(sel.length != 1 || sel[0].type != 'ClassSelector') {
+                                    let selName = csstree.generate(selNode);
+                                    throw Error(`Wrong class for export '${selName}'`);
+                                }
+                                selNode.bound = true;
+                                selectorList.push(selNode);
+                            });
+                        } else if(sel.type == 'PseudoClassSelector' && sel.name == 'global') {
+                            sel = sel.children.first();
+                            assert(sel.type == 'Raw');
+                            let a = csstree.parse(sel.value, {context: 'selector'});
                             assert(a.type == 'Selector');
                             a.children.forEach(sel => {
-                                selector.push(Object.assign({__global: true}, sel));
+                                sel.global = true;
+                                selector.push(sel);
                             })
                         } else {
                             selector.push(sel);
                         }
                     });
 
+                    if(!selector.length) {
+                        fullSelector.removed = true;
+                        fullSelector.children = [];
+                        return;
+                    }
+
+                    let fullSelectorName = csstree.generate({
+                        type: 'Selector',
+                        children: selector
+                    });
+
+                    let selectorObject = selectors[fullSelectorName];
+                    
+                    if(!selectorObject) {
+                        selectorObject = new SelectorObject(fullSelectorName, {id: self.id, genId});
+                        selectors[fullSelectorName] = selectorObject;
+                        if(selector.length == 1 && selector[0].type == 'ClassSelector' && !selector[0].global) {
+                            selectorObject.simpleClass = selector[0].name;
+                            self.simpleClasses[selectorObject.simpleClass] = selectorObject;
+                        }
+                    }
+
+                    if(fullSelector.bound && !selectorObject.bound) {
+                        selectorObject.bound = true;
+                    } else if(!selectorObject.notBound) {
+                        selectorObject.notBound = true;
+                    }
+
+                    selectorObject.nodes.push({
+                        rule: node,
+                        selector: fullSelector,
+                        bound: fullSelector.bound
+                    });
+
+                    let proc = [];
                     let result = [];
                     let inserted = false;
                     for(let i=0;i<selector.length;i++) {
                         let sel = selector[i];
-                        if(sel.__global) inserted = true;
+                        if(sel.global) inserted = true;
                         if(sel.type == 'PseudoClassSelector' || sel.type == 'PseudoElementSelector') {
-                            if(!inserted) result.push({type: "ClassSelector", loc: null, name: id});
+                            if(!inserted) result.push({type: "ClassSelector", loc: null, name: '', __hash: true});
                             inserted = true;
                         } else {
-                            proc.push(Object.assign({}, sel));
+                            proc.push(sel);
                         }
                         if(sel.type == 'Combinator' || sel.type == 'WhiteSpace') {
-                            if(!inserted) result.push({type: "ClassSelector", loc: null, name: id});
+                            if(!inserted) result.push({type: "ClassSelector", loc: null, name: '', __hash: true});
                             inserted = false;
                         }
                         result.push(sel);
                     }
-                    if(!inserted) result.push({type: "ClassSelector", loc: null, name: id});
-
+                    if(!inserted) {
+                        result.push({type: "ClassSelector", loc: null, name: '', __hash: true});
+                    }
                     fullSelector.children = result;
-                    let selectorName = csstree.generate({
-                        type: 'Selector',
-                        children: proc
-                    });
-                    selectors.push({
-                        name: selectorName
-                    });
-                    let rx = selectorName.match(/^\.([\w\-]+)$/);
-                    if(rx) simpleClasses[rx[1]] = node;
-                });
+
+                    if(!selectorObject.clearSelector) {
+                        selectorObject.clearSelector = csstree.generate({
+                            type: 'Selector',
+                            children: proc,
+                            selectorNodes: result
+                        });
+                    }
+
+                };
             }
         });
     }
@@ -93,56 +170,83 @@ export function processCSS(styleNode, config) {
             DOMException: function() {}
         });
 
-        selectors.forEach(sel => {
+        Object.values(selectors).forEach(sel => {
+            if(sel.simpleClass) return;
             let selected;
             try {
-                selected = nw.select([sel.name]);
+                selected = nw.select([sel.clearSelector]);
             } catch (_) {
-                let e = new Error(`CSS error: '${sel.name}'`);
-                e.details = `selector: '${sel.name}'`;
+                let e = new Error(`CSS error: '${sel.fullSelector}'`);
+                e.details = `selector: '${sel.fullSelector}'`;
                 throw e;
             }
             if(selected.length) {
-                sel.used = true;
+                sel.useAsLocal();
                 selected.forEach(s => {
-                    if(sel.bound) {
-                        s.node.__node.scopedClassParent = true;
-                        assert(s.lvl.length == 1);
-                    } else {
-                        s.node.__node.scopedClass = true;
-                        s.lvl.forEach(l => l.__node.scopedClass = true);
-                    }
+                    assert(!sel.bound);
+                    s.node.__node.injectCssHash = true;
+                    s.lvl.forEach(l => l.__node.injectCssHash = true);
                 })
             }
         });
     };
 
     self.getContent = function() {
-        let passedSelectors = {};
-        if(self.passed.length) {
-            self.passed.forEach(item => {
-                passedSelectors['.' + item.parent] = true;
-                let node = simpleClasses[item.parent];
-                assert(node, 'No clas to pass ' + item.parent);
+        Object.values(selectors).forEach(sel => {
+            if(sel.used) {
+                sel.nodes.forEach(node => {
+                    let selectorChildren = node.selector.children.map(i => Object.assign({}, i));
 
-                let children = node.prelude.children.toArray ? node.prelude.children.toArray() : node.prelude.children;
-                children.push({
-                    type: 'Selector',
-                    children: [{
-                        type: 'ClassSelector',
-                        name: item.child
-                    }, {
-                        type: 'ClassSelector',
-                        name: item.id
-                    }]
+                    let hash = [];
+                    if(sel.localHash && !node.bound) hash.push(sel.localHash);
+                    if(sel.boundHash && node.bound) hash.push(sel.boundHash);
+
+                    if(!hash.length) node.selector.removed = true;
+
+                    let id = hash.shift();
+                    if(id) {
+                        node.selector.children.forEach(i => {
+                            if(i.__hash) i.name = id;
+                        })
+                    }
+                    id = hash.shift();
+                    if(id) {
+                        selectorChildren.forEach(i => {
+                            if(i.__hash) i.name = id;
+                        })
+                        node.rule.prelude.children.push({
+                            type: 'Selector',
+                            children: selectorChildren
+                        });
+                    }
+
+                    sel.passedHashes.forEach(p => {
+                        node.rule.prelude.children.push({
+                            type: 'Selector',
+                            children: [{
+                                type: 'ClassSelector',
+                                name: p.childName
+                            }, {
+                                type: 'ClassSelector',
+                                name: p.hash
+                            }]
+                        });
+                    })
+                })
+            } else {
+                sel.nodes.forEach(node => {
+                    let i = node.rule.prelude.children.indexOf(node.selector);
+                    assert(i >= 0);
+                    node.rule.prelude.children.splice(i, 1);
                 });
-                node.prelude.children = children;
-            });
-        }
+                config.warning({message: 'No used css-class: ' + sel.fullSelector});
+            }
+        });
 
-        selectors.forEach(sel => {
-            if(!passedSelectors[sel.name] && !sel.used) config.warning({message: 'No used css-class: ' + sel.name});
-        })
+        // removed selectors
+        self.ast.children.forEach(rule => {
+            rule.prelude.children = rule.prelude.children.filter(s => !s.removed);
+        });
 
         return csstree.generate(self.ast);
     }

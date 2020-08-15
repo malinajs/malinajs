@@ -10,10 +10,13 @@ export function makeComponent(node, makeEl) {
     let forwardAllEvents = false;
     let injectGroupCall = 0;
     let spreading = false;
-    let defaultClass = false, defaultClassNeedHash = false, defaultClassNeedLocalHash = false;
-    let namedClass = false, namedClassIndex = 1;
     let options = [];
+
     let __classId;
+    let defaultClass = false;
+    let namedClass = false, namedClassIndex = 1;
+    let defaultClassNeedHash = false, defaultClassNeedLocalHash = false;
+    let passedClasses = [];
 
     const getClassId = () => {
         if(__classId) return __classId;
@@ -212,12 +215,15 @@ export function makeComponent(node, makeEl) {
                     });
                 `);
             } else {
-                value.split(/\s+/).forEach(name => {
-                    if(this.css && this.css.simpleClasses[name]) {
+                if(this.css) {
+                    value.split(/\s+/).forEach(name => {
+                        let c = this.css.simpleClasses[name];
+                        if(!c) return;
+                        c.useAsPassed(name, getClassId());
+                        passedClasses.push({name, hash: getClassId()});
                         defaultClassNeedHash = true;
-                        this.css.passed.push({id: getClassId(), parent: name, child: name});
-                    }
-                });
+                    });
+                }
                 head2.push(`$class.$default[${index}] = \`${this.Q(value)}\`;`);
             }
             return;
@@ -233,9 +239,11 @@ export function makeComponent(node, makeEl) {
             if(value) exp = unwrapExp(value);
             else exp = className;
 
-            if(this.css && this.css.simpleClasses[className]) {
+            let classObject = this.css && this.css.simpleClasses[className];
+            if(classObject) {
                 defaultClassNeedHash = true;
-                this.css.passed.push({id: getClassId(), parent: className, child: className});
+                classObject.useAsPassed(className, getClassId());
+                passedClasses.push({name: className, hash: getClassId()});
             }
 
             let funcName = `pf${this.uniqIndex++}`;
@@ -273,10 +281,11 @@ export function makeComponent(node, makeEl) {
                 let valueName = `v${this.uniqIndex++}`;
                 injectGroupCall++;
                 let hash = '';
-                if(this.css && this.css.simpleClasses[localClass]) {
+                let classObject = this.css && this.css.simpleClasses[localClass];
+                if(classObject) {
+                    classObject.useAsPassed(childClass, getClassId());
+                    passedClasses.push({name: childClass, hash: getClassId()});
                     hash = getClassId() + ' ';
-                    this.css.passed.push({id: getClassId(), parent: localClass, child: localClass});
-                    this.css.passed.push({id: getClassId(), parent: localClass, child: childClass});
                 }
                 head2.push(`
                     const ${funcName} = () => !!(${this.Q(exp)});
@@ -303,12 +312,16 @@ export function makeComponent(node, makeEl) {
                     // .header="local global"
                     let hash = '';
                     if(this.css) {
+                        let result = {};
                         value.split(/\s+/).forEach(name => {
-                            if(!this.css.simpleClasses[name]) return;
-                            if(!hash) hash = getClassId() + ' ';
-                            this.css.passed.push({id: getClassId(), parent: name, child: name});
-                            this.css.passed.push({id: getClassId(), parent: name, child: childClass});
+                            let c = this.css.simpleClasses[name];
+                            if(!c) return;
+                            let h = getClassId();
+                            result[h] = true;
+                            c.useAsPassed(childClass, h);
+                            passedClasses.push({name: childClass, hash: h});
                         });
+                        if(Object.keys(result).length) hash = Object.keys(result).join(' ') + ' ';
                     }
                     head2.push(`$class.${keyName} = \`${hash}${this.Q(value)}\`;`);
                 }
@@ -368,6 +381,13 @@ export function makeComponent(node, makeEl) {
         if(defaultClassNeedLocalHash && this.css) hash = (hash ? hash + ' ' : '') + this.css.id;
         head.push(`let $class = $runtime.makeNamedClass('${hash}');`);
         options.push('$class');
+    }
+    if(passedClasses.length) {
+        let pclass = passedClasses.map(i => {
+            return `'${i.name}': '${i.hash}'`;
+        }).join(',');
+        head.push(`let $passedClass = \{${pclass}\};`);
+        options.push('$passedClass');
     }
 
     options.unshift('afterElement: true, noMount: true, props, boundProps, events, slots');
