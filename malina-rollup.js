@@ -6,7 +6,7 @@ module.exports = malinaRollup;
 function malinaRollup(option = {}) {
     option.$context = {};
     if(option.displayVersion !== false) console.log('! Malina.js', malina.version);
-    if(!option.extension) option.extension = ['html', 'ma'];
+    if(!option.extension) option.extension = ['html', 'ma', 'xht'];
     return {
         name: 'malina',
         transform(code, id) {
