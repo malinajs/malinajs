@@ -390,5 +390,7 @@ export function parseText(source) {
     }
     if(text) result.push('`' + this.Q(text) + '`');
     assert(step == 0, 'Wrong expression: ' + source);
-    return result.join('+');
+    result = result.join('+');
+    if(result == '($class)') result = "''+$class";
+    return result;
 };
