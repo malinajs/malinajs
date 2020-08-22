@@ -196,7 +196,9 @@ export function parse(source) {
                         if(a === '>') break;
                         name += a;
                     }
-                    assert(name === parent.name, 'Wrong close-tag: ' + parent.name + ' - ' + name);
+                    if(!(name == 'slot' && parent.name.split(':')[0] == 'slot')) {
+                        assert(name === parent.name, 'Wrong close-tag: ' + parent.name + ' - ' + name);
+                    }
                     return;
                 }
 
