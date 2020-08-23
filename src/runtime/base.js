@@ -55,6 +55,24 @@ export function $$removeElements(el, last) {
     }
 };
 
+export function removeElementsBetween(el, stop) {
+    let next;
+    el = el.nextSibling;
+    while(el) {
+        next = el.nextSibling;
+        if(el == stop) break;
+        el.remove();
+        el = next;
+    }
+};
+
+export const getFinalLabel = n => {
+    if(n.nextSibling) return n.nextSibling;
+    let e = document.createTextNode('');
+    n.parentNode.appendChild(e);
+    return e;
+};
+
 
 let _tick_list = [];
 let _tick_planned = {};

@@ -162,7 +162,7 @@ function buildBlock(data) {
                 tpl.push('</template>');
             } else if(n.type === 'node') {
                 setLvl();
-                if(n.name.match(/^[A-Z]/) && this.script.imports.indexOf(n.name) >= 0) {
+                if(n.name.match(/^[A-Z]/)) {
                     // component
                     if(this.config.hideLabel) tpl.push(`<!---->`);
                     else tpl.push(`<!-- ${n.name} -->`);
