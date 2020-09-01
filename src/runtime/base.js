@@ -353,35 +353,59 @@ export const bindText = (cd, element, fn) => {
 
 
 export const bindParentClass = (cd, el, className, hash, option) => {
-    if(option.passedClassDyn && className in option.passedClassDyn) {
+    let $class = option.$class;
+    if(!($class && className in $class)) {
+        el.classList.add(className);
+        el.classList.add(hash);
+        return;
+    }
+
+    if($class.$dyn[className]) {
         let prev;
-        $watchReadOnly(cd, () => option.passedClassDyn[className], parentHash => {
-            if(prev) el.classList.remove(prev);
-            if(parentHash) {
-                el.classList.add(parentHash);
-                prev = parentHash;
-            } else {
-                el.classList.add(hash);
-                prev = hash;
-            }
+        $watchReadOnly(cd, () => $class[className], line => {
+            if(prev) prev.forEach(name => el.classList.remove(name));
+            if(line) prev = line.split(/\s+/);
+            else prev = [className, hash];
+            prev.forEach(name => el.classList.add(name));
         });
     } else {
-        el.classList.add(option.passedClass && option.passedClass[className] || hash);
+        $class[className].split(/\s+/).forEach(name => el.classList.add(name));
     }
 };
 
 
-export const makeNamedClass = (id) => {
-    return {
-        $default: [id],
-        toString: function() {
-            let $default = this.$default;
-            let result = '';
-            for(let i = 1; i < $default.length; i++) {
-                if($default[i]) result += $default[i] + ' ';
+export const bindBoundClass = (cd, element, fn, className, defaultHash, $option) => {
+    let prev, getter, empty = {};
+    let $class = $option.$class;
+    if($class && className in $class) {
+        getter = () => $class[className];
+
+        if($class.$dyn[className]) {
+            let orig = fn;
+            fn = () => {
+                if(!orig()) return false;
+                return $class[className] || empty;
             }
-            if(result) result += $default[0];
-            return result;
+        }
+    }
+
+    $watchReadOnly(cd, fn, value => {
+        if(prev) prev.forEach(name => element.classList.remove(name));
+        if(value) {
+            let parent = value === empty ? null : getter && getter();
+            if(parent) prev = parent.split(/\s+/);
+            else prev = [className, defaultHash];
+            prev.forEach(name => element.classList.add(name));
+        } else prev = null;
+    });
+}
+
+
+export const makeNamedClass = () => {
+    return {
+        $dyn: {},
+        toString: function() {
+            return this.$default || '';
         }
     };
 };

@@ -172,23 +172,24 @@ export function bindProp(prop, makeEl, node) {
 
         let bind = [];
         let returnProp;
-        let c = this.css && this.css.simpleClasses[className];
-        if(c) {
-            let result = {};
-            if(node.injectCssHash) result[this.css.id] = true;
+
+        let classObject = this.css && this.css.simpleClasses[className];
+        if(!classObject) {
+            bind.push(`$runtime.bindClass($cd, ${makeEl()}, () => !!(${exp}), '${className}');`);
+        } else {
+            let localHash = null;
+            if(classObject.notBound) localHash = classObject.useAsLocal();
+            else if(node.injectCssHash) localHash = this.css.id;
             node.injectCssHash = false;
-
-            if(c.bound) {
-                let hash = c.useAsBound();
-                bind.push(`$runtime.bindParentClass($cd, ${makeEl()}, '${className}', '${hash}', $option)`);
+            
+            if(classObject.bound) {
+                let defaultHash = classObject.useAsBound();
+                bind.push(`$runtime.bindBoundClass($cd, ${makeEl()}, () => !!(${exp}), '${className}', '${defaultHash}', $option);`);
+            } else {
+                bind.push(`$runtime.bindClass($cd, ${makeEl()}, () => !!(${exp}), '${className}');`);
             }
-            if(c.notBound) result[c.useAsLocal()] = true;
-
-            let propClassName = Object.keys(result).join(' ');
-            returnProp = `class="${propClassName}"`;
+            if(localHash) returnProp = `class="${localHash}"`;
         }
-
-        bind.push(`$runtime.bindClass($cd, ${makeEl()}, () => !!(${exp}), '${className}');`);
         return {bind: bind.join('\n'), prop: returnProp};
     } else if(name == 'style' && arg) {
         let styleName = arg;
@@ -275,14 +276,19 @@ export function bindProp(prop, makeEl, node) {
             if(node.injectCssHash) result[this.css.id] = true;
             node.injectCssHash = false;
             classList.split(/\s+/).forEach(name => {
-                result[name] = true;
                 let c = this.css.simpleClasses[name];
-                if(!c) return;
-                if(c.bound) {
-                    let hash = c.useAsBound();
-                    bind.push(`$runtime.bindParentClass($cd, ${makeEl()}, '${name}', '${hash}', $option)`);
+                if(c) {
+                    if(c.bound) {
+                        let hash = c.useAsBound();
+                        bind.push(`$runtime.bindParentClass($cd, ${makeEl()}, '${name}', '${hash}', $option)`);
+                    }
+                    if(c.notBound) {
+                        result[name] = true;
+                        result[c.useAsLocal()] = true;
+                    }
+                } else {
+                    result[name] = true;
                 }
-                if(c.notBound) result[c.useAsLocal()] = true;
             });
             classList = Object.keys(result).join(' ');
 

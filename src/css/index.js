@@ -244,8 +244,9 @@ export function processCSS(styleNode, config) {
         });
 
         // removed selectors
-        self.ast.children.forEach(rule => {
+        self.ast.children = self.ast.children.filter(rule => {
             rule.prelude.children = rule.prelude.children.filter(s => !s.removed);
+            return rule.prelude.children.length;
         });
 
         return csstree.generate(self.ast);

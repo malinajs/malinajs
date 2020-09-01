@@ -1,5 +1,5 @@
 
-import { assert, detectExpressionType, isSimpleName, unwrapExp, genId, toCamelCase } from '../utils'
+import { assert, detectExpressionType, isSimpleName, unwrapExp, genId } from '../utils'
 
 
 export function makeComponent(node, makeEl) {
@@ -14,11 +14,19 @@ export function makeComponent(node, makeEl) {
     let dynamicComponent;
 
     let __classId;
-    let defaultClass = false;
-    let namedClass = false, namedClassIndex = 1;
-    let defaultClassNeedHash = false, defaultClassNeedLocalHash = false;
-    let passedClasses = [];
-    let passedClassDyn = false;
+    let classMap = {};
+
+    function addClassMap(name, fn, line) {
+        name = name || '$default';
+        if(!classMap[name]) classMap[name] = [];
+        classMap[name].push({fn, line})
+    }
+
+    function addClassMapExp(name, exp) {
+        name = name || '$default';
+        if(!classMap[name]) classMap[name] = [];
+        classMap[name].push({exp})
+    }
 
     const getClassId = () => {
         if(__classId) return __classId;
@@ -202,37 +210,26 @@ export function makeComponent(node, makeEl) {
             boundEvents[event] = true;
             return;
         } else if(name == 'class') {
-            namedClass = true;
-            let index = namedClassIndex++;
-            assert(!defaultClass, 'Double class');
-            defaultClass = true;
             assert(value, 'Empty class');
             if(value.indexOf('{') >= 0) {
-                defaultClassNeedLocalHash = true;
                 let exp = this.parseText(value);
-                injectGroupCall++;
-                head2.push(`
-                    $class.$default[${index}] = $runtime.watchInit($cd, () => (${exp}), (value) => {
-                        $class.$default[${index}] = value;
-                        groupCall();
-                    });
-                `);
+                addClassMapExp(null, exp);
             } else {
-                if(this.css) {
-                    value.split(/\s+/).forEach(name => {
-                        let c = this.css.simpleClasses[name];
-                        if(!c) return;
-                        c.useAsPassed(name, getClassId());
-                        passedClasses.push({name, hash: getClassId()});
-                        defaultClassNeedHash = true;
-                    });
-                }
-                head2.push(`$class.$default[${index}] = \`${this.Q(value)}\`;`);
+                value.split(/\s+/).forEach(className => {
+                    let classObject = this.css && this.css.simpleClasses[className];
+                    if(classObject) {
+                        let hash = getClassId();
+                        classObject.useAsPassed(className, hash);
+                        addClassMap(null, null, className + ' ' + hash);
+                        addClassMap(className, null, className + ' ' + hash);
+                    } else {
+                        // global class
+                        addClassMap(null, null, className);
+                    };
+                });
             }
             return;
         } else if(name.startsWith('class:')) {
-            namedClass = true;
-            let index = namedClassIndex++;
             let args = name.split(':');
             assert(args.length == 2);
             let className = args[1];
@@ -243,39 +240,26 @@ export function makeComponent(node, makeEl) {
             else exp = className;
 
             let funcName = `pf${this.uniqIndex++}`;
-            let valueName = `v${this.uniqIndex++}`;
 
-            let classObject = this.css && this.css.simpleClasses[className];
-            let hashLine1 = '';
-            let hashLine2 = '';
-            if(classObject) {
-                defaultClassNeedHash = true;
-                passedClassDyn = true;
-                let hash = getClassId();
-                classObject.useAsPassed(className, hash);
-                hashLine1 = `passedClassDyn['${className}'] = ${valueName} ? '${hash}' : '';`;
-                hashLine2 = `passedClassDyn['${className}'] = value ? '${hash}' : '';`;
-            }
-
-            injectGroupCall++;
             head2.push(`
                 const ${funcName} = () => !!(${this.Q(exp)});
-                let ${valueName} = ${funcName}();
-                $class.$default[${index}] = ${valueName} ? '${className}' : '';
-                ${hashLine1}
-                $watch($cd, ${funcName}, (value) => {
-                    $class.$default[${index}] = value ? '${className}' : '';
-                    ${hashLine2}
-                    groupCall();
-                }, {ro: true, value: ${valueName}});
             `);
+
+            let classObject = this.css && this.css.simpleClasses[className];
+            if(classObject) {
+                let h = getClassId();
+                classObject.useAsPassed(className, h);
+                addClassMap(null, funcName, className + ' ' + h);
+                addClassMap(className, funcName, className + ' ' + h);
+            } else {
+                // global class
+                addClassMap(null, funcName, className);
+            }
             return;
         } else if(name[0] == '.') {
-            namedClass = true;
             let args = name.substring(1).split(':');
             let exp, localClass, childClass = args.shift();
             assert(childClass);
-            let keyName = toCamelCase(childClass);
             assert(args.length <= 1);
             if(args[0] || !value) {
                 // .header
@@ -289,64 +273,38 @@ export function makeComponent(node, makeEl) {
                     exp = localClass = childClass;
                 }
                 let funcName = `pf${this.uniqIndex++}`;
-                let valueName = `v${this.uniqIndex++}`;
                 injectGroupCall++;
-                let hash = '';
-
 
                 let classObject = this.css && this.css.simpleClasses[localClass];
-                let hashLine1 = '';
-                let hashLine2 = '';
                 if(classObject) {
-                    passedClassDyn = true;
                     let h = getClassId();
-                    classObject.useAsPassed(localClass, h);
                     classObject.useAsPassed(childClass, h);
-                    hashLine1 = `passedClassDyn['${childClass}'] = ${valueName} ? '${h}' : '';`;
-                    hashLine2 = `passedClassDyn['${childClass}'] = value ? '${h}' : '';`;
-                    hash = h + ' ';
+                    addClassMap(childClass, funcName, childClass + ' ' + h);
+                } else {
+                    // global class
+                    addClassMap(childClass, funcName, localClass);
                 }
 
                 head2.push(`
                     const ${funcName} = () => !!(${this.Q(exp)});
-                    let ${valueName} = ${funcName}();
-                    $class.${keyName} = ${valueName} ? \`${hash}${localClass}\` : '';
-                    ${hashLine1}
-                    $watch($cd, ${funcName}, (value) => {
-                        $class.${keyName} = value ? \`${hash}${localClass}\` : '';
-                        ${hashLine2}
-                        groupCall();
-                    }, {ro: true, value: ${valueName}});
                 `);
             } else {
                 if(value.indexOf('{') >= 0) {
                     // .header="{'local global'}"
-                    let hash = this.css ? this.css.id + ' ' : '';
                     let exp = unwrapExp(value);
-                    injectGroupCall++;
-                    head2.push(`
-                        $class.${keyName} = $runtime.watchInit($cd, () => '${hash}' + (${this.Q(exp)}), (value) => {
-                            $class.${keyName} = value;
-                            groupCall();
-                        });
-                    `);
+                    addClassMapExp(childClass, exp);
                 } else {
                     // .header="local global"
-                    let hash = '';
-                    if(this.css) {
-                        let result = {};
-                        value.split(/\s+/).forEach(name => {
-                            let c = this.css.simpleClasses[name];
-                            if(!c) return;
+                    value.split(/\s+/).forEach(name => {
+                        let classObject = this.css && this.css.simpleClasses[name];
+                        if(classObject) {
                             let h = getClassId();
-                            result[h] = true;
-                            c.useAsPassed(name, h);
-                            c.useAsPassed(childClass, h);
-                            passedClasses.push({name: childClass, hash: h});
-                        });
-                        if(Object.keys(result).length) hash = Object.keys(result).join(' ') + ' ';
-                    }
-                    head2.push(`$class.${keyName} = \`${hash}${this.Q(value)}\`;`);
+                            classObject.useAsPassed(childClass, h);
+                            addClassMap(childClass, null, childClass + ' ' + h);
+                        } else {
+                            addClassMap(childClass, null, name);
+                        }
+                    });
                 }
             }
             return;
@@ -385,6 +343,52 @@ export function makeComponent(node, makeEl) {
         }
     });
 
+    if(Object.keys(classMap).length) {
+        head.push(`let $class = $runtime.makeNamedClass();`);
+        options.push('$class');
+        let localHash = this.css ? ' ' + this.css.id : '';
+        Object.entries(classMap).forEach(i => {
+            let childClass = i[0];
+            let dyn = false;
+            let staticLine = '';
+            let line = i[1].map(i => {
+                if(i.exp) {
+                    dyn = true;
+                    return `r += (${i.exp}) + '${localHash} ';`
+                } else if(i.fn) {
+                    dyn = true;
+                    return `if(${i.fn}()) r += '${i.line} ';`
+                }
+                staticLine += i.line + ' ';
+                return `r += '${i.line} ';`;
+            }).join('\n');
+
+            if(dyn) {
+                let funcName = 'fn' + (this.uniqIndex++);
+                let valueName = 'v' + (this.uniqIndex++);
+                injectGroupCall++;
+                head2.push(`
+                    let ${funcName} = () => {
+                        let r = '';
+                        ${line}
+                        return r.trim();
+                    };
+                    let ${valueName} = ${funcName}();
+                    $class['${childClass}'] = ${valueName};
+                    $class.$dyn['${childClass}'] = true;
+                    $watch($cd, ${funcName}, (result) => {
+                        $class['${childClass}'] = result;
+                        groupCall();
+                    }, {ro: true, value: ${valueName}});
+                `);
+            } else {
+                head2.push(`
+                    $class['${childClass}'] = '${staticLine.trim()}';
+                `);
+            }
+        });
+    }
+
     if(forwardAllEvents) head.unshift('let events = Object.assign({}, $option.events);');
     else head.unshift('let events = {};');
     if(injectGroupCall) {
@@ -397,25 +401,6 @@ export function makeComponent(node, makeEl) {
         }
     }
     if(spreading) head.push('spreadObject.build();');
-
-    if(namedClass) {
-        let hash = '';
-        if(defaultClassNeedHash && this.css) hash = getClassId();
-        if(defaultClassNeedLocalHash && this.css) hash = (hash ? hash + ' ' : '') + this.css.id;
-        head.push(`let $class = $runtime.makeNamedClass('${hash}');`);
-        options.push('$class');
-    }
-    if(passedClasses.length) {
-        let pclass = passedClasses.map(i => {
-            return `'${i.name}': '${i.hash}'`;
-        }).join(',');
-        head.push(`let passedClass = \{${pclass}\};`);
-        options.push('passedClass');
-    }
-    if(passedClassDyn) {
-        head.push('let passedClassDyn = {};');
-        options.push('passedClassDyn');
-    }
 
     options.unshift('afterElement: true, noMount: true, props, boundProps, events, slots');
 
