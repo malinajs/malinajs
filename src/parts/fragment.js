@@ -48,11 +48,8 @@ export function makeFragment(node) {
 
 
 export function attachFragment(node, elementName) {
-
     let head = [];
-    let rx = node.name.match(/^fragment\:(\w+)$/);
-    assert(rx);
-    let name = rx[1];
+    let name = node.elArg;
     assert(isSimpleName(name));
 
     node.attributes.forEach(prop => {

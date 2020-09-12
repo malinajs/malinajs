@@ -34,6 +34,11 @@ export function makeComponent(node, makeEl) {
         return __classId;
     };
 
+    if(node.name == 'component') {
+        assert(node.elArg);
+        dynamicComponent = node.elArg[0] == '{' ? unwrapExp(node.elArg) : node.elArg;
+    }
+
     if(node.body && node.body.length) {
         let slots = {};
         let defaultSlot = {

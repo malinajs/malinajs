@@ -162,7 +162,7 @@ function buildBlock(data) {
                 tpl.push('</template>');
             } else if(n.type === 'node') {
                 setLvl();
-                if(n.name.match(/^[A-Z]/)) {
+                if(n.name == 'component' || n.name.match(/^[A-Z]/)) {
                     // component
                     if(this.config.hideLabel) tpl.push(`<!---->`);
                     else tpl.push(`<!-- ${n.name} -->`);
@@ -170,24 +170,17 @@ function buildBlock(data) {
                     binds.push(b.bind);
                     return;
                 }
-                if(n.name.match(/^slot(\:|$| )/)) {
-                    let slotName;
-                    if(n.name == 'slot') slotName = 'default';
-                    else {
-                        let rx = n.name.match(/^slot\:(\S+)(.*)$/);
-                        assert(rx);
-                        slotName = rx[1];
-                    };
-
+                if(n.name == 'slot') {
+                    let slotName = n.elArg || 'default';
                     if(this.config.hideLabel) tpl.push(`<!---->`);
                     else tpl.push(`<!-- Slot ${slotName} -->`);
                     let b = this.attachSlot(slotName, getElementName(), n);
                     binds.push(b.source);
                     return;
                 }
-                if(n.name.match(/^fragment(\:|$| )/)) {
+                if(n.name == 'fragment') {
                     if(this.config.hideLabel) tpl.push(`<!---->`);
-                    else tpl.push(`<!-- Slot ${n.name} -->`);
+                    else tpl.push(`<!-- Fragment ${n.name} -->`);
                     let b = this.attachFragment(n, getElementName());
                     binds.push(b.source);
                     return;

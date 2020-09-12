@@ -19,20 +19,27 @@ export function parse(source) {
         let name = '';
         let bind;
         let eq, attr_start;
+        let elArg = null;
 
         function flush(shift) {
             if(!attr_start) return;
             shift = shift || 0;
             let end = index - 1 + shift;
+            if(elArg === true) {
+                elArg = source.substring(attr_start, end);
+                attr_start = null;
+                eq = null;
+                return;
+            }
             let a = {
                 content: source.substring(attr_start, end)
             };
             if(eq) {
                 a.name = source.substring(attr_start, eq);
                 a.value = source.substring(eq + 1, end);
-                if(a.value[0] == '"' || a.value[0] == '"') a.value = a.value.substring(1);
+                if(a.value[0] == '"' || a.value[0] == '\'') a.value = a.value.substring(1);
                 let i = a.value.length - 1;
-                if(a.value[i] == '"' || a.value[i] == '"') a.value = a.value.substring(0, i);
+                if(a.value[i] == '"' || a.value[i] == '\'') a.value = a.value.substring(0, i);
             } else a.name = a.content;
             attributes.push(a);
             attr_start = null;
@@ -69,13 +76,13 @@ export function parse(source) {
             }
             if(a == '>') {
                 flush();
-                const voidTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
+                const voidTags = ['fragment', 'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
                 let voidTag = voidTags.indexOf(name) >= 0;
-                if(name.match(/^fragment($| |\:)/)) voidTag = true;
                 let closedTag = voidTag || source[index-2] == '/';
                 return {
                     type: 'node',
-                    name: name,
+                    name,
+                    elArg,
                     openTag: source.substring(start, index),
                     start: start,
                     end: index,
@@ -85,10 +92,16 @@ export function parse(source) {
                 }
             }
             if(begin) {
-                if(a.match(/[\da-zA-Z\:]/)) {
+                if(a.match(/[\da-zA-Z]/)) {
                     name += a;
                     continue;
-                } else begin = false;
+                } else {
+                    begin = false;
+                    if(a == ':') {
+                        elArg = true;
+                        attr_start = index;
+                    }
+                }
             } else if(attr_start) {
                 if(a == '=' && !eq) eq = index - 1;
                 else if(a.match(/\s/)) flush();
@@ -196,9 +209,7 @@ export function parse(source) {
                         if(a === '>') break;
                         name += a;
                     }
-                    if(!(name == 'slot' && parent.name.split(':')[0] == 'slot')) {
-                        assert(name === parent.name, 'Wrong close-tag: ' + parent.name + ' - ' + name);
-                    }
+                    assert(name === parent.name, 'Wrong close-tag: ' + parent.name + ' - ' + name);
                     return;
                 }
 
