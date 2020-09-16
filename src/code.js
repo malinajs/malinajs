@@ -37,7 +37,10 @@ export function transformJS(code, config={}) {
         if(n.type == 'FunctionDeclaration') {
             rootFunctions[n.id.name] = true;
         } else if(n.type == 'VariableDeclaration') {
-            n.declarations.forEach(i => rootVariables[i.id.name] = true);
+            n.declarations.forEach(i => {
+                rootVariables[i.id.name] = true;
+                if(i.init && i.init.type == 'ArrowFunctionExpression') rootFunctions[i.id.name] = true;
+            });
         }
     });
 
