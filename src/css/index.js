@@ -244,10 +244,25 @@ export function processCSS(styleNode, config) {
         });
 
         // removed selectors
-        self.ast.children = self.ast.children.filter(rule => {
-            rule.prelude.children = rule.prelude.children.filter(s => !s.removed);
-            return rule.prelude.children.length;
-        });
+        const walk = (node, parent) => {
+            if(node.children && node.children.forEach) {
+                if(node.children.toArray) node.children = node.children.toArray();
+                node.children.slice().forEach(n => walk(n, node));
+            } else if(node && typeof node == 'object') {
+                Object.values(node).forEach(i => {
+                    if(i && typeof i == 'object') walk(i, null)
+                });
+            }
+
+            if(node.type != 'Rule') return;
+            node.prelude.children = node.prelude.children.filter(s => !s.removed);
+            if(!node.prelude.children.length && parent) {
+                let i = parent.children.indexOf(node);
+                if(i >= 0) parent.children.splice(i, 1);
+            }
+        }
+
+        walk(self.ast, null);
 
         return csstree.generate(self.ast);
     }
