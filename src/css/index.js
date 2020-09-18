@@ -288,7 +288,7 @@ function makeDom(data) {
                 if(e.parts.then && e.parts.then.length) build(parent, e.parts.then);
                 if(e.parts.catch && e.parts.catch.length) build(parent, e.parts.catch);
             } else if(e.type != 'node') return;
-            if(e.name[0].match(/[A-Z]/)) return;
+            //if(e.name[0].match(/[A-Z]/)) return;
             let n = new Node(e.name, {__node: e});
             e.attributes.forEach(a => {
                 if(a.name == 'class') n.className += ' ' + a.value;
