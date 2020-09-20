@@ -49,12 +49,42 @@ export function processCSS(styleNode, config) {
 
         self.ast = csstree.parse(content);
 
+        const convert = (node, parent) => {
+            if(!node) return node;
+            if(typeof node != 'object') return node;
+            if(Array.isArray(node)) return node.map(i => convert(i, parent));
+            if(node.toArray) return node.toArray().map(i => convert(i, parent));
+            let r = {parent};
+            let newParent = node.type ? r : parent;
+            for(let k in node) r[k] = convert(node[k], newParent);
+            return r;
+        }
+        self.ast = convert(self.ast, null);
+
         csstree.walk(self.ast, function(node) {
-            if (node.type === 'Rule') {
+            if(node.type == 'Declaration') {
+                if(node.property == 'animation' || node.property == 'animation-name') {
+                    let c = node.value.children[0];
+                    if(!c) return;
+                    if(c.type == 'Identifier') {
+                        c.name += '-' + self.id;
+                    } else {
+                        c = node.value.children[node.value.children.length - 1];
+                        if(c.type == 'Identifier') c.name += '-' + self.id;
+                    }
+                }
+            } else if(node.type === 'Atrule') {
+                if(node.name == 'keyframes') {
+                    node.prelude.children[0].name += '-' + self.id;
+                }
+            } else if(node.type === 'Rule') {
+                if(node.parent.parent && node.parent.parent.type == 'Atrule') {
+                    if(node.parent.parent.name == 'keyframes') return;
+                }
+
                 assert(node.prelude.type=='SelectorList');
 
-                let selectorList = node.prelude.children.toArray();
-                node.prelude.children = selectorList;
+                let selectorList = node.prelude.children;
                 for(let i=0; i < selectorList.length; i++) {
                     processSelector(selectorList[i]);
                 }
@@ -62,7 +92,7 @@ export function processCSS(styleNode, config) {
                 function processSelector(fullSelector) {
                     assert(fullSelector.type == 'Selector');
                     let selector = [];
-                    let fullSelectorChildren = fullSelector.children.toArray();
+                    let fullSelectorChildren = fullSelector.children;
                     fullSelectorChildren.forEach(sel => {
                         if(sel.type == 'PseudoClassSelector' && sel.name == 'export') {
                             assert(fullSelectorChildren.length == 1);
@@ -71,7 +101,7 @@ export function processCSS(styleNode, config) {
                             let sl = csstree.parse(sel.value, {context: 'selectorList'})
                             assert(sl.type == 'SelectorList');
                             sl.children.forEach(selNode => {
-                                let sel = selNode.children.toArray();
+                                let sel = selNode.children;
                                 if(sel.length != 1 || sel[0].type != 'ClassSelector') {
                                     let selName = csstree.generate(selNode);
                                     throw Error(`Wrong class for export '${selName}'`);
@@ -244,25 +274,15 @@ export function processCSS(styleNode, config) {
         });
 
         // removed selectors
-        const walk = (node, parent) => {
-            if(node.children && node.children.forEach) {
-                if(node.children.toArray) node.children = node.children.toArray();
-                node.children.slice().forEach(n => walk(n, node));
-            } else if(node && typeof node == 'object') {
-                Object.values(node).forEach(i => {
-                    if(i && typeof i == 'object') walk(i, null)
-                });
-            }
-
+        csstree.walk(self.ast, (node) => {
             if(node.type != 'Rule') return;
             node.prelude.children = node.prelude.children.filter(s => !s.removed);
+            let parent = node.parent;
             if(!node.prelude.children.length && parent) {
                 let i = parent.children.indexOf(node);
                 if(i >= 0) parent.children.splice(i, 1);
             }
-        }
-
-        walk(self.ast, null);
+        });
 
         return csstree.generate(self.ast);
     }
