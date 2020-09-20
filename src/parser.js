@@ -17,9 +17,15 @@ export function parse(source) {
         let attributes = [];
         let begin = true;
         let name = '';
-        let bind;
+        let bind = 0;
         let eq, attr_start;
         let elArg = null;
+
+        const error = (name) => {
+            let e = new Error(name);
+            e.details = source.substring(start, index);
+            throw e;
+        }
 
         function flush(shift) {
             if(!attr_start) return;
@@ -53,22 +59,20 @@ export function parse(source) {
                 while(a != readNext());
                 continue;
             }
+            if(a == '{') {
+                bind++;
+                continue;
+            }
             if(bind) {
                 if(a == '}') {
-                    bind = false;
+                    bind--;
+                    if(bind > 0) continue;
                     flush(1);
                 }
                 continue;
             }
-            if(a == '{') {
-                bind = true;
-                continue;
-            }
-            if(a == '<') {
-                let e = new Error('Wrong tag');
-                e.details = source.substring(start, index);
-                throw e;
-            }
+            if(a == '}') error('Wrong attr');
+            if(a == '<') error('Wrong tag');
             if(a == '/') {
                 a = readNext();
                 assert(a == '>');
@@ -147,6 +151,8 @@ export function parse(source) {
         let start = index;
         assert(readNext() === '{', 'Bind error');
         let p, q;
+        let bkt = 1;
+
         while(true) {
             let a = readNext();
 
@@ -161,8 +167,14 @@ export function parse(source) {
                 continue;
             }
 
-            if(a == '{') throw 'Error binding: ' + source.substring(start, index);
-            if(a != '}') continue;
+            if(a == '{') {
+                bkt++;
+                continue;
+            }
+            if(a == '}') {
+                bkt--;
+                if(bkt > 0) continue;
+            } else continue;
 
             return {
                 value: source.substring(start + 1, index - 1)

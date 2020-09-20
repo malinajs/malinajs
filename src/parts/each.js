@@ -33,10 +33,31 @@ export function makeEachBlock(data, option) {
         right = rx[1];
         keyName = rx[2];
     }
-    rx = right.trim().split(/\s*\,\s*/);
-    assert(rx.length <= 2, `Wrong #each expression '${data.value}'`);
-    let itemName = rx[0];
-    let indexName = rx[1] || '$index';
+    right = right.trim();
+
+    let itemName, indexName, keywords, bind0 = '';
+    if(right[0] == '{') {
+        rx = right.match(/^\{([^}]+)\}(.*)$/);
+        assert(rx, `Wrong #each expression '${data.value}'`);
+        keywords = rx[1].trim().split(/\s*\,\s*/);
+        itemName = '$$item';
+        indexName = rx[2].trim();
+        if(indexName[0] == ',') indexName = indexName.substring(1).trim();
+        indexName = indexName || '$index';
+
+        let assignVars = keywords.map(k => `${k} = $$item.${k}`).join(', ');
+        bind0 = `
+            var ${assignVars};
+            $ctx.cd.prefix.push(() => {
+                ${assignVars};
+            });
+        `;
+    } else {
+        rx = right.trim().split(/\s*\,\s*/);
+        assert(rx.length != 2, `Wrong #each expression '${data.value}'`);
+        itemName = rx[0];
+        indexName = rx[1] || '$index';
+    }
     assert(isSimpleName(itemName), `Wrong name '${itemName}'`);
     assert(isSimpleName(indexName), `Wrong name '${indexName}'`);
 
@@ -52,6 +73,7 @@ export function makeEachBlock(data, option) {
     source.push(`
         {
             function bind($ctx, $template, ${itemName}, ${indexName}) {
+                ${bind0}
                 ${itemData.source};
                 ${itemData.name}($ctx.cd, $template);
                 $ctx.rebind = function(_${indexName}, _${itemName}) {
