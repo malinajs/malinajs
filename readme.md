@@ -12,7 +12,20 @@ Malina.js builds your web-application to use it **without framework on frontend 
 
 **[Try Malina.js online](https://malinajs.github.io/repl/)**
 
-Run dev environment:
+```html
+<script>
+  let name = 'world';
+    
+  function rename() {
+    name = 'user';
+  }
+</script>
+
+<h1>Hello {name.toUpperCase()}!</h1>
+<button @click={rename}>Rename</button>
+```
+
+**Run dev environment:**
 ```
 npx create-malina myapp
 cd myapp
@@ -21,7 +34,7 @@ npm run dev
 ```
 
 
-Run dev environment via docker:
+**Run dev environment via docker:**
 ```
 docker run --rm -it --user ${UID} -p 7000:7000 -p 35729:35729 -v `pwd`:/app/src lega911/malina
 # open http://localhost:7000/
