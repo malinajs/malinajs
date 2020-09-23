@@ -12,6 +12,7 @@ Malina.js builds your web-application to use it **without framework on frontend 
 
 **[Try Malina.js online](https://malinajs.github.io/repl/)**
 
+**Example**
 ```html
 <script>
   let name = 'world';
