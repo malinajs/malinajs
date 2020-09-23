@@ -8,11 +8,15 @@ Malina.js builds your web-application to use it **without framework on frontend 
 
 * [Docs](https://malinajs.github.io/docs/)
 * [Syntax Highlighter for VS-Code](https://marketplace.visualstudio.com/items?itemName=AlexxNB.malina-js-highlight)
-* [Differences from Svelte.js](https://medium.com/@lega911/svelte-js-and-malina-js-b33c55253271)
+* **[Try Malina.js online (REPL)](https://malinajs.github.io/repl/)**
 
-**[Try Malina.js online](https://malinajs.github.io/repl/)**
+#### Articles
+* [Comparision with Svelte.js](https://medium.com/@lega911/svelte-js-and-malina-js-b33c55253271)
+* [Comparision with Vue 3](https://medium.com/@lega911/vue-3-vs-malina-js-abd97025ba81)
+* [Passing CSS classes to child components](https://medium.com/@lega911/how-a-popular-feature-declined-by-svelte-went-live-in-malina-js-1a08fdb9dbc4)
+* [Using fragments](https://medium.com/@lega911/how-fragments-can-help-in-your-web-development-5efc4d10f9da)
 
-**Example**
+#### Example
 ```html
 <script>
   let name = 'world';
@@ -26,7 +30,7 @@ Malina.js builds your web-application to use it **without framework on frontend 
 <button @click={rename}>Rename</button>
 ```
 
-**Run dev environment:**
+#### Run dev environment:
 ```
 npx create-malina myapp
 cd myapp
@@ -35,7 +39,7 @@ npm run dev
 ```
 
 
-**Run dev environment via docker:**
+#### Run dev environment via docker:
 ```
 docker run --rm -it --user ${UID} -p 7000:7000 -p 35729:35729 -v `pwd`:/app/src lega911/malina
 # open http://localhost:7000/
