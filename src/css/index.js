@@ -44,22 +44,24 @@ export function processCSS(styleNode, config) {
     let self = {element: {}, cls: {}, passed: [], simpleClasses: {}, id: genId()};
     let selectors = {};
 
+    const convertAst = (node, parent) => {
+        if(!node) return node;
+        if(typeof node != 'object') return node;
+        if(Array.isArray(node)) return node.map(i => convertAst(i, parent));
+        if(node.toArray) return node.toArray().map(i => convertAst(i, parent));
+        let r = {parent};
+        let newParent = node.type ? r : parent;
+        for(let k in node) r[k] = convertAst(node[k], newParent);
+        return r;
+    }
+
+    const parseCSS = (content, option) => {
+        let ast = csstree.parse(content, option);
+        return convertAst(ast, null);
+    }
+    
     function transform() {
-        let content = styleNode.content;
-
-        self.ast = csstree.parse(content);
-
-        const convert = (node, parent) => {
-            if(!node) return node;
-            if(typeof node != 'object') return node;
-            if(Array.isArray(node)) return node.map(i => convert(i, parent));
-            if(node.toArray) return node.toArray().map(i => convert(i, parent));
-            let r = {parent};
-            let newParent = node.type ? r : parent;
-            for(let k in node) r[k] = convert(node[k], newParent);
-            return r;
-        }
-        self.ast = convert(self.ast, null);
+        self.ast = parseCSS(styleNode.content);
 
         csstree.walk(self.ast, function(node) {
             if(node.type == 'Declaration') {
@@ -96,9 +98,9 @@ export function processCSS(styleNode, config) {
                     fullSelectorChildren.forEach(sel => {
                         if(sel.type == 'PseudoClassSelector' && sel.name == 'export') {
                             assert(fullSelectorChildren.length == 1);
-                            sel = sel.children.first();
+                            sel = sel.children[0];
                             assert(sel.type == 'Raw');
-                            let sl = csstree.parse(sel.value, {context: 'selectorList'})
+                            let sl = parseCSS(sel.value, {context: 'selectorList'})
                             assert(sl.type == 'SelectorList');
                             sl.children.forEach(selNode => {
                                 let sel = selNode.children;
@@ -110,9 +112,9 @@ export function processCSS(styleNode, config) {
                                 selectorList.push(selNode);
                             });
                         } else if(sel.type == 'PseudoClassSelector' && sel.name == 'global') {
-                            sel = sel.children.first();
+                            sel = sel.children[0];
                             assert(sel.type == 'Raw');
-                            let a = csstree.parse(sel.value, {context: 'selector'});
+                            let a = parseCSS(sel.value, {context: 'selector'});
                             assert(a.type == 'Selector');
                             a.children.forEach(sel => {
                                 sel.global = true;
