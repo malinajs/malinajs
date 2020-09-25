@@ -59,7 +59,9 @@ export function processCSS(styleNode, config) {
         let ast = csstree.parse(content, option);
         return convertAst(ast, null);
     }
-    
+
+    const isKeyframes = (name) => name == 'keyframes' || name == '-webkit-keyframes' || name == '-moz-keyframes' || name == '-o-keyframes';
+
     function transform() {
         self.ast = parseCSS(styleNode.content);
 
@@ -76,12 +78,12 @@ export function processCSS(styleNode, config) {
                     }
                 }
             } else if(node.type === 'Atrule') {
-                if(node.name == 'keyframes') {
+                if(isKeyframes(node.name)) {
                     node.prelude.children[0].name += '-' + self.id;
                 }
             } else if(node.type === 'Rule') {
                 if(node.parent.parent && node.parent.parent.type == 'Atrule') {
-                    if(node.parent.parent.name == 'keyframes') return;
+                    if(isKeyframes(node.parent.parent.name)) return;
                 }
 
                 assert(node.prelude.type=='SelectorList');
