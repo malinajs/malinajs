@@ -1,0 +1,11 @@
+<script>
+    let items = [
+        { label: 'One'},
+        { label: 'Two'},
+        { label: 'Three'}
+    ];
+</script>
+
+{#each items as item, index}
+    <p>No.{index} {item.label}</p>
+{/each}
