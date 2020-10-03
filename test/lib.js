@@ -42,4 +42,11 @@ async function build(name, option={}) {
 };
 
 
-module.exports = {build};
+function tick() {
+    return new Promise(resolve => {
+        setTimeout(resolve, 1);
+    });
+}
+
+
+module.exports = {build, tick};

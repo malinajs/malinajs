@@ -314,9 +314,8 @@ export function makeComponent(node, makeEl) {
             }
             return;
         }
-        assert(value, 'Empty property');
         assert(isSimpleName(name), `Wrong property: '${name}'`);
-        if(value.indexOf('{') >= 0) {
+        if(value && value.indexOf('{') >= 0) {
             let exp = this.parseText(value);
             let fname = 'pf' + (this.uniqIndex++);
             let valueName = 'v' + (this.uniqIndex++);
@@ -338,12 +337,12 @@ export function makeComponent(node, makeEl) {
                 }, {ro: true, cmp: $runtime.$$compareDeep, value: $runtime.$$cloneDeep(${valueName})});
             `);
         } else {
+            if(value) value = '`' + this.Q(value) + '`';
+            else value = 'true';
             if(spreading) {
-                head.push(`
-                    spreadObject.attr('${name}', \`${this.Q(value)}\`);
-                `);
+                head.push(`spreadObject.attr('${name}', ${value});`);
             } else {
-                head.push(`props.${name} = \`${this.Q(value)}\``);
+                head.push(`props.${name} = ${value};`);
             }
         }
     });
