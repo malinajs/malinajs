@@ -40,7 +40,10 @@ export function unwrapExp(e) {
 };
 
 export function isSimpleName(name) {
-    return !!name.match(/^([\w\$_][\w\d\$_]*)$/);
+    if(!name) return false;
+    if(!name.match(/^([\w\$_][\w\d\$_\.]*)$/)) return false;
+    if(name[name.length - 1] == '.') return false;
+    return true;
 }
 
 export function detectExpressionType(name) {
