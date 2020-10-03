@@ -56,6 +56,7 @@ export function transformJS(code, config={}) {
 
     function applyBlock() {
         return {
+            _apply: true,
             type: 'ExpressionStatement',
             expression: {
                 callee: {
@@ -64,6 +65,18 @@ export function transformJS(code, config={}) {
                 },
                 type: 'CallExpression'
             }
+        }
+    }
+
+    function returnApplyBlock(a) {
+        return {
+            _apply: true,
+            callee: {
+                type: 'Identifier',
+                name: '$$apply'
+            },
+            type: 'CallExpression',
+            arguments: [a]
         }
     }
 
@@ -103,16 +116,22 @@ export function transformJS(code, config={}) {
                 transformNode(node);
             }
         } else if(node.type == 'AwaitExpression') {
-            if(node._parent && node._parent._parent && node._parent._parent._parent) {
-                if(node._parent.type == 'ExpressionStatement' &&
-                    node._parent._parent.type == 'BlockStatement' &&
-                    node._parent._parent._parent.type == 'FunctionDeclaration' &&
-                    node._parent._parent._parent.async) {
-                        let list = node._parent._parent.body;
-                        let i = list.indexOf(node._parent);
-                        assert(i >= 0);
-                        list.splice(i + 1, 0, applyBlock());
+            let n = node, p;
+            while(n._parent) {
+                p = n._parent;
+                if(p.type == 'BlockStatement') break;
+                n = p;
+                p = null;
+            }
+            if(p) {
+                let i = p.body.indexOf(n);
+                if(i >= 0 && !(p.body[i + 1] && p.body[i + 1]._apply)) {
+                    if(n.type == 'ReturnStatement') {
+                        n.argument = returnApplyBlock(n.argument);
+                    } else {
+                        p.body.splice(i + 1, 0, applyBlock());
                     }
+                }
             }
         }
     };
@@ -120,6 +139,7 @@ export function transformJS(code, config={}) {
     function walk(node, parent, fn) {
         if(typeof node !== 'object') return;
 
+        if(node._apply) return;
         node._parent = parent;
         let forParent = parent;
         if(node.type) {
@@ -132,7 +152,9 @@ export function transformJS(code, config={}) {
             if(!child || typeof child !== 'object') continue;
 
             if(Array.isArray(child)) {
-                child.forEach(i => walk(i, forParent, fn));
+                for(let i=0;i<child.length;i++) {
+                    walk(child[i], forParent, fn);
+                }
             } else {
                 walk(child, forParent, fn);
             }
