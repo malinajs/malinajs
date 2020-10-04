@@ -60,6 +60,8 @@ export function processCSS(styleNode, config) {
         return convertAst(ast, null);
     }
 
+    const last = a => a[a.length - 1];
+
     const isKeyframes = (name) => name == 'keyframes' || name == '-webkit-keyframes' || name == '-moz-keyframes' || name == '-o-keyframes';
 
     function transform() {
@@ -73,7 +75,7 @@ export function processCSS(styleNode, config) {
                     if(c.type == 'Identifier') {
                         c.name += '-' + self.id;
                     } else {
-                        c = node.value.children[node.value.children.length - 1];
+                        c = last(node.value.children);
                         if(c.type == 'Identifier') c.name += '-' + self.id;
                     }
                 }
@@ -185,6 +187,7 @@ export function processCSS(styleNode, config) {
                     fullSelector.children = result;
 
                     if(!selectorObject.clearSelector) {
+                        if(last(proc).type == 'Combinator') proc.push({name: '*', type: 'TypeSelector'})
                         selectorObject.clearSelector = csstree.generate({
                             type: 'Selector',
                             children: proc,
