@@ -3,11 +3,11 @@ var assert = require('assert');
 
 
 async function main(build) {
-    const {dom} = await build();
+    const {document} = await build();
 
-    assert.strictEqual(dom.window.document.body.innerHTML, ' <div class="one c1">text</div> ');
+    assert.strictEqual(document.body.innerHTML, ' <div class="one c1">text</div> ');
     
-    const styles = dom.window.document.querySelectorAll('style');
+    const styles = document.querySelectorAll('style');
     assert.strictEqual(styles.length, 1);
     assert.strictEqual(styles[0].innerHTML, '.one.c1{color:red}');
 

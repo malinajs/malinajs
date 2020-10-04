@@ -1,4 +1,4 @@
 
 import App from 'main.xht';
 
-App(document.body);
+window.app = App(document.body);

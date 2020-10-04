@@ -2,6 +2,7 @@
 const jsdom = require("jsdom");
 const rollup = require('rollup');
 const malinaRollup = require('../malina-rollup');
+const assert = require('assert');
 
 async function build(name, option={}) {
     function customResolve() {
@@ -37,7 +38,8 @@ async function build(name, option={}) {
     return {
         code,
         dom,
-        document: dom.window.document
+        document: dom.window.document,
+        app: dom.window.app
     };
 };
 
@@ -49,4 +51,11 @@ function tick() {
 }
 
 
-module.exports = {build, tick};
+function equalClass(node, expected) {
+    let a = node.classList.toString().trim().split(/\s+/).sort().join(' ');
+    let b = expected.trim().split(/\s+/).sort().join(' ');
+    assert.strictEqual(a, b);
+};
+
+
+module.exports = {build, tick, equalClass};
