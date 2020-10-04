@@ -139,7 +139,7 @@ export function processCSS(styleNode, config) {
                     });
 
                     let selectorObject = selectors[fullSelectorName];
-                    
+
                     if(!selectorObject) {
                         selectorObject = new SelectorObject(fullSelectorName, {id: self.id, genId});
                         selectors[fullSelectorName] = selectorObject;
@@ -215,11 +215,11 @@ export function processCSS(styleNode, config) {
                 throw e;
             }
             if(selected.length) {
-                sel.useAsLocal();
+                const h = sel.useAsLocal();
                 selected.forEach(s => {
                     assert(!sel.bound);
-                    s.node.__node.injectCssHash = true;
-                    s.lvl.forEach(l => l.__node.injectCssHash = true);
+                    s.node.__node.classes.add(h);
+                    s.lvl.forEach(l => l.__node.classes.add(h));
                 })
             }
         });

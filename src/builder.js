@@ -189,7 +189,7 @@ function buildBlock(data) {
                 let el = ['<' + n.name];
                 if(n.attributes.some(a => a.name.startsWith('{...'))) {
                     n.spreadObject = 'spread' + (this.uniqIndex++);
-                    n.injectCssHash = !!this.css;
+                    if(this.css) n.classes.add(this.css.id);
                     binds.push(`
                         let ${n.spreadObject} = $runtime.$$makeSpreadObject($cd, ${getElementName()}, '${this.css && this.css.id}');
                     `);
@@ -199,7 +199,8 @@ function buildBlock(data) {
                     if(b.prop) el.push(b.prop);
                     if(b.bind) binds.push(b.bind);
                 });
-                if(n.injectCssHash) el.push(`class="${this.css.id}"`);
+                let className = Array.from(n.classes).join(' ');
+                if(className) el.push(`class="${className}"`);
 
                 el = el.join(' ');
                 if(n.closedTag) {

@@ -239,6 +239,8 @@ export function parse(source) {
                     tag.type = 'style';
                     tag.content = readStyle();
                     continue;
+                } else {
+                    tag.classes = new Set();
                 };
 
                 if(tag.closedTag) continue;
