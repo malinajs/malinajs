@@ -1,0 +1,24 @@
+<script>
+    import Child from './Child.xht';
+
+</script>
+
+<Child />
+<hr/>
+<div>
+    <b>
+        <Child />
+    </b>
+</div>
+<hr/>
+<div class="root">
+    <span>
+        <Child />
+    </span>
+</div>
+
+<style>
+    :global(h1) {color: red}
+    div b :global(h2) {color: green}
+    .root span :global(div h3) {color: blue}
+</style>

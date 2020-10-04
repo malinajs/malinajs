@@ -9,7 +9,8 @@ async function main() {
         'prop1',
         'css1',
         'css2',
-        'css3'
+        'css3',
+        'css4'
     ];
 
     for(let i=0; i<tests.length; i++) {

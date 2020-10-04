@@ -52,7 +52,7 @@ function tick() {
 
 
 function equalClass(node, expected) {
-    let a = node.classList.toString().trim().split(/\s+/).sort().join(' ');
+    let a = node.className.trim().split(/\s+/).sort().join(' ');
     let b = expected.trim().split(/\s+/).sort().join(' ');
     assert.strictEqual(a, b);
 };

@@ -187,12 +187,34 @@ export function processCSS(styleNode, config) {
                     fullSelector.children = result;
 
                     if(!selectorObject.clearSelector) {
-                        if(last(proc).type == 'Combinator') proc.push({name: '*', type: 'TypeSelector'})
-                        selectorObject.clearSelector = csstree.generate({
-                            type: 'Selector',
-                            children: proc,
-                            selectorNodes: result
+                        const onlyGlobal = proc.every(p => {
+                            if(p.type == 'Combinator' || p.type == 'WhiteSpace') return true;
+                            return p.global;
                         });
+
+                        if(onlyGlobal) {
+                            selectorObject.clearSelector = true;
+                            selectorObject.onlyGlobal = true;
+                            selectorObject.used = true;
+                        } else {
+                            let localSelector = [];
+                            for(let i=0; i<proc.length; i++) {
+                                let p = proc[i];
+                                if(p.type == 'Combinator' || p.type == 'WhiteSpace') {
+                                    localSelector.push(p);
+                                } else {
+                                    if(p.global) break;
+                                    localSelector.push(p);
+                                }
+                            }
+    
+                            if(last(localSelector).type == 'Combinator') localSelector.push({name: '*', type: 'TypeSelector'})
+                            selectorObject.clearSelector = csstree.generate({
+                                type: 'Selector',
+                                children: localSelector,
+                                selectorNodes: result
+                            });
+                        }
                     }
 
                 };
@@ -208,6 +230,7 @@ export function processCSS(styleNode, config) {
         });
 
         Object.values(selectors).forEach(sel => {
+            if(sel.onlyGlobal) return true;
             if(sel.simpleClass) return;
             let selected;
             try {
@@ -231,6 +254,7 @@ export function processCSS(styleNode, config) {
     self.getContent = function() {
         Object.values(selectors).forEach(sel => {
             if(sel.used) {
+                if(sel.onlyGlobal) return;
                 sel.nodes.forEach(node => {
                     let selectorChildren = node.selector.children.map(i => Object.assign({}, i));
 
