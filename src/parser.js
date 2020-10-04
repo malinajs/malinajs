@@ -378,9 +378,9 @@ export function parseText(source) {
     let step = 0;
     let text = '';
     let exp = '';
-    let result = [];
     let q;
     let len = source.length;
+    let parts = [];
     while(i < len) {
         let a = source[i++];
         if(step == 1) {
@@ -398,7 +398,7 @@ export function parseText(source) {
                 step = 0;
                 exp = exp.trim();
                 if(!exp) throw 'Wrong expression';
-                result.push('(' + exp + ')');
+                parts.push({value: exp, type: 'exp'});
                 exp = '';
                 continue;
             }
@@ -407,7 +407,7 @@ export function parseText(source) {
         }
         if(a === '{') {
             if(text) {
-                result.push('`' + this.Q(text) + '`');
+                parts.push({value: text, type: 'text'});
                 text = '';
             }
             step = 1;
@@ -415,9 +415,13 @@ export function parseText(source) {
         }
         text += a;
     }
-    if(text) result.push('`' + this.Q(text) + '`');
+    if(text) parts.push({value: text, type: 'text'});
     assert(step == 0, 'Wrong expression: ' + source);
-    result = result.join('+');
-    if(result == '($class)') result = "''+$class";
-    return result;
+    let result;
+    if(parts.length == 1 && parts[0].type == 'exp' && parts[0].value == '$class') {
+        result = "''+$class";
+    } else {
+        result = parts.map(p => p.type == 'text' ? '`' + this.Q(p.value) + '`' : '(' + p.value + ')').join('+');
+    }
+    return {result, parts};
 };

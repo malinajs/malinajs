@@ -151,7 +151,7 @@ function buildBlock(data) {
                 setLvl();
                 if(n.value.indexOf('{') >= 0) {
                     tpl.push(' ');
-                    let exp = this.parseText(n.value);
+                    let exp = this.parseText(n.value).result;
                     binds.push(`$runtime.bindText($cd, ${getElementName()}, () => ${exp});`);
                 } else tpl.push(n.value);
                 lastText = tpl.length;

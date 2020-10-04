@@ -217,7 +217,7 @@ export function makeComponent(node, makeEl) {
         } else if(name == 'class') {
             assert(value, 'Empty class');
             if(value.indexOf('{') >= 0) {
-                let exp = this.parseText(value);
+                let exp = this.parseText(value).result;
                 addClassMapExp(null, exp);
             } else {
                 value.split(/\s+/).forEach(className => {
@@ -316,7 +316,7 @@ export function makeComponent(node, makeEl) {
         }
         assert(isSimpleName(name), `Wrong property: '${name}'`);
         if(value && value.indexOf('{') >= 0) {
-            let exp = this.parseText(value);
+            let exp = this.parseText(value).result;
             let fname = 'pf' + (this.uniqIndex++);
             let valueName = 'v' + (this.uniqIndex++);
             if(spreading) {

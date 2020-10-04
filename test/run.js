@@ -7,7 +7,8 @@ async function main() {
         'each1',
         'each2',
         'prop1',
-        'css1'
+        'css1',
+        'css2'
     ];
 
     for(let i=0; i<tests.length; i++) {

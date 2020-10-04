@@ -214,7 +214,8 @@ export function bindProp(prop, makeEl, node) {
             $tick(() => { ${exp}; $$apply(); });}`};
     } else {
         if(prop.value && prop.value.indexOf('{') >= 0) {
-            let exp = this.parseText(prop.value);
+            const parsed = this.parseText(prop.value);
+            let exp = parsed.result;
 
             if(node.spreadObject) {
                 return {bind: `
@@ -238,10 +239,23 @@ export function bindProp(prop, makeEl, node) {
                     $watchReadOnly($cd, () => (${exp}), (value) => {$element.${name} = value;});
                 }`};
             } else {
-                let suffix = '', scopedClass = name == 'class' && this.css;  // scope any dynamic class
-                if(scopedClass) {
-                    let passed = prop.value.match(/^\{\s*\$class\s*\}$/) || prop.value.match(/^\{\s*\$class\.\w+\s*\}$/)
-                    if(!passed) suffix = `+' ${this.css.id}'`;
+                let suffix = '';
+                if(name == 'class' && this.css) {
+                    let needHash = false;
+                    parsed.parts.forEach(p => {
+                        if(p.type == 'text') {
+                            p.value.trim().split(/\s+/).forEach(name => {
+                                let c = this.css.simpleClasses[name];
+                                if(c) {
+                                    c.useAsLocal();
+                                    needHash = true;
+                                }
+                            });
+                        } else {
+                            if(!p.value.startsWith('$class')) needHash = true;
+                        }
+                    });
+                    if(needHash) suffix = `+' ${this.css.id}'`;
                 }
                 return {
                     bind: `{
@@ -250,8 +264,7 @@ export function bindProp(prop, makeEl, node) {
                             if(value != null) $element.setAttribute('${name}', value);
                             else $element.removeAttribute('${name}');
                         });
-                    }`,
-                    scopedClass: scopedClass
+                    }`
                 };
             }
         }
