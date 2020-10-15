@@ -338,6 +338,7 @@ function makeDom(data) {
                 if(e.parts.main && e.parts.main.length) build(parent, e.parts.main);
                 if(e.parts.then && e.parts.then.length) build(parent, e.parts.then);
                 if(e.parts.catch && e.parts.catch.length) build(parent, e.parts.catch);
+                return;
             } else if(e.type != 'node') return;
             //if(e.name[0].match(/[A-Z]/)) return;
             let n = new Node(e.name, {__node: e});
