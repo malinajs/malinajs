@@ -115,23 +115,24 @@ export function makeComponent(node, makeEl) {
             assert(isSimpleName(inner), `Wrong property: '${inner}'`);
             assert(detectExpressionType(outer) == 'identifier', 'Wrong bind name: ' + outer);
             twoBinds.push(inner);
-            let valueName = 'v' + (this.uniqIndex++);
+            let valueName0 = '$$v' + (this.uniqIndex++);
+            let valueName = '$$v' + (this.uniqIndex++);
             head.push(`props.${inner} = ${outer};`);
             head.push(`boundProps.${inner} = 2;`);
             binds.push(`
                 if('${inner}' in $component) {
-                    let value = $runtime.$$cloneDeep(props.${inner});
+                    let ${valueName0} = $runtime.$$cloneDeep(props.${inner});
                     let $$_w0 = $watch($cd, () => (${outer}), (value) => {
                         props.${inner} = value;
                         $$_w1.value = $$_w0.value;
                         $component.${inner} = value;
-                    }, {ro: true, cmp: $runtime.$$compareDeep, value});
+                    }, {ro: true, cmp: $runtime.$$compareDeep, value: ${valueName0}});
                     let $$_w1 = $watch($component.$cd, () => ($component.${inner}), (${valueName}) => {
                         props.${inner} = ${valueName};
                         $$_w0.value = $$_w1.value;
                         ${outer} = ${valueName};
                         $$apply();
-                    }, {cmp: $runtime.$$compareDeep, value});
+                    }, {cmp: $runtime.$$compareDeep, value: ${valueName0}});
                 } else console.error("Component ${node.name} doesn't have prop ${inner}");
             `);
             return false;
@@ -244,7 +245,7 @@ export function makeComponent(node, makeEl) {
             if(value) exp = unwrapExp(value);
             else exp = className;
 
-            let funcName = `pf${this.uniqIndex++}`;
+            let funcName = `$$pf${this.uniqIndex++}`;
 
             head2.push(`
                 const ${funcName} = () => !!(${this.Q(exp)});
@@ -277,7 +278,7 @@ export function makeComponent(node, makeEl) {
                 } else {
                     exp = localClass = childClass;
                 }
-                let funcName = `pf${this.uniqIndex++}`;
+                let funcName = `$$pf${this.uniqIndex++}`;
                 injectGroupCall++;
 
                 let classObject = this.css && this.css.simpleClasses[localClass];
@@ -317,8 +318,8 @@ export function makeComponent(node, makeEl) {
         assert(isSimpleName(name), `Wrong property: '${name}'`);
         if(value && value.indexOf('{') >= 0) {
             let exp = this.parseText(value).result;
-            let fname = 'pf' + (this.uniqIndex++);
-            let valueName = 'v' + (this.uniqIndex++);
+            let fname = '$$pf' + (this.uniqIndex++);
+            let valueName = '$$v' + (this.uniqIndex++);
             if(spreading) {
                 return head.push(`
                     spreadObject.prop('${name}', () => ${exp});
@@ -368,8 +369,8 @@ export function makeComponent(node, makeEl) {
             }).join('\n');
 
             if(dyn) {
-                let funcName = 'fn' + (this.uniqIndex++);
-                let valueName = 'v' + (this.uniqIndex++);
+                let funcName = '$$fn' + (this.uniqIndex++);
+                let valueName = '$$v' + (this.uniqIndex++);
                 injectGroupCall++;
                 head2.push(`
                     let ${funcName} = () => {
@@ -428,7 +429,7 @@ export function makeComponent(node, makeEl) {
     if(!dynamicComponent) {
         return {bind: `{ ${makeSrc(node.name)} }`};
     } else {
-        let componentName = 'comp' + (this.uniqIndex++);
+        let componentName = '$$comp' + (this.uniqIndex++);
         return {bind: `
         {
             const ${componentName} = ($cd, $ComponentConstructor) => {

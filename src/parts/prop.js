@@ -174,8 +174,8 @@ export function bindProp(prop, makeEl, node) {
         return {bind: `{
             ${spreading}
             let $element=${makeEl()};
-            $runtime.addEvent($cd, $element, 'input', () => { ${exp}=$element.${attr}; $$apply(); });
-            $watchReadOnly($cd, () => (${watchExp}), (value) => { if(value != $element.${attr}) $element.${attr} = value; });
+            let $$w = $watchReadOnly($cd, () => (${watchExp}), (value) => { if(value != $element.${attr}) $element.${attr} = value; });
+            $runtime.addEvent($cd, $element, 'input', () => { $$w.value = ${exp} = $element.${attr}; $$apply(); });
         }`};
     } else if(name == 'class' && arg) {
         let className = arg;
