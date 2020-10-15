@@ -152,10 +152,21 @@ export function bindProp(prop, makeEl, node) {
             if(arg.length) exp = arg.pop();
             else exp = attr;
         }
+        let inputType = null;
+        if(node.name == 'input') {
+            node.attributes.some(a => {
+                if(a.name == 'type') {
+                    inputType = a.value;
+                    return true;
+                }
+            });
+        }
+
         assert(['value', 'checked', 'valueAsNumber', 'valueAsDate', 'selectedIndex'].includes(attr), 'Not supported: ' + prop.content);
         assert(arg.length == 0);
         assert(detectExpressionType(exp) == 'identifier', 'Wrong bind name: ' + prop.content);
         let watchExp = attr == 'checked' ? '!!' + exp : exp;
+        if(attr == 'value' && inputType == 'number') attr = 'valueAsNumber';
 
         let spreading = '';
         if(node.spreadObject) spreading = `${node.spreadObject}.except(['${attr}']);`;
