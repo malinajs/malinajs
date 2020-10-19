@@ -1,7 +1,7 @@
 
 import acorn from 'acorn';
 import astring from 'astring';
-import { assert, replace } from './utils.js'
+import { assert, replace, detectExpressionType } from './utils.js'
 
 
 export function transformJS(code, config={}) {
@@ -214,17 +214,23 @@ export function transformJS(code, config={}) {
         } else if(n.body.expression.type == 'SequenceExpression') {
             const ex = n.body.expression.expressions;
             const handler = ex[ex.length - 1];
-            if(['ArrowFunctionExpression', "FunctionExpression"].indexOf(handler.type) < 0) throw 'Error function';
             let callback = code.substring(handler.start, handler.end);
+            if(handler.type == 'ArrowFunctionExpression' || handler.type == 'FunctionExpression') {
+                // default
+            } else if(detectExpressionType(callback) == 'identifier') {
+                callback = `(v) => { ${callback}(v); }`;
+            } else {
+                callback = `() => { ${callback}; }`;
+            }
 
             if(ex.length == 2) {
                 assertExpression(ex[0]);
                 let exp = code.substring(ex[0].start, ex[0].end);
-                result.watchers.push(`$watch($cd, () => (${exp}), ${callback});`);
+                result.watchers.push(`$watch($cd, () => (${exp}), ${callback}, {cmp: $runtime.$$deepComparator(0)});`);
             } else if(ex.length > 2) {
                 for(let i = 0;i<ex.length-1;i++) assertExpression(ex[i]);
                 let exp = code.substring(ex[0].start, ex[ex.length-2].end);
-                result.watchers.push(`$watch($cd, () => [${exp}], ($args) => { (${callback}).apply(null, $args); }, {cmp: $runtime.$$compareArray});`);
+                result.watchers.push(`$watch($cd, () => [${exp}], ($args) => { (${callback}).apply(null, $args); }, {cmp: $runtime.$$deepComparator(1)});`);
             } else throw 'Error';
         } else throw 'Error';
     }
