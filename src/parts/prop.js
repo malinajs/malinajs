@@ -166,7 +166,7 @@ export function bindProp(prop, makeEl, node) {
         assert(arg.length == 0);
         assert(detectExpressionType(exp) == 'identifier', 'Wrong bind name: ' + prop.content);
         let watchExp = attr == 'checked' ? '!!' + exp : exp;
-        if(attr == 'value' && inputType == 'number') attr = 'valueAsNumber';
+        if(attr == 'value' && ['number', 'range'].includes(inputType)) attr = 'valueAsNumber';
 
         let spreading = '';
         if(node.spreadObject) spreading = `${node.spreadObject}.except(['${attr}']);`;
