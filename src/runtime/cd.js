@@ -180,5 +180,5 @@ export function $digest($cd) {
         loop--;
         if(!changes) break;
     }
-    if(loop < 0) console.error('Infinity changes: ', w);
+    if(loop < 0) __app_onerror('Infinity changes: ', w);
 };
