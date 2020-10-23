@@ -5,11 +5,19 @@ import { transformJS } from './code';
 import { buildRuntime } from './builder';
 import { processCSS } from './css/index';
 
-export const version = '0.5.26';
+export const version = '0.5.27';
 
 export function compile(src, config = {}) {
-    if(!config.name) config.name = 'widget';
-    if(!config.warning) config.warning = function() {};
+    config = Object.assign({
+        name: 'widget',
+        warning: (w) => console.warn('!', w.message),
+        exportDefault: true,
+        inlineTemplate: false,
+        hideLabel: false,
+        compact: true,
+        autoSubscribe: true,
+        cssGenId: null
+    }, config);
 
     const data = parse(src);
 

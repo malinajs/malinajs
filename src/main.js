@@ -27,7 +27,6 @@ if(opt) option[opt] = true;
 let inputFile = option.i;
 let outputFile = option.o || './bin/output.js';
 option.name = option.n || 'widget';
-option.$context = {};
 
 if(!inputFile) throw 'No input file';
 const src = fs.readFileSync(inputFile, {encoding:'utf8', flag:'r'}); 
