@@ -1,5 +1,6 @@
 
-import { assert, detectExpressionType, isSimpleName } from '../utils.js'
+import { parseText } from '../parser.js';
+import { assert, detectExpressionType, isSimpleName, unwrapExp } from '../utils.js'
 
 
 export function bindProp(prop, makeEl, node) {
@@ -204,47 +205,57 @@ export function bindProp(prop, makeEl, node) {
             let $element=${makeEl()};
             $tick(() => { ${exp}; $$apply(); });}`};
     } else if(name == 'class') {
+        if(node.__skipClass) return {};
         if(!this.css) return {prop: prop.content};
-
-        if(arg) {
-            let className = arg;
-            let exp = prop.value ? getExpression() : className;
-    
-            let bind = [];
-
-            if(this.css.isExternalClass(className)) {
-                this.use.resolveClass = true;
-                bind.push(`
-                    $watch($cd, () => !!(${exp}) && $$resolveClass('${className}'), value => {
-                        ${makeEl()}.className = value || '';
-                    });
-                `);
-                node.classes.clear();
-            } else {
-                bind.push(`$runtime.bindClass($cd, ${makeEl()}, () => !!(${exp}), '${className}');`);
-            }
-            return {bind: bind.join('\n')};
-        }
         
-        let classList = prop.value.trim();
-        if(!classList) return {};
+        node.__skipClass = true;
+        let props = node.attributes.filter(a => a.name == 'class' || a.name.startsWith('class:'));
 
-        if(this.css.hasExternal || classList.indexOf('{') >= 0) {
-            this.use.resolveClass = true;
-            const e = this.parseText(classList);
-            return {
-                bind: `
-                    $watchReadOnly($cd, () => $$resolveClass(${e.result}), value => {
-                        ${makeEl()}.className = value;
-                    });
-                `};
-        }
-
-        classList.split(/\s+/).forEach(name => {
-            node.classes.add(name);
+        let compound = props.some(prop => {
+            let classes;
+            if(prop.name == 'class') {
+                if(prop.value.indexOf('{') >= 0) return true;
+                classes = prop.value.trim().split(/\s+/);
+            } else {
+                classes = [prop.name.slice(6)];
+            }
+            return classes.some(name => this.css.isExternalClass(name));
         });
 
-        return {};
+        if(compound) {
+            node.classes.clear();
+            this.use.resolveClass = true;
+            let exp = props.map(prop => {
+                if(prop.name == 'class') {
+                    return this.parseText(prop.value).result;
+                } else {
+                    let className = prop.name.slice(6);
+                    assert(className);
+                    let exp = prop.value ? unwrapExp(prop.value) : className;
+                    return `(${exp}) ? \`${this.Q(className)}\` : ''`;
+                }
+            }).join(') + \' \' + (');
+            return {bind: `
+                $watchReadOnly($cd, () => $$resolveClass((${exp})), value => {
+                    ${makeEl()}.className = value;
+                });
+            `};
+        } else {
+            let bind = [];
+            props.forEach(prop => {
+                if(prop.name == 'class') {
+                    prop.value.trim().split(/\s+/).forEach(name => {
+                        node.classes.add(name);
+                    });
+                } else {
+                    let className = prop.name.slice(6);
+                    assert(className);
+                    let exp = prop.value ? unwrapExp(prop.value) : className;
+                    bind.push(`$runtime.bindClass($cd, ${makeEl()}, () => !!(${exp}), '${className}');`);
+                }
+            });
+            return {bind: bind.join('\n')};
+        }
     } else {
         if(prop.value && prop.value.indexOf('{') >= 0) {
             const parsed = this.parseText(prop.value);
