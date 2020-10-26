@@ -199,8 +199,8 @@ export function processCSS(styleNodes, config) {
                 throw e;
             }
             selected.forEach(s => {
-                s.node.__node.classes.add(sel.hash);
-                s.lvl.forEach(l => l.__node.classes.add(sel.hash));
+                s.node.__node.classes.add(sel.local);
+                s.lvl.forEach(l => l.__node.classes.add(sel.local));
             })
         });
     };
