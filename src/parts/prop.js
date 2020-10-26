@@ -236,9 +236,7 @@ export function bindProp(prop, makeEl, node) {
                 }
             }).join(') + \' \' + (');
             return {bind: `
-                $watchReadOnly($cd, () => $$resolveClass((${exp})), value => {
-                    ${makeEl()}.className = value;
-                });
+                $watchReadOnly($cd, () => $$resolveClass((${exp})), value => $runtime.setClassToElement(${makeEl()}, value));
             `};
         } else {
             let bind = [];
