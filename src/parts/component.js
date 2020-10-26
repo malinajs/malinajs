@@ -13,26 +13,7 @@ export function makeComponent(node, makeEl) {
     let options = [];
     let dynamicComponent;
 
-    let __classId;
-    let classMap = {};
-
-    function addClassMap(name, fn, line) {
-        name = name || '$default';
-        if(!classMap[name]) classMap[name] = [];
-        classMap[name].push({fn, line})
-    }
-
-    function addClassMapExp(name, exp) {
-        name = name || '$default';
-        if(!classMap[name]) classMap[name] = [];
-        classMap[name].push({exp})
-    }
-
-    const getClassId = () => {
-        if(__classId) return __classId;
-        __classId = this.config.cssGenId ? this.config.cssGenId() : genId();
-        return __classId;
-    };
+    let injectClass = false;
 
     if(node.name == 'component') {
         assert(node.elArg);
@@ -215,104 +196,32 @@ export function makeComponent(node, makeEl) {
             else head.push(`events.${event} = ${callback};`);
             boundEvents[event] = true;
             return;
-        } else if(name == 'class') {
-            assert(value, 'Empty class');
-            if(value.indexOf('{') >= 0) {
-                let exp = this.parseText(value).result;
-                addClassMapExp(null, exp);
+        } else if(name == 'class' || name.startsWith('class:')) {
+            let metaClass, args = name.split(':');
+            if(args.length == 1) {
+                metaClass = '$$main';
             } else {
-                value.split(/\s+/).forEach(className => {
-                    let classObject = this.css && this.css.simpleClasses[className];
-                    if(classObject) {
-                        let hash = getClassId();
-                        classObject.useAsPassed(className, hash);
-                        addClassMap(null, null, className + ' ' + hash);
-                        addClassMap(className, null, className + ' ' + hash);
-                    } else {
-                        // global class
-                        addClassMap(null, null, className);
-                    };
-                });
+                assert(args.length == 2);
+                metaClass = args[1];
+                assert(metaClass);
             }
-            return;
-        } else if(name.startsWith('class:')) {
-            let args = name.split(':');
-            assert(args.length == 2);
-            let className = args[1];
-            assert(className);
-            let exp;
+            assert(value);
 
-            if(value) exp = unwrapExp(value);
-            else exp = className;
-
+            const parsed = this.parseText(prop.value);
+            let exp = parsed.result;
             let funcName = `$$pf${this.uniqIndex++}`;
-
             head2.push(`
-                const ${funcName} = () => !!(${this.Q(exp)});
+                const ${funcName} = () => $$resolveClass(${exp});
+                $class['${metaClass}'] = ${funcName}();
+
+                $watch($cd, ${funcName}, (result) => {
+                    $class['${metaClass}'] = result;
+                    groupCall();
+                }, {ro: true, value: $class['${metaClass}']});
             `);
-
-            let classObject = this.css && this.css.simpleClasses[className];
-            if(classObject) {
-                let h = getClassId();
-                classObject.useAsPassed(className, h);
-                addClassMap(null, funcName, className + ' ' + h);
-                addClassMap(className, funcName, className + ' ' + h);
-            } else {
-                // global class
-                addClassMap(null, funcName, className);
-            }
-            return;
-        } else if(name[0] == '.') {
-            let args = name.substring(1).split(':');
-            let exp, localClass, childClass = args.shift();
-            assert(childClass);
-            assert(args.length <= 1);
-            if(args[0] || !value) {
-                // .header
-                // .header:local
-                // .header:local={cond}
-                if(args[0]) {
-                    localClass = args[0];
-                    if(value) exp = unwrapExp(value);
-                    else exp = localClass;
-                } else {
-                    exp = localClass = childClass;
-                }
-                let funcName = `$$pf${this.uniqIndex++}`;
-                injectGroupCall++;
-
-                let classObject = this.css && this.css.simpleClasses[localClass];
-                if(classObject) {
-                    let h = getClassId();
-                    classObject.useAsPassed(childClass, h);
-                    addClassMap(childClass, funcName, childClass + ' ' + h);
-                } else {
-                    // global class
-                    addClassMap(childClass, funcName, localClass);
-                }
-
-                head2.push(`
-                    const ${funcName} = () => !!(${this.Q(exp)});
-                `);
-            } else {
-                if(value.indexOf('{') >= 0) {
-                    // .header="{'local global'}"
-                    let exp = unwrapExp(value);
-                    addClassMapExp(childClass, exp);
-                } else {
-                    // .header="local global"
-                    value.split(/\s+/).forEach(name => {
-                        let classObject = this.css && this.css.simpleClasses[name];
-                        if(classObject) {
-                            let h = getClassId();
-                            classObject.useAsPassed(childClass, h);
-                            addClassMap(childClass, null, childClass + ' ' + h);
-                        } else {
-                            addClassMap(childClass, null, name);
-                        }
-                    });
-                }
-            }
+            injectClass = true;
+            this.use.resolveClass = true;
+            injectGroupCall++;
             return;
         }
         assert(isSimpleName(name), `Wrong property: '${name}'`);
@@ -348,50 +257,9 @@ export function makeComponent(node, makeEl) {
         }
     });
 
-    if(Object.keys(classMap).length) {
-        head.push(`let $class = $runtime.makeNamedClass();`);
+    if(injectClass) {
+        head.push(`let $class = {}`);
         options.push('$class');
-        let localHash = this.css ? ' ' + this.css.id : '';
-        Object.entries(classMap).forEach(i => {
-            let childClass = i[0];
-            let dyn = false;
-            let staticLine = '';
-            let line = i[1].map(i => {
-                if(i.exp) {
-                    dyn = true;
-                    return `r += (${i.exp}) + '${localHash} ';`
-                } else if(i.fn) {
-                    dyn = true;
-                    return `if(${i.fn}()) r += '${i.line} ';`
-                }
-                staticLine += i.line + ' ';
-                return `r += '${i.line} ';`;
-            }).join('\n');
-
-            if(dyn) {
-                let funcName = '$$fn' + (this.uniqIndex++);
-                let valueName = '$$v' + (this.uniqIndex++);
-                injectGroupCall++;
-                head2.push(`
-                    let ${funcName} = () => {
-                        let r = '';
-                        ${line}
-                        return r.trim();
-                    };
-                    let ${valueName} = ${funcName}();
-                    $class['${childClass}'] = ${valueName};
-                    $class.$dyn['${childClass}'] = true;
-                    $watch($cd, ${funcName}, (result) => {
-                        $class['${childClass}'] = result;
-                        groupCall();
-                    }, {ro: true, value: ${valueName}});
-                `);
-            } else {
-                head2.push(`
-                    $class['${childClass}'] = '${staticLine.trim()}';
-                `);
-            }
-        });
     }
 
     if(forwardAllEvents) head.unshift('let events = Object.assign({}, $option.events);');

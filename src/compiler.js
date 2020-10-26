@@ -26,9 +26,7 @@ export function compile(src, config = {}) {
 
     script = transformJS(script[0] ? script[0].content : null, config);
 
-    let css = data.body.filter(n => n.type == 'style');
-    assert(css.length <= 1, 'Only one style section');
-    css = css[0] && processCSS(css[0], config);
+    const css = processCSS(data.body.filter(n => n.type == 'style'), config);
 
     data.body = data.body.filter(n => n.type != 'script' && n.type != 'style');
     if(config.compact) compactDOM(data);

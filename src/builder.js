@@ -17,7 +17,7 @@ export function buildRuntime(data, script, css, config) {
         return (function() {
             let $cd = $component.$cd;
     `];
-    let runtimeHeader = [];
+    let componentHeader = [];
 
     const Q = config.inlineTemplate ? utils.Q2 : utils.Q;
     const ctx = {
@@ -37,7 +37,9 @@ export function buildRuntime(data, script, css, config) {
         attachSlot,
         makeFragment,
         attachFragment,
-        checkRootName: utils.checkRootName
+        checkRootName: utils.checkRootName,
+        componentHeader,
+        use: {}
     };
 
     if(css) css.process(data);
@@ -73,8 +75,27 @@ export function buildRuntime(data, script, css, config) {
             $$apply();
             return $component;
         })();`);
+
+    if(ctx.use.resolveClass) {
+        if(ctx.css) {
+            let {classMap, metaClass, main} = ctx.css.getClassMap();
+            if(main) main = `'${main}'`;
+            else main = 'null';
+            classMap = Object.entries(classMap).map(i => `'${i[0]}': '${i[1]}'`).join(', ');
+            metaClass = Object.entries(metaClass).map(i => {
+                let value = i[1] === true ? 'true' : `'${i[1]}'`;
+                return `'${i[0]}': ${value}`;
+            }).join(', ');
+            componentHeader.push(`
+                const $$resolveClass = $runtime.makeClassResolver(
+                    $option, {${classMap}}, {${metaClass}}, ${main}
+                );
+            `);
+        }
+    }
+
     return {
-        header: runtimeHeader.join('\n'),
+        header: componentHeader.join('\n'),
         body: runtime.join('\n')
     };
 }

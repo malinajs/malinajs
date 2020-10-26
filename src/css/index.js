@@ -4,45 +4,18 @@ import { assert, genId as utilsGenId } from '../utils.js';
 import nwsapi from './ext/nwsapi';
 
 
-class SelectorObject {
-    constructor(fullSelector, config) {
-        this._id = config.id;
-        this._genId = config.genId;
-
-        this.fullSelector = fullSelector;
-        this.clearSelector = null;
-        this.nodes = [];
-        this.simpleClass = null;
-        this.bound = false;
-        this.notBound = false;
-        this.used = false;
-
-        this.localHash = null;
-        this.boundHash = null;
-        this.passedHashes = [];
-    }
-    useAsLocal() {
-        this.used = true;
-        this.localHash = this._id;
-        return this.localHash;
-    }
-    useAsBound() {
-        this.used = true;
-        if(!this.boundHash) this.boundHash = this._genId();
-        return this.boundHash;
-    }
-    useAsPassed(childName, hash) {
-        this.used = true;
-        this.passedHashes.push({childName, hash});
-    }
-}
-
-
-export function processCSS(styleNode, config) {
+export function processCSS(styleNodes, config) {
+    if(!styleNodes.length) return null;
     const genId = () => config.cssGenId ? config.cssGenId() : utilsGenId();
 
-    let self = {element: {}, cls: {}, passed: [], simpleClasses: {}, id: genId()};
+    let self = {id: genId(), externalMainName: null};
+    let astList = [];
     let selectors = {};
+
+    const selector2str = (sel) => {
+        if(!sel.children) sel = {type: 'Selector', children: sel};
+        return csstree.generate(sel);
+    }
 
     const convertAst = (node, parent) => {
         if(!node) return node;
@@ -64,10 +37,19 @@ export function processCSS(styleNode, config) {
 
     const isKeyframes = (name) => name == 'keyframes' || name == '-webkit-keyframes' || name == '-moz-keyframes' || name == '-o-keyframes';
 
-    function transform() {
-        self.ast = parseCSS(styleNode.content);
+    styleNodes.forEach(transform);
 
-        csstree.walk(self.ast, function(node) {
+    function transform(styleNode) {
+        let external = false;
+        styleNode.attributes.forEach(a => {
+            if(a.name == 'external') self.hasExternal = external = true;
+            else if(a.name == 'main') self.externalMainName = a.value;
+        });
+
+        let ast = parseCSS(styleNode.content);
+        astList.push(ast);
+
+        csstree.walk(ast, function(node) {
             if(node.type == 'Declaration') {
                 if(node.property == 'animation' || node.property == 'animation-name') {
                     let c = node.value.children[0];
@@ -90,6 +72,7 @@ export function processCSS(styleNode, config) {
 
                 assert(node.prelude.type=='SelectorList');
 
+                let emptyBlock = node.block.children.length == 0;
                 let selectorList = node.prelude.children;
                 for(let i=0; i < selectorList.length; i++) {
                     processSelector(selectorList[i]);
@@ -97,129 +80,105 @@ export function processCSS(styleNode, config) {
 
                 function processSelector(fullSelector) {
                     assert(fullSelector.type == 'Selector');
-                    let selector = [];
-                    let fullSelectorChildren = fullSelector.children;
-                    fullSelectorChildren.forEach(sel => {
-                        if(sel.type == 'PseudoClassSelector' && sel.name == 'export') {
-                            assert(fullSelectorChildren.length == 1);
-                            sel = sel.children[0];
-                            assert(sel.type == 'Raw');
-                            let sl = parseCSS(sel.value, {context: 'selectorList'})
-                            assert(sl.type == 'SelectorList');
-                            sl.children.forEach(selNode => {
-                                let sel = selNode.children;
-                                if(sel.length != 1 || sel[0].type != 'ClassSelector') {
-                                    let selName = csstree.generate(selNode);
-                                    throw Error(`Wrong class for export '${selName}'`);
-                                }
-                                selNode.bound = true;
-                                selectorList.push(selNode);
-                            });
-                        } else if(sel.type == 'PseudoClassSelector' && sel.name == 'global') {
+                    let origin = [];
+                    fullSelector.children.forEach(sel => {
+                        if(sel.type == 'PseudoClassSelector' && sel.name == 'global') {
                             sel = sel.children[0];
                             assert(sel.type == 'Raw');
                             let a = parseCSS(sel.value, {context: 'selector'});
                             assert(a.type == 'Selector');
                             a.children.forEach(sel => {
                                 sel.global = true;
-                                selector.push(sel);
+                                origin.push(sel);
                             })
                         } else {
-                            selector.push(sel);
+                            origin.push(sel);
                         }
                     });
 
-                    if(!selector.length) {
-                        fullSelector.removed = true;
-                        fullSelector.children = [];
-                        return;
-                    }
+                    assert(origin.length);
 
-                    let fullSelectorName = csstree.generate({
-                        type: 'Selector',
-                        children: selector
-                    });
+                    let cleanSelectorItems = origin.filter(i => !i.global && i.type != 'PseudoClassSelector' && i.type != 'PseudoElementSelector');
+                    while(cleanSelectorItems.length && last(cleanSelectorItems).type == 'WhiteSpace') cleanSelectorItems.pop();
+                    if(!cleanSelectorItems.length) return;  // fully global?
+                    let cleanSelector = selector2str(cleanSelectorItems);
 
-                    let selectorObject = selectors[fullSelectorName];
-
-                    if(!selectorObject) {
-                        selectorObject = new SelectorObject(fullSelectorName, {id: self.id, genId});
-                        selectors[fullSelectorName] = selectorObject;
-                        if(selector.length == 1 && selector[0].type == 'ClassSelector' && !selector[0].global) {
-                            selectorObject.simpleClass = selector[0].name;
-                            self.simpleClasses[selectorObject.simpleClass] = selectorObject;
-                        }
-                    }
-
-                    if(fullSelector.bound && !selectorObject.bound) {
-                        selectorObject.bound = true;
-                    } else if(!selectorObject.notBound) {
-                        selectorObject.notBound = true;
-                    }
-
-                    selectorObject.nodes.push({
-                        rule: node,
-                        selector: fullSelector,
-                        bound: fullSelector.bound
-                    });
-
-                    let proc = [];
-                    let result = [];
-                    let inserted = false;
-                    for(let i=0;i<selector.length;i++) {
-                        let sel = selector[i];
-                        if(sel.global) inserted = true;
-                        if(sel.type == 'PseudoClassSelector' || sel.type == 'PseudoElementSelector') {
-                            if(!inserted) result.push({type: "ClassSelector", loc: null, name: '', __hash: true});
-                            inserted = true;
-                        } else {
-                            proc.push(sel);
-                        }
-                        if(sel.type == 'Combinator' || sel.type == 'WhiteSpace') {
-                            if(!inserted) result.push({type: "ClassSelector", loc: null, name: '', __hash: true});
-                            inserted = false;
-                        }
-                        result.push(sel);
-                    }
-                    if(!inserted) {
-                        result.push({type: "ClassSelector", loc: null, name: '', __hash: true});
-                    }
-                    fullSelector.children = result;
-
-                    if(!selectorObject.clearSelector) {
-                        const onlyGlobal = proc.every(p => {
-                            if(p.type == 'Combinator' || p.type == 'WhiteSpace') return true;
-                            return p.global;
-                        });
-
-                        if(onlyGlobal) {
-                            selectorObject.clearSelector = true;
-                            selectorObject.onlyGlobal = true;
-                            selectorObject.used = true;
-                        } else {
-                            let localSelector = [];
-                            for(let i=0; i<proc.length; i++) {
-                                let p = proc[i];
-                                if(p.type == 'Combinator' || p.type == 'WhiteSpace') {
-                                    localSelector.push(p);
-                                } else {
-                                    if(p.global) break;
-                                    localSelector.push(p);
+                    let sobj = selectors[cleanSelector];
+                    if(!sobj) {
+                        let isSimple = false;
+                        if(cleanSelectorItems[0].type == 'ClassSelector') {
+                            isSimple = true;
+                            for(let i=1; i<cleanSelectorItems.length; i++) {
+                                if(cleanSelectorItems[i].type != 'AttributeSelector') {
+                                    isSimple = false;
+                                    break;
                                 }
                             }
-    
-                            if(last(localSelector).type == 'Combinator') localSelector.push({name: '*', type: 'TypeSelector'})
-                            selectorObject.clearSelector = csstree.generate({
-                                type: 'Selector',
-                                children: localSelector,
-                                selectorNodes: result
-                            });
                         }
+    
+                        selectors[cleanSelector] = sobj = {
+                            cleanSelector,
+                            isSimple,
+                            source: [],
+                            fullyGlobal: origin.every(i => i.global)
+                        };
                     }
 
+                    if(external) {
+                        assert(sobj.isSimple);
+                        if(!sobj.external) sobj.external = emptyBlock ? true : genId();
+                    } else if(!sobj.local) {
+                        if(sobj.isSimple) sobj.local = genId();
+                        else sobj.local = self.id;
+                    }
+
+                    let hash = external ? sobj.external : sobj.local;
+                    if(emptyBlock) fullSelector.emptyBlock = true;
+                    sobj.source.push(fullSelector);
+
+                    let hashed = origin.slice();
+                    const insert = (i) => {
+                        hashed.splice(i, 0, {type: "ClassSelector", loc: null, name: hash, __hash: true});
+                    }
+
+                    for(let i=hashed.length-1;i>=0;i--) {
+                        let sel = hashed[i];
+                        let left = hashed[i - 1];
+                        let right = hashed[i + 1];
+                        if(sel.global) continue;
+                        if(sel.type == 'PseudoClassSelector' || sel.type == 'PseudoElementSelector') {
+                            if(!left || left.type == 'Combinator' || left.type == 'WhiteSpace') insert(i);
+                            continue;
+                        } else if(sel.type == 'Combinator' || sel.type == 'WhiteSpace') continue;
+                        if(!right || ['PseudoClassSelector', 'PseudoElementSelector', 'Combinator', 'WhiteSpace'].includes(right.type)) insert(i + 1);
+                    }
+
+                    fullSelector.children = hashed;
                 };
             }
         });
+    }
+
+    self.isExternalClass = (name) => {
+        let sobj = selectors['.' + name];
+        return sobj && sobj.external;
+    }
+
+    self.getClassMap = () => {
+        let classMap = {};
+        let metaClass = {};
+        Object.values(selectors).forEach(sel => {
+            if(!sel.isSimple) return;
+
+            let className = sel.source[0].children[0].name;
+            if(sel.external) {
+                metaClass[className] = sel.external;
+            }
+            if(sel.local) {
+                classMap[className] = sel.local;
+            }
+        });
+        return {classMap, metaClass, main: self.externalMainName};
     }
 
     self.process = function(data) {
@@ -230,95 +189,26 @@ export function processCSS(styleNode, config) {
         });
 
         Object.values(selectors).forEach(sel => {
-            if(sel.onlyGlobal) return true;
-            if(sel.simpleClass) return;
+            if(sel.fullyGlobal) return;
             let selected;
             try {
-                selected = nw.select([sel.clearSelector]);
+                selected = nw.select([sel.cleanSelector]);
             } catch (_) {
-                let e = new Error(`CSS error: '${sel.fullSelector}'`);
-                e.details = `selector: '${sel.fullSelector}'`;
+                let e = new Error(`CSS error: '${selector2str(sel.source[0])}'`);
+                e.details = `selector: '${selector2str(sel.source[0])}'`;
                 throw e;
             }
-            if(selected.length) {
-                const h = sel.useAsLocal();
-                selected.forEach(s => {
-                    assert(!sel.bound);
-                    s.node.__node.classes.add(h);
-                    s.lvl.forEach(l => l.__node.classes.add(h));
-                })
-            }
+            selected.forEach(s => {
+                s.node.__node.classes.add(sel.hash);
+                s.lvl.forEach(l => l.__node.classes.add(sel.hash));
+            })
         });
     };
 
     self.getContent = function() {
-        Object.values(selectors).forEach(sel => {
-            if(sel.used) {
-                if(sel.onlyGlobal) return;
-                sel.nodes.forEach(node => {
-                    let selectorChildren = node.selector.children.map(i => Object.assign({}, i));
-
-                    let hash = [];
-                    if(sel.localHash && !node.bound) hash.push(sel.localHash);
-                    if(sel.boundHash && node.bound) hash.push(sel.boundHash);
-
-                    if(!hash.length) node.selector.removed = true;
-
-                    let id = hash.shift();
-                    if(id) {
-                        node.selector.children.forEach(i => {
-                            if(i.__hash) i.name = id;
-                        })
-                    }
-                    id = hash.shift();
-                    if(id) {
-                        selectorChildren.forEach(i => {
-                            if(i.__hash) i.name = id;
-                        })
-                        node.rule.prelude.children.push({
-                            type: 'Selector',
-                            children: selectorChildren
-                        });
-                    }
-
-                    sel.passedHashes.forEach(p => {
-                        node.rule.prelude.children.push({
-                            type: 'Selector',
-                            children: [{
-                                type: 'ClassSelector',
-                                name: p.childName
-                            }, {
-                                type: 'ClassSelector',
-                                name: p.hash
-                            }]
-                        });
-                    })
-                })
-            } else {
-                sel.nodes.forEach(node => {
-                    let i = node.rule.prelude.children.indexOf(node.selector);
-                    assert(i >= 0);
-                    node.rule.prelude.children.splice(i, 1);
-                });
-                config.warning({message: 'No used css-class: ' + sel.fullSelector});
-            }
-        });
-
-        // removed selectors
-        csstree.walk(self.ast, (node) => {
-            if(node.type != 'Rule') return;
-            node.prelude.children = node.prelude.children.filter(s => !s.removed);
-            let parent = node.parent;
-            if(!node.prelude.children.length && parent) {
-                let i = parent.children.indexOf(node);
-                if(i >= 0) parent.children.splice(i, 1);
-            }
-        });
-
-        return csstree.generate(self.ast);
+        return astList.map(ast => csstree.generate(ast)).join('');
     }
 
-    transform();
     return self;
 }
 

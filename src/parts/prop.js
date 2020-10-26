@@ -177,26 +177,6 @@ export function bindProp(prop, makeEl, node) {
             let $$w = $watchReadOnly($cd, () => (${watchExp}), (value) => { if(value != $element.${attr}) $element.${attr} = value; });
             $runtime.addEvent($cd, $element, 'input', () => { $$w.value = ${exp} = $element.${attr}; $$apply(); });
         }`};
-    } else if(name == 'class' && arg) {
-        let className = arg;
-        let exp = prop.value ? getExpression() : className;
-
-        let bind = [];
-
-        let classObject = this.css && this.css.simpleClasses[className];
-        if(!classObject) {
-            bind.push(`$runtime.bindClass($cd, ${makeEl()}, () => !!(${exp}), '${className}');`);
-        } else {
-            if(classObject.notBound) node.classes.add(classObject.useAsLocal());
-
-            if(classObject.bound) {
-                let defaultHash = classObject.useAsBound();
-                bind.push(`$runtime.bindBoundClass($cd, ${makeEl()}, () => !!(${exp}), '${className}', '${defaultHash}', $option);`);
-            } else {
-                bind.push(`$runtime.bindClass($cd, ${makeEl()}, () => !!(${exp}), '${className}');`);
-            }
-        }
-        return {bind: bind.join('\n')};
     } else if(name == 'style' && arg) {
         let styleName = arg;
         let exp = prop.value ? getExpression() : styleName;
@@ -223,6 +203,48 @@ export function bindProp(prop, makeEl, node) {
         return {bind: `{
             let $element=${makeEl()};
             $tick(() => { ${exp}; $$apply(); });}`};
+    } else if(name == 'class') {
+        if(!this.css) return {prop: prop.content};
+
+        if(arg) {
+            let className = arg;
+            let exp = prop.value ? getExpression() : className;
+    
+            let bind = [];
+
+            if(this.css.isExternalClass(className)) {
+                this.use.resolveClass = true;
+                bind.push(`
+                    $watch($cd, () => !!(${exp}) && $$resolveClass('${className}'), value => {
+                        ${makeEl()}.className = value || '';
+                    });
+                `);
+                node.classes.clear();
+            } else {
+                bind.push(`$runtime.bindClass($cd, ${makeEl()}, () => !!(${exp}), '${className}');`);
+            }
+            return {bind: bind.join('\n')};
+        }
+        
+        let classList = prop.value.trim();
+        if(!classList) return {};
+
+        if(this.css.hasExternal || classList.indexOf('{') >= 0) {
+            this.use.resolveClass = true;
+            const e = this.parseText(classList);
+            return {
+                bind: `
+                    $watchReadOnly($cd, () => $$resolveClass(${e.result}), value => {
+                        ${makeEl()}.className = value;
+                    });
+                `};
+        }
+
+        classList.split(/\s+/).forEach(name => {
+            node.classes.add(name);
+        });
+
+        return {};
     } else {
         if(prop.value && prop.value.indexOf('{') >= 0) {
             const parsed = this.parseText(prop.value);
@@ -286,31 +308,6 @@ export function bindProp(prop, makeEl, node) {
             `};
         }
 
-        if(name == 'class' && this.css) {
-            let classList = prop.value.trim();
-            if(!classList) return {};
-
-            let bind = [];
-            classList.split(/\s+/).forEach(name => {
-                let c = this.css.simpleClasses[name];
-                if(c) {
-                    if(c.bound) {
-                        let hash = c.useAsBound();
-                        bind.push(`$runtime.bindParentClass($cd, ${makeEl()}, '${name}', '${hash}', $option)`);
-                    }
-                    if(c.notBound) {
-                        node.classes.add(name);
-                        node.classes.add(c.useAsLocal());
-                    }
-                } else {
-                    node.classes.add(name);
-                }
-            });
-
-            return {
-                bind: bind.join('\n')
-            }
-        }
         return {
             prop: prop.content
         }
