@@ -98,9 +98,23 @@ export function processCSS(styleNodes, config) {
 
                     assert(origin.length);
 
-                    let cleanSelectorItems = origin.filter(i => !i.global && i.type != 'PseudoClassSelector' && i.type != 'PseudoElementSelector');
+                    let cleanSelectorItems = [];
+                    for(let i=0; i<origin.length; i++) {
+                        let s = origin[i];
+                        if(s.global) continue;
+                        if(s.type == 'PseudoClassSelector' || s.type == 'PseudoElementSelector') {
+                            let prev = origin[i - 1];
+                            if(!prev || prev.type == 'Combinator' || prev.type == 'WhiteSpace') {
+                                cleanSelectorItems.push({type: 'TypeSelector', name: '*'});
+                            }
+                        } else cleanSelectorItems.push(s);
+                    }
                     while(cleanSelectorItems.length && last(cleanSelectorItems).type == 'WhiteSpace') cleanSelectorItems.pop();
-                    if(!cleanSelectorItems.length) return;  // fully global?
+                    if(!cleanSelectorItems.length) {  // fully global?
+                        assert(origin.length);
+                        fullSelector.children = origin;
+                        return;
+                    }
                     let cleanSelector = selector2str(cleanSelectorItems);
 
                     let sobj = selectors[cleanSelector];

@@ -8,17 +8,17 @@ async function main(build) {
 
     await tick();
 
-    equalClass(document.body.firstElementChild, 'c1 bold');
+    equalClass('bold c2 c3', document.body.firstElementChild.className);
 
     app.cond = true;
 
     await tick();
 
-    equalClass(document.body.firstElementChild, 'c1 bold red');
+    equalClass('bold c2 c3 red', document.body.firstElementChild.className);
 
     const styles = document.querySelectorAll('style');
     assert.strictEqual(styles.length, 1);
-    assert.strictEqual(styles[0].innerHTML, '.bold.c1{font-weight:bold}.red.c1{color:red}');
+    assert.strictEqual(styles[0].innerHTML, '.bold.c2{font-weight:bold}.red.c3{color:red}');
 
 }
 

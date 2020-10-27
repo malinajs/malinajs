@@ -8,16 +8,15 @@ async function main(build) {
 
     await tick();
 
-    equalClass(document.body.querySelectorAll('div')[0], '');
-    equalClass(document.body.querySelectorAll('div')[1], 'c1');
+    equalClass('', document.body.querySelectorAll('div')[0]);
+    equalClass('c1', document.body.querySelectorAll('div')[1]);
     document.body.querySelectorAll('span').forEach(n => {
-        equalClass(n, 'c1');
+        equalClass('c1', n);
     });
 
     const styles = document.querySelectorAll('style');
-    assert.strictEqual(styles.length, 1);
-    assert.strictEqual(styles[0].innerHTML, 'div.c1>.c1:last-child{color:red}');
-
+    assert.strictEqual(1, styles.length);
+    assert.strictEqual('div.c1>.c1:last-child{color:red}', styles[0].innerHTML);
 }
 
 module.exports = {main};

@@ -51,10 +51,11 @@ function tick() {
 }
 
 
-function equalClass(node, expected) {
-    let a = node.className.trim().split(/\s+/).sort().join(' ');
-    let b = expected.trim().split(/\s+/).sort().join(' ');
-    assert.strictEqual(a, b);
+function equalClass(expected, actual) {
+    if(typeof actual.className === 'string') actual = actual.className;
+    expected = expected.trim().split(/\s+/).sort().join(' ');
+    actual = actual.trim().split(/\s+/).sort().join(' ');
+    assert.strictEqual(expected, actual);
 };
 
 
