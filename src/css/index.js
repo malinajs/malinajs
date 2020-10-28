@@ -41,9 +41,11 @@ export function processCSS(styleNodes, config) {
 
     function transform(styleNode) {
         let external = false;
+        let globalBlock = false;
         styleNode.attributes.forEach(a => {
             if(a.name == 'external') self.hasExternal = external = true;
             else if(a.name == 'main') self.externalMainName = a.value;
+            else if(a.name == 'global') globalBlock = true;
         });
 
         let ast = parseCSS(styleNode.content);
@@ -110,7 +112,7 @@ export function processCSS(styleNodes, config) {
                         } else cleanSelectorItems.push(s);
                     }
                     while(cleanSelectorItems.length && last(cleanSelectorItems).type == 'WhiteSpace') cleanSelectorItems.pop();
-                    if(!cleanSelectorItems.length) {  // fully global?
+                    if(!cleanSelectorItems.length || globalBlock) {  // fully global?
                         assert(origin.length);
                         fullSelector.children = origin;
                         return;
