@@ -10,7 +10,9 @@ async function main() {
         'css1',
         'css2',
         'css3',
-        'css4'
+        'css4',
+        'pass-css',
+        'css-global'
     ];
 
     for(let i=0; i<tests.length; i++) {

@@ -1,0 +1,41 @@
+<script>
+    import Button from './Button.xht';
+</script>
+
+<div class="box">
+    <div class="header">
+        Child-Header
+        <small>sub-text</small>
+    </div>
+    <Button title="Default" />
+    <Button class:color="blue" title="Blue" />
+    <Button class:color="red" title="Red" />
+    <Button class:color="button" title="Imported CSS" />
+</div>
+
+<style>
+    .box {border: 1px solid blue; padding: 4px; margin: 4px;}
+
+	.red {
+        color: rgb(220, 0, 78);
+        border: 1px solid rgba(220, 0, 78, 0.5);
+    }
+	.red:hover {
+        border: 1px solid rgb(220, 0, 78);
+        background-color: rgba(220, 0, 78, 0.04);
+    }
+
+	.blue {
+        color: #1976d2;
+        border: 1px solid rgba(25, 118, 210, 0.5);
+    }
+	.blue:hover {
+        border: 1px solid #1976d2;
+        background-color: rgba(25, 118, 210, 0.04);
+    }
+</style>
+
+<style external>
+    .header {color: blueviolet}
+    .button {}
+</style>

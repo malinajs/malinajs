@@ -1,0 +1,29 @@
+<script>
+    import Child from './Child.xht';
+
+    export let classList = '';
+    export let checked = false;
+</script>
+
+<div class="box">
+    <Child class:header="red {classList}" class:button={checked ? 'green' : ''} />
+</div>
+
+<style>
+    .box {border: 1px solid blue;}
+    .red {color: red;}
+    .bold {font-weight: bold;}
+    .hovered {background-color: #e9f9ff;}
+    .hovered:hover {background-color: #d4f3ff;}
+
+    .subtext :global(small) {
+        color: brown;
+    }
+
+    .green {
+        color: rgb(0, 150, 78);
+    }
+    .green:hover {
+        border: 1px solid rgb(0, 150, 78);
+    }
+</style>

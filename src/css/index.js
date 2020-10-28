@@ -11,6 +11,7 @@ export function processCSS(styleNodes, config) {
     let self = {id: genId(), externalMainName: null};
     let astList = [];
     let selectors = {};
+    let removeBlocks = [];
 
     const selector2str = (sel) => {
         if(!sel.children) sel = {type: 'Selector', children: sel};
@@ -75,6 +76,8 @@ export function processCSS(styleNodes, config) {
                 assert(node.prelude.type=='SelectorList');
 
                 let emptyBlock = node.block.children.length == 0;
+                if(emptyBlock) removeBlocks.push(node);
+
                 let selectorList = node.prelude.children;
                 for(let i=0; i < selectorList.length; i++) {
                     processSelector(selectorList[i]);
@@ -222,6 +225,10 @@ export function processCSS(styleNodes, config) {
     };
 
     self.getContent = function() {
+        removeBlocks.forEach(node => {
+            let i = node.parent.children.indexOf(node);
+            if(i>=0) node.parent.children.splice(i, 1);
+        });
         return astList.map(ast => csstree.generate(ast)).join('');
     }
 
