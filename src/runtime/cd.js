@@ -95,6 +95,7 @@ export function $$compareArray(w, value) {
 
 const compareDeep = (a, b, lvl) => {
     if(lvl < 0 || !a || !b) return a !== b;
+    if(a === b) return false;
     let o0 = typeof(a) == 'object';
     let o1 = typeof(b) == 'object';
     if(!(o0 && o1)) return a !== b;
@@ -128,6 +129,7 @@ function cloneDeep(d, lvl) {
 
     if(typeof(d) == 'object') {
         if(d instanceof Date) return d;
+        if(d instanceof Element) return d;
         if(isArray(d)) return d.map(i => cloneDeep(i, lvl-1));
         let r = {};
         for(let k in d) r[k] = cloneDeep(d[k], lvl-1);
