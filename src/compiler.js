@@ -5,7 +5,7 @@ import { transformJS } from './code';
 import { buildRuntime } from './builder';
 import { processCSS } from './css/index';
 
-export const version = '0.6.0';
+export const version = '0.6.1';
 
 export function compile(src, config = {}) {
     config = Object.assign({
