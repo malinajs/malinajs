@@ -208,7 +208,7 @@ export function processCSS(styleNodes, config) {
         });
 
         Object.values(selectors).forEach(sel => {
-            if(sel.fullyGlobal) return;
+            if(sel.fullyGlobal || !sel.local) return;
             let selected;
             try {
                 selected = nw.select([sel.cleanSelector]);

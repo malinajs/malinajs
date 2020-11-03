@@ -223,6 +223,8 @@ export function bindProp(prop, makeEl, node) {
         });
 
         if(compound) {
+            let defaultHash = '';
+            if(node.classes.has(this.css.id)) defaultHash = `,'${this.css.id}'`;
             node.classes.clear();
             this.use.resolveClass = true;
             let exp = props.map(prop => {
@@ -236,7 +238,7 @@ export function bindProp(prop, makeEl, node) {
                 }
             }).join(') + \' \' + (');
             return {bind: `
-                $watchReadOnly($cd, () => $$resolveClass((${exp})), value => $runtime.setClassToElement(${makeEl()}, value));
+                $watchReadOnly($cd, () => $$resolveClass((${exp})${defaultHash}), value => $runtime.setClassToElement(${makeEl()}, value));
             `};
         } else {
             let bind = [];

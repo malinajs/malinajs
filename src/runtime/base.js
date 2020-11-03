@@ -362,8 +362,9 @@ export const bindText = (cd, element, fn) => {
 export const makeClassResolver = ($option, classMap, metaClass, mainName) => {
     if(!$option.$class) $option.$class = {};
     if(!mainName && metaClass.main) mainName = 'main';
-    return line => {
+    return (line, defaults) => {
         let result = [];
+        if(defaults) result.push(defaults);
         line.trim().split(/\s+/).forEach(name => {
             let h = metaClass[name];
             if(h) {
