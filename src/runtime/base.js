@@ -367,8 +367,7 @@ export const makeClassResolver = ($option, classMap, metaClass, mainName) => {
         line.trim().split(/\s+/).forEach(name => {
             let h = metaClass[name];
             if(h) {
-                if(name === mainName && $option.$class.$$main) name = '$$main';
-                let className = ($option.$class[name] || '').trim();
+                let className = ($option.$class[name === mainName ? '$$main' : name] || '').trim();
                 if(className) {
                     result.push(className);
                 } else if(h !== true) {
