@@ -2,7 +2,8 @@
 import { assert } from './utils.js'
 
 
-export function parse(source) {
+export function parse() {
+    let source = this.source;
     let index = 0;
 
     const readNext = () => {
@@ -368,8 +369,7 @@ export function parse(source) {
     };
     go(root);
 
-
-    return root;
+    this.DOM = root;
 };
 
 

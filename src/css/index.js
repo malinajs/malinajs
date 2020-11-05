@@ -4,11 +4,12 @@ import { assert, genId as utilsGenId } from '../utils.js';
 import nwsapi from './ext/nwsapi';
 
 
-export function processCSS(styleNodes, config) {
-    if(!styleNodes.length) return null;
-    const genId = () => config.cssGenId ? config.cssGenId() : utilsGenId();
+export function processCSS() {
+    let styleNodes = this.styleNodes;
+    if(!styleNodes.length) return;
+    const genId = () => this.config.cssGenId ? this.config.cssGenId() : utilsGenId();
 
-    let self = {id: genId(), externalMainName: null};
+    let self = this.css = {id: genId(), externalMainName: null};
     let astList = [];
     let selectors = {};
     let removeBlocks = [];
@@ -231,8 +232,6 @@ export function processCSS(styleNodes, config) {
         });
         return astList.map(ast => csstree.generate(ast)).join('');
     }
-
-    return self;
 }
 
 

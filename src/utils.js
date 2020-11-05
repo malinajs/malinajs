@@ -92,7 +92,8 @@ export function checkRootName(name) {
     this.config.warning({message:'No name: ' + name});
 };
 
-export function compactDOM(data) {
+export function compactDOM() {
+    let data = this.DOM;
     const details = {
         node: [n => n.body],
         each: [n => n.body],

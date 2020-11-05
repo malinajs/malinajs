@@ -1,74 +1,38 @@
 
-import * as utils from './utils.js'
-import { parseText } from './parser.js'
-import { makeComponent } from './parts/component.js'
-import { bindProp } from './parts/prop.js'
-import { makeifBlock } from './parts/if.js'
-import { makeEachBlock } from './parts/each.js'
-import { makeHtmlBlock } from './parts/html.js'
-import { makeAwaitBlock } from './parts/await.js'
-import { attachSlot } from './parts/slot.js'
-import { makeFragment, attachFragment } from './parts/fragment.js'
+import {assert, svgElements} from './utils.js'
 
-const assert = utils.assert;
 
-export function buildRuntime(data, script, css, config) {
+export function buildRuntime() {
     let runtime = [`
         return (function() {
             let $cd = $component.$cd;
     `];
-    let componentHeader = [];
 
-    const Q = config.inlineTemplate ? utils.Q2 : utils.Q;
-    const ctx = {
-        uniqIndex: 0,
-        Q,
-        config,
-        script,
-        css,
-        buildBlock,
-        bindProp,
-        makeEachBlock,
-        makeifBlock,
-        makeComponent,
-        makeHtmlBlock,
-        parseText,
-        makeAwaitBlock,
-        attachSlot,
-        makeFragment,
-        attachFragment,
-        checkRootName: utils.checkRootName,
-        componentHeader,
-        use: {}
-    };
-
-    if(css) css.process(data);
-
-    let bb = ctx.buildBlock(data);
+    let bb = this.buildBlock(this.DOM);
 
     let rootTemplate = bb.tpl;
     runtime.push(bb.source);
 
     if(bb.svg) {
-        runtime.push(`const rootTemplate = $runtime.svgToFragment(\`${Q(rootTemplate)}\`);`);
+        runtime.push(`const rootTemplate = $runtime.svgToFragment(\`${this.Q(rootTemplate)}\`);`);
     } else {
-        runtime.push(`const rootTemplate = $$htmlToFragment(\`${Q(rootTemplate)}\`);`);
+        runtime.push(`const rootTemplate = $$htmlToFragment(\`${this.Q(rootTemplate)}\`);`);
     }
     runtime.push(`
         ${bb.name}($cd, rootTemplate);
         $component.$$render(rootTemplate);
     `);
-    if(script.onMount) runtime.push(`
+    if(this.script.onMount) runtime.push(`
         if($option.noMount) $component.onMount = onMount;
         else $tick(onMount);
     `);
-    if(script.onDestroy) runtime.push(`$runtime.cd_onDestroy($cd, onDestroy);`);
-    if(script.watchers.length) {
-        runtime.push(script.watchers.join('\n'));
+    if(this.script.onDestroy) runtime.push(`$runtime.cd_onDestroy($cd, onDestroy);`);
+    if(this.script.watchers.length) {
+        runtime.push(this.script.watchers.join('\n'));
     }
 
-    if(css) runtime.push(`
-        $runtime.addStyles('${css.id}', \`${Q(css.getContent())}\`);
+    if(this.css) runtime.push(`
+        $runtime.addStyles('${this.css.id}', \`${this.Q(this.css.getContent())}\`);
     `);
 
     runtime.push(`
@@ -76,9 +40,9 @@ export function buildRuntime(data, script, css, config) {
             return $component;
         })();`);
 
-    if(ctx.use.resolveClass) {
-        if(ctx.css) {
-            let {classMap, metaClass, main} = ctx.css.getClassMap();
+    if(this.use.resolveClass) {
+        if(this.css) {
+            let {classMap, metaClass, main} = this.css.getClassMap();
             if(main) main = `'${main}'`;
             else main = 'null';
             classMap = Object.entries(classMap).map(i => `'${i[0]}': '${i[1]}'`).join(', ');
@@ -86,7 +50,7 @@ export function buildRuntime(data, script, css, config) {
                 let value = i[1] === true ? 'true' : `'${i[1]}'`;
                 return `'${i[0]}': ${value}`;
             }).join(', ');
-            componentHeader.push(`
+            this.runtime.componentHeader.push(`
                 const $$resolveClass = $runtime.makeClassResolver(
                     $option, {${classMap}}, {${metaClass}}, ${main}
                 );
@@ -94,14 +58,12 @@ export function buildRuntime(data, script, css, config) {
         }
     }
 
-    return {
-        header: componentHeader.join('\n'),
-        body: runtime.join('\n')
-    };
+    this.runtime.header = this.runtime.componentHeader.join('\n');
+    this.runtime.body = runtime.join('\n');
 }
 
 
-function buildBlock(data) {
+export function buildBlock(data) {
     let tpl = [];
     let lvl = [];
     let binds = [];
@@ -145,7 +107,7 @@ function buildBlock(data) {
             let svg = false, other = false;
             body.some(node => {
                 if(node.type != 'node') return;
-                if(utils.svgElements[node.name]) svg = true;
+                if(svgElements[node.name]) svg = true;
                 else return other = true;
             });
             if(svg && !other) result.svg = true;

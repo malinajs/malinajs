@@ -4,8 +4,10 @@ import astring from 'astring';
 import { assert, replace, detectExpressionType } from './utils.js'
 
 
-export function transformJS(code, config={}) {
-    let result = {
+export function parse() {
+    let source = this.scriptNodes.length ? this.scriptNodes[0].content : null;
+    this.script = {
+        source,
         watchers: [],
         imports: [],
         importedNames: [],
@@ -13,23 +15,28 @@ export function transformJS(code, config={}) {
         rootVariables: {},
         rootFunctions: {}
     };
-    var ast;
-    if(code) {
-        code = code.split(/\n/).map(line => {
+    if(source) {
+        source = source.split(/\n/).map(line => {
             let rx = line.match(/^(\s*)\/\/(.*)$/);
             if(!rx) return line;
             let code = rx[2].trim()
             if(code != '!no-check') return line;
             return rx[1] + '$$_noCheck;';
         }).join('\n');
-        ast = acorn.parse(code, {sourceType: 'module', ecmaVersion: 12});
+        this.script.ast = acorn.parse(source, {sourceType: 'module', ecmaVersion: 12});
     } else {
-        ast = {
+        this.script.ast = {
             body: [],
             sourceType: "module",
             type: "Program"
         };
     }
+};
+
+export function transform() {
+    const result = this.script;
+    const source = this.script.source;
+    const ast = this.script.ast;
 
     let rootVariables = result.rootVariables;
     let rootFunctions = result.rootFunctions;
@@ -206,15 +213,15 @@ export function transformJS(code, config={}) {
                 target = ex.left.name;
                 if(!(target in rootVariables)) resultBody.push(makeVariable(target));
             } else if(ex.left.type == 'MemberExpression') {
-                target = code.substring(ex.left.start, ex.left.end);
+                target = source.substring(ex.left.start, ex.left.end);
             } else throw 'Error';
             assertExpression(ex.right);
-            const exp = code.substring(ex.right.start, ex.right.end);
+            const exp = source.substring(ex.right.start, ex.right.end);
             result.watchers.push(`$cd.prefix.push(() => {${target} = ${exp};});`);
         } else if(n.body.expression.type == 'SequenceExpression') {
             const ex = n.body.expression.expressions;
             const handler = ex[ex.length - 1];
-            let callback = code.substring(handler.start, handler.end);
+            let callback = source.substring(handler.start, handler.end);
             if(handler.type == 'ArrowFunctionExpression' || handler.type == 'FunctionExpression') {
                 // default
             } else if(detectExpressionType(callback) == 'identifier') {
@@ -225,11 +232,11 @@ export function transformJS(code, config={}) {
 
             if(ex.length == 2) {
                 assertExpression(ex[0]);
-                let exp = code.substring(ex[0].start, ex[0].end);
+                let exp = source.substring(ex[0].start, ex[0].end);
                 result.watchers.push(`$watch($cd, () => (${exp}), ${callback}, {cmp: $runtime.$$deepComparator(0)});`);
             } else if(ex.length > 2) {
                 for(let i = 0;i<ex.length-1;i++) assertExpression(ex[i]);
-                let exp = code.substring(ex[0].start, ex[ex.length-2].end);
+                let exp = source.substring(ex[0].start, ex[ex.length-2].end);
                 result.watchers.push(`$watch($cd, () => [${exp}], ($args) => { (${callback}).apply(null, $args); }, {cmp: $runtime.$$deepComparator(1)});`);
             } else throw 'Error';
         } else throw 'Error';
@@ -270,7 +277,7 @@ export function transformJS(code, config={}) {
                 makeWatch(n);
                 return;
             } catch (e) {
-                throw new Error(e + ': ' + code.substring(n.start, n.end));
+                throw new Error(e + ': ' + source.substring(n.start, n.end));
             }
         }
         resultBody.push(n);
@@ -302,7 +309,7 @@ export function transformJS(code, config={}) {
         header.push(parseExp('const $attributes = $props'));
     }
 
-    if(config.autoSubscribe) {
+    if(this.config.autoSubscribe) {
         result.importedNames.forEach(name => {
             header.push(parseExp(`$runtime.autoSubscribe($component.$cd, $$apply, ${name})`));
         });
@@ -321,7 +328,7 @@ export function transformJS(code, config={}) {
         },
         id: {
             type: 'Identifier"',
-            name: config.name
+            name: this.config.name
         },
         params: [{
             type: 'Identifier',
@@ -333,7 +340,7 @@ export function transformJS(code, config={}) {
         type: 'FunctionDeclaration'
     };
 
-    if(config.exportDefault) {
+    if(this.config.exportDefault) {
         widgetFunc = {
             type: 'ExportDefaultDeclaration',
             declaration: widgetFunc
@@ -342,10 +349,12 @@ export function transformJS(code, config={}) {
 
     ast.body = [widgetFunc];
     ast.body.unshift.apply(ast.body, imports);
+};
 
-    result.code = astring.generate(ast);
-    result.code = replace(result.code, '$$fixImport', 'import');
-    return result;
+export function build() {
+    // add type: 'Raw'
+    this.script.code = astring.generate(this.script.ast, {generator: astring.baseGenerator});
+    this.script.code = replace(this.script.code, '$$fixImport', 'import');
 }
 
 
