@@ -169,19 +169,6 @@ export function transform() {
     };
     walk(ast, null, transformNode);
 
-    // temporary fix for ImportExpression
-    function fixImportExpression(node) {
-        if(node.type != 'ImportExpression') return;
-        node.type = 'CallExpression';
-        node.callee = {
-            type: 'Identifier',
-            name: '$$fixImport'
-        };
-        node.arguments = [node.source];
-        delete node.source;
-    };
-    walk(ast, null, fixImportExpression)
-
     function makeVariable(name) {
         return {
             "type": "VariableDeclaration",
@@ -266,7 +253,7 @@ export function transform() {
             });
             resultBody.push(n.declaration);
             forInit.forEach(n => {
-                resultBody.push(parseExp(`$runtime.$$makeProp($component, $props, $option.boundProps || {}, '${n}', () => ${n}, _${n} => {${n} = _${n}; $$apply();})`));
+                resultBody.push(rawNode(`$runtime.$$makeProp($component, $props, $option.boundProps || {}, '${n}', () => ${n}, _${n} => {${n} = _${n}; $$apply();});`));
                 lastPropIndex = resultBody.length;
             });
             return;
@@ -295,28 +282,28 @@ export function transform() {
     });
 
     let header = [];
-    header.push(parseExp('if(!$option) $option = {}'));
-    header.push(parseExp('if(!$option.events) $option.events = {}'));
-    header.push(parseExp('$$runtimeHeader()'));
-    header.push(parseExp('const $props = $option.props || {}'));
-    header.push(parseExp('const $component = $runtime.$$makeComponent($element, $option);'));
-    header.push(parseExp('const $$apply = $runtime.$$makeApply($component.$cd)'));
+    header.push(rawNode('if(!$option) $option = {};'));
+    header.push(rawNode('if(!$option.events) $option.events = {};'));
+    header.push(rawNode('$$runtimeHeader();'));
+    header.push(rawNode('const $props = $option.props || {};'));
+    header.push(rawNode('const $component = $runtime.$$makeComponent($element, $option);'));
+    header.push(rawNode('const $$apply = $runtime.$$makeApply($component.$cd);'));
 
     if(lastPropIndex != null) {
-        resultBody.splice(lastPropIndex, 0, parseExp('let $attributes = $runtime.$$componentCompleteProps($component, $$apply, $props)'));
+        resultBody.splice(lastPropIndex, 0, rawNode('let $attributes = $runtime.$$componentCompleteProps($component, $$apply, $props);'));
     } else {
-        header.push(parseExp('$component.push = $$apply'));
-        header.push(parseExp('const $attributes = $props'));
+        header.push(rawNode('$component.push = $$apply;'));
+        header.push(rawNode('const $attributes = $props;'));
     }
 
     if(this.config.autoSubscribe) {
         result.importedNames.forEach(name => {
-            header.push(parseExp(`$runtime.autoSubscribe($component.$cd, $$apply, ${name})`));
+            header.push(rawNode(`$runtime.autoSubscribe($component.$cd, $$apply, ${name});`));
         });
     }
 
-    if(!rootFunctions.$emit) header.push(parseExp('const $emit = $runtime.$makeEmitter($option)'));
-    if(insertOnDestroy) header.push(parseExp('function $onDestroy(fn) {$runtime.cd_onDestroy($component.$cd, fn);}'));
+    if(!rootFunctions.$emit) header.push(rawNode('const $emit = $runtime.$makeEmitter($option);'));
+    if(insertOnDestroy) header.push(rawNode('function $onDestroy(fn) {$runtime.cd_onDestroy($component.$cd, fn);};'));
     while(header.length) {
         resultBody.unshift(header.pop());
     }
@@ -352,14 +339,23 @@ export function transform() {
 };
 
 export function build() {
-    // add type: 'Raw'
-    this.script.code = astring.generate(this.script.ast, {generator: astring.baseGenerator});
-    this.script.code = replace(this.script.code, '$$fixImport', 'import');
+    const generator = Object.assign({
+        ImportExpression: function(node, state) {
+            state.write('import(');
+            this[node.source.type](node.source, state);
+            state.write(')');
+        },
+        Raw: function(node, state) {
+            state.write(node.value);
+        }
+    }, astring.baseGenerator);
+    this.script.code = astring.generate(this.script.ast, {generator});
 }
 
 
-function parseExp(exp) {
-    let ast = acorn.parse(exp);
-    assert(ast.body.length == 1);
-    return ast.body[0];
+function rawNode(exp) {
+    return {
+        type: 'Raw',
+        value: exp
+    };
 }
