@@ -4,6 +4,7 @@ import { parse as parseHTML } from './parser';
 import * as codelib from './code';
 import { buildRuntime, buildBlock } from './builder';
 import { processCSS } from './css/index';
+import preprocess from './preprocess/index.js';
 
 import * as utils from './utils.js'
 import { parseText } from './parser.js'
@@ -30,6 +31,7 @@ export async function compile(source, config = {}) {
         compact: true,
         autoSubscribe: true,
         cssGenId: null,
+        preprocess: false,
         plugins: []
     }, config);
 
@@ -37,7 +39,7 @@ export async function compile(source, config = {}) {
         source,
         config,
         uniqIndex: 0,
-        
+
         Q: config.inlineTemplate ? utils.Q2 : utils.Q,
         buildBlock,
         bindProp,
@@ -71,6 +73,8 @@ export async function compile(source, config = {}) {
         result: null,
         buildRuntime
     };
+
+    if(config.preprocess) preprocess(ctx);
 
     await hook(ctx, 'dom:before');
     ctx.parseHTML();
@@ -135,8 +139,7 @@ export async function compile(source, config = {}) {
 
 
 async function hook(ctx, name) {
-    for(let i=0; i<ctx.config.plugins.length; i++) {
-        const fn = ctx.config.plugins[i][name];
-        if(fn) await fn(ctx);
+    for(let p of ctx.config.plugins) {
+        p[name] && await p[name](ctx);
     }
 };
