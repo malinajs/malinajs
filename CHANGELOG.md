@@ -5,6 +5,8 @@
 * compound classes (handle mix of class and class directives)
 * new passing class
 * Deprecated: passing class from 0.5
+* plugins
+* esbuild-plugin (by AlexxNB)
 
 ## 0.5.x
 
