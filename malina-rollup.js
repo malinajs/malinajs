@@ -8,15 +8,16 @@ function malinaRollup(option = {}) {
     if(!option.extension) option.extension = ['html', 'ma', 'xht'];
     return {
         name: 'malina',
-        transform(code, id) {
+        async transform(code, id) {
             if(!option.extension.some(ext => id.endsWith('.' + ext))) return null;
             let result;
 
             let opts = Object.assign({
+                path: id,
                 name: id.match(/([^/\\]+)\.\w+$/)[1]
             }, option);
             try {
-                result = malina.compile(code, opts);
+                result = await malina.compile(code, opts);
             } catch (e) {
                 if(e.details) console.log(e.details);
                 throw e;

@@ -67,7 +67,7 @@ function malinaPlugin(options={}){
 
                     let source = await fsp.readFile(args.path, 'utf8');
 
-                    let result = malina.compile(source,{
+                    let result = await malina.compile(source,{
                         name: args.path.match(/([^/\\]+)\.\w+$/)[1],
                         ...options
                     });
