@@ -6,19 +6,18 @@ export function makeComponent(node, makeEl) {
     let propList = node.attributes;
     let binds = [];
     let head = [];
-    let head2 = [];
     let forwardAllEvents = false;
     let injectGroupCall = 0;
     let spreading = false;
     let options = [];
     let dynamicComponent;
 
-    let injectClass = false;
-
     if(node.name == 'component') {
         assert(node.elArg);
         dynamicComponent = node.elArg[0] == '{' ? unwrapExp(node.elArg) : node.elArg;
     }
+
+    let passOption = {};
 
     if(node.body && node.body.length) {
         let slots = {};
@@ -53,6 +52,7 @@ export function makeComponent(node, makeEl) {
                 }).join(',\n');
             }
 
+            passOption.slots = true;
             let block = this.buildBlock(slot);
             const convert = block.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
             head.push(`
@@ -98,6 +98,8 @@ export function makeComponent(node, makeEl) {
             twoBinds.push(inner);
             let valueName0 = '$$v' + (this.uniqIndex++);
             let valueName = '$$v' + (this.uniqIndex++);
+            passOption.props = true;
+            passOption.boundProps = true;
             head.push(`props.${inner} = ${outer};`);
             head.push(`boundProps.${inner} = 2;`);
             binds.push(`
@@ -125,6 +127,8 @@ export function makeComponent(node, makeEl) {
     });
 
     if(spreading) {
+        passOption.props = true;
+        passOption.boundProps = true;
         head.push('let spreadObject = $runtime.$$makeSpreadObject2($cd, props);');
         head.push('boundProps.$$spreading = true;');
         binds.push('spreadObject.emit = $component.push;');
@@ -164,6 +168,7 @@ export function makeComponent(node, makeEl) {
             else {
                 if(!arg.length) {
                     // forwarding
+                    passOption.events = true;
                     if(forwardAllEvents || boundEvents[event]) head.push(`$runtime.$$addEventForComponent(events, '${event}', $option.events.${event});`);
                     else head.push(`events.${event} = $option.events.${event};`);
                     boundEvents[event] = true;
@@ -192,6 +197,7 @@ export function makeComponent(node, makeEl) {
                 callback = `($event) => {${this.Q(exp)}}`;
             }
 
+            passOption.events = true;
             if(forwardAllEvents || boundEvents[event]) head.push(`$runtime.$$addEventForComponent(events, '${event}', ${callback});`);
             else head.push(`events.${event} = ${callback};`);
             boundEvents[event] = true;
@@ -210,7 +216,7 @@ export function makeComponent(node, makeEl) {
             const parsed = this.parseText(prop.value);
             let exp = parsed.result;
             let funcName = `$$pf${this.uniqIndex++}`;
-            head2.push(`
+            head.push(`
                 const ${funcName} = () => $$resolveClass(${exp});
                 $class['${metaClass}'] = ${funcName}();
 
@@ -219,7 +225,7 @@ export function makeComponent(node, makeEl) {
                     groupCall();
                 }, {ro: true, value: $class['${metaClass}']});
             `);
-            injectClass = true;
+            passOption.class = true;
             this.use.resolveClass = true;
             injectGroupCall++;
             return;
@@ -235,6 +241,8 @@ export function makeComponent(node, makeEl) {
                 `);
             }
             injectGroupCall++;
+            passOption.props = true;
+            passOption.boundProps = true;
             head.push(`
                 let ${fname} = () => (${exp});
                 let ${valueName} = ${fname}()
@@ -252,50 +260,80 @@ export function makeComponent(node, makeEl) {
             if(spreading) {
                 head.push(`spreadObject.attr('${name}', ${value});`);
             } else {
+                passOption.props = true;
                 head.push(`props.${name} = ${value};`);
             }
         }
     });
 
-    if(injectClass) {
-        head.push(`let $class = {}`);
+    let rootHead = [];
+    if(passOption.class) {
+        rootHead.push(`let $class = {}`);
         options.push('$class');
     }
 
-    if(forwardAllEvents) head.unshift('let events = Object.assign({}, $option.events);');
-    else head.unshift('let events = {};');
+    if(passOption.slots) {
+        rootHead.push('let slots = {};');
+        options.push('slots');
+    }
+
+    if(passOption.props) {
+        rootHead.push('let props = {};');
+        options.push('props');
+    }
+
+    if(passOption.boundProps) {
+        rootHead.push('let boundProps = {};');
+        options.push('boundProps');
+    }
+
+    if(forwardAllEvents) {
+        rootHead.push('let events = Object.assign({}, $option.events);');
+        options.push('events');
+    } else if(passOption.events) {
+        rootHead.push('let events = {};');
+        options.push('events');
+    }
     if(injectGroupCall) {
         if(injectGroupCall == 1) {
-            head.push('let groupCall;');
+            rootHead.push('let groupCall;');
             binds.push('groupCall = $component.push;');
         } else {
-            head.push('let groupCall = $runtime.$$groupCall();');
+            rootHead.push('let groupCall = $runtime.$$groupCall();');
             binds.push('groupCall.emit = $component.push;');
         }
     }
     if(spreading) head.push('spreadObject.build();');
 
-    options.unshift('afterElement: true, noMount: true, props, boundProps, events, slots');
-
-    const makeSrc = (componentName) => {
-        return `
-            let props = {};
-            let boundProps = {};
-            let slots = {};
-            ${head.join('\n')};
-            let componentOption = {${options.join(', ')}};
-            ${head2.join('\n')};
-            let $component = ${componentName}(${makeEl()}, componentOption);
-            if($component) {
-                if($component.destroy) $runtime.cd_onDestroy($cd, $component.destroy);
-                ${binds.join('\n')};
-                if($component.onMount) $tick($component.onMount);
-            }
-        `;
+    const makeSrc = (componentName, brackets) => {
+        let scope = false;
+        let result = '';
+        if(rootHead.length || head.length) {
+            scope = true;
+            result = `
+                ${rootHead.join('\n')};
+                ${head.join('\n')};
+            `;
+        }
+        if(binds.length) {
+            scope = true;
+            result += `
+                let $component = $runtime.callComponent($cd, ${componentName}, ${makeEl()}, {${options.join(', ')}});
+                if($component) {
+                    ${binds.join('\n')};
+                }
+            `;
+        } else {
+            result += `
+                $runtime.callComponent($cd, ${componentName}, ${makeEl()}, {${options.join(', ')}});
+            `;
+        }
+        if(brackets && scope) return '{' + result + '}';
+        return result;
     }
 
     if(!dynamicComponent) {
-        return {bind: `{ ${makeSrc(node.name)} }`};
+        return {bind: `${makeSrc(node.name, true)}`};
     } else {
         let componentName = '$$comp' + (this.uniqIndex++);
         return {bind: `

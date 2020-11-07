@@ -7,6 +7,7 @@ let templatecache = {false: {}, true: {}, svg: {}};
 let $$uniqIndex = 1;
 
 export const $$childNodes = 'childNodes';
+export const $$firstChild = 'firstChild';
 
 export function $$htmlToFragment(html, lastNotTag) {
     lastNotTag = !!lastNotTag;
@@ -296,10 +297,21 @@ export function $$makeComponent($element, $option) {
     return $component;
 };
 
+export const callComponent = (cd, component, el, option) => {
+    option.afterElement = true;
+    option.noMount = true;
+    let $component = component(el, option);
+    if($component) {
+        if($component.destroy) cd_onDestroy(cd, $component.destroy);
+        if($component.onMount) $tick($component.onMount);
+    }
+    return $component;
+};
+
 export const autoSubscribe = (cd, apply, obj) => {
     if(obj && 'value' in obj && obj.subscribe) {
         let unsub = obj.subscribe(apply);
-        if(typeof unsub == 'function') cd_onDestroy(unsub);
+        if(typeof unsub == 'function') cd_onDestroy(cd, unsub);
     }
 }
 

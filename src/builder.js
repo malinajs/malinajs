@@ -277,7 +277,8 @@ export function buildBlock(data) {
         }
 
         keys.forEach(k => {
-            buildNodes(d[k], lvl.concat([`[$runtime.$$childNodes][${k}]`]))
+            const p = k == 0 ? `[$runtime.$$firstChild]` : `[$runtime.$$childNodes][${k}]`;
+            buildNodes(d[k], lvl.concat([p]))
         });
     }
     buildNodes(DN, ['$parentElement']);
