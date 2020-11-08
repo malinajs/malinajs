@@ -253,7 +253,7 @@ export function transform() {
             });
             resultBody.push(n.declaration);
             forInit.forEach(n => {
-                resultBody.push(rawNode(`$runtime.$$makeProp($component, $props, $option.boundProps || {}, '${n}', () => ${n}, _${n} => {${n} = _${n}; $$apply();});`));
+                resultBody.push(rawNode(`$runtime.$$makeProp($component, '${n}', () => ${n}, _${n} => {${n} = _${n};});`));
                 lastPropIndex = resultBody.length;
             });
             return;
@@ -283,16 +283,14 @@ export function transform() {
 
     let header = [];
     header.push(rawNode('if(!$option) $option = {};'));
-    header.push(rawNode('if(!$option.events) $option.events = {};'));
-    header.push(rawNode('$$runtimeHeader();'));
-    header.push(rawNode('const $props = $option.props || {};'));
     header.push(rawNode('const $component = $runtime.$$makeComponent($element, $option);'));
-    header.push(rawNode('const $$apply = $runtime.$$makeApply($component.$cd);'));
+    header.push(rawNode('const $props = $option.props;'));
+    header.push(rawNode('const $$apply = $component.apply;'));
+    header.push(rawNode('$$runtimeHeader();'));
 
     if(lastPropIndex != null) {
-        resultBody.splice(lastPropIndex, 0, rawNode('let $attributes = $runtime.$$componentCompleteProps($component, $$apply, $props);'));
+        resultBody.splice(lastPropIndex, 0, rawNode('let $attributes = $runtime.$$componentCompleteProps($component);'));
     } else {
-        header.push(rawNode('$component.push = $$apply;'));
         header.push(rawNode('const $attributes = $props;'));
     }
 

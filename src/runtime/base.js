@@ -185,68 +185,15 @@ export function $$makeSpreadObject($cd, el, css) {
     }
 };
 
-export function $$makeSpreadObject2($cd, props) {
-    let index = 0;
-    let list = [];
-    let self = {};
-    let defaultUsed = {};
 
-    const emit = $$groupCall(() => {
-        self.build();
-        self.emit && self.emit();
-    });
-
-    self.build = () => {
-        let obj, name, used = Object.assign({}, defaultUsed);
-        for(let i=index-1; i>=0; i--) {
-            obj = list[i];
-            for(name in obj) {
-                if(used[name]) continue;
-                used[name] = true;
-                props[name] = obj[name];
-            }
-        }
-    }
-
-    self.spread = function(fn) {
-        let i = index++;
-        let value = fn();
-        list[i] = value;
-        $watch($cd, fn, value => {
-            list[i] = value;
-            emit();
-        }, {ro: true, cmp: $$compareDeep, value: $$cloneDeep(value)});
-    }
-    self.prop = function(name, fn) {
-        let value = fn();
-        let i = index++;
-        list[i] = {};
-        list[i][name] = value;
-        $watch($cd, fn, value => {
-            list[i][name] = value;
-            emit();
-        }, {ro: true, cmp: $$compareDeep, value: $$cloneDeep(value)});
-    }
-    self.attr = function(name, value) {
-        let d = {};
-        d[name] = value;
-        list[index++] = d;
-    }
-    self.except = function(list) {
-        list.forEach(n => defaultUsed[n] = true);
-    }
-    return self;
-};
-
-export function $$makeProp($component, $props, bound, name, getter, setter) {
-    let value = $props[name];
+export function $$makeProp($component, name, getter, setter) {
+    let value = $component.$option.props[name];
     if(value !== void 0) setter(value);
-    if((bound[name] || bound.$$spreading) && (bound[name] !== 2)) $component.push.push(() => setter($props[name]));
-    $component.exportedProps[name] = true;
+    $component.exportedProps[name] = {getter, setter};
 
     Object.defineProperty($component, name, {
         get: getter,
-        set: setter
+        set: v => {setter(v); $component.apply();}
     });
 }
 
@@ -261,30 +208,48 @@ export function $$groupCall(emit) {
     return fn;
 };
 
-export function $$makeApply($cd) {
+export const $$makeComponent = ($element, $option) => {
+    if(!$option.events) $option.events = {};
+    if(!$option.props) $option.props = {};
+    let $cd = new $ChangeDetector();
+
     let id = `a${$$uniqIndex++}`;
-    return function apply(r) {
-        if(apply._p) return r;
+    let process;
+    let apply = r => {
+        if(process) return r;
         $tick(() => {
             try {
-                apply._p = true;
+                process = true;
                 $digest($cd);
             } finally {
-                apply._p = false;
+                process = false;
             }
         }, id);
         return r;
     };
-}
 
-export function $$makeComponent($element, $option) {
     let $component = {
-        $cd: new $ChangeDetector(),
+        $option,
+        $cd,
         exportedProps: {},
-        push: []
+        apply,
+        push: apply,
+        destroy: () => $component.$cd.destroy(),
+        bindProp: (name, up, initValue) => {
+            let p = $component.exportedProps[name];
+            if(p) {
+                let w = $watch($cd, p.getter, (value) => {
+                    up(w.value, value);
+                }, {value: initValue, cmp: $$compareDeep});
+                return (wvalue, value) => {
+                    w.value = wvalue;
+                    p.setter(value);
+                    $component.push();
+                };
+            } else $runtime.__app_onerror("Component ${node.name} doesn't have prop ${inner}");
+        }
     };
 
-    $component.destroy = () => $component.$cd.destroy();
     $component.$$render = (rootTemplate) => {
         if ($option.afterElement) {
             $element.parentNode.insertBefore(rootTemplate, $element.nextSibling);
@@ -315,29 +280,26 @@ export const autoSubscribe = (cd, apply, obj) => {
     }
 }
 
-export function $$componentCompleteProps($component, $$apply, $props) {
-    let list = $component.push;
-    let recalcAttributes, $attributes = $props;
-    $component.push = () => {
-        list.forEach(fn => fn());
-        recalcAttributes();
-        $$apply();
+export function $$componentCompleteProps($component) {
+    if(Object.keys($component.exportedProps).length) {
+        let $attributes = {};
+        let $props = $component.$option.props;
+        const recalc = () => {
+            for(let k in $props) {
+                if(!(k in $component.exportedProps)) $attributes[k] = $props[k];
+            }
+            for(let k in $attributes) {
+                if(!(k in $props)) delete $attributes[k];
+            }
+        }
+        $component.push = () => {
+            recalc();
+            $component.apply();
+        };
+        recalc();
+        return $attributes;
     };
-
-    $attributes = {};
-    for(let k in $props) {
-        if(!$component.exportedProps[k]) {
-            $attributes[k] = $props[k];
-            recalcAttributes = 1;
-        }
-    }
-    if(recalcAttributes) {
-        recalcAttributes = () => {
-            for(let k in $attributes) $attributes[k] = $props[k];
-        }
-    } else recalcAttributes = () => {};
-
-    return $attributes;
+    return $component.$option.props;
 };
 
 
@@ -397,3 +359,27 @@ export const makeClassResolver = ($option, classMap, metaClass, mainName) => {
         return result.join(' ');
     }
 };
+
+
+export const makeTree = (n, lvl) => {
+    let p = null;
+    while(n--) {
+        let c = Object.create(p);
+        lvl.push(c);
+        p = c;
+    }
+    let root = Object.create(p);
+    lvl.unshift(root);
+    return root;
+};
+
+
+export const spreadObject = (d, src) => {
+    for(let k in src) d[k] = src[k];
+    for(let k in d) {
+        if(!(k in src)) delete d[k];
+    }
+};
+
+
+export function noop() {};

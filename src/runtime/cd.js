@@ -153,6 +153,14 @@ export function $$deepComparator(depth) {
 
 export const $$compareDeep = $$deepComparator(10);
 
+export const fire = w => {
+    if(w.cmp) w.cmp(w, w.fn());
+    else {
+        w.value = w.fn();
+        w.cb(w.value);
+    }
+};
+
 export function $digest($cd) {
     let loop = 10;
     let w;
