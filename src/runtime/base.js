@@ -234,20 +234,7 @@ export const $$makeComponent = ($element, $option) => {
         exportedProps: {},
         apply,
         push: apply,
-        destroy: () => $component.$cd.destroy(),
-        bindProp: (name, up, initValue) => {
-            let p = $component.exportedProps[name];
-            if(p) {
-                let w = $watch($cd, p.getter, (value) => {
-                    up(w.value, value);
-                }, {value: initValue, cmp: $$compareDeep});
-                return (wvalue, value) => {
-                    w.value = wvalue;
-                    p.setter(value);
-                    $component.push();
-                };
-            } else $runtime.__app_onerror("Component ${node.name} doesn't have prop ${inner}");
-        }
+        destroy: () => $component.$cd.destroy()
     };
 
     $component.$$render = (rootTemplate) => {
@@ -261,6 +248,29 @@ export const $$makeComponent = ($element, $option) => {
 
     return $component;
 };
+
+
+export const componentPropBinderError = (name) => {
+    $runtime.__app_onerror(`Component doesn't have prop ${name}`);
+}
+
+
+export const componentPropBinder = ($component) => {
+    return (name, up, initValue) => {
+        let p = $component.exportedProps[name];
+        if(p) {
+            let w = $watch($component.$cd, p.getter, (value) => {
+                up(w.value, value);
+            }, {value: initValue, cmp: $$compareDeep});
+            return (wvalue, value) => {
+                w.value = wvalue;
+                p.setter(value);
+                $component.push();
+            };
+        } else componentPropBinderError(name);
+    }
+}
+
 
 export const callComponent = (cd, component, el, option) => {
     option.afterElement = true;

@@ -290,8 +290,10 @@ export function transform() {
 
     if(lastPropIndex != null) {
         resultBody.splice(lastPropIndex, 0, rawNode('let $attributes = $runtime.$$componentCompleteProps($component);'));
+        header.push(rawNode('$component.bindProp = $runtime.componentPropBinder($component);'));
     } else {
         header.push(rawNode('const $attributes = $props;'));
+        header.push(rawNode('$component.bindProp = $runtime.componentPropBinderError;'));
     }
 
     if(this.config.autoSubscribe) {
