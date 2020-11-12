@@ -177,18 +177,15 @@ export function bindProp(prop, makeEl, node) {
         assert(['value', 'checked', 'valueAsNumber', 'valueAsDate', 'selectedIndex'].includes(attr), 'Not supported: ' + prop.content);
         assert(arg.length == 0);
         assert(detectExpressionType(exp) == 'identifier', 'Wrong bind name: ' + prop.content);
-        let watchExp = attr == 'checked' ? '!!' + exp : exp;
         if(attr == 'value' && ['number', 'range'].includes(inputType)) attr = 'valueAsNumber';
 
         let spreading = '';
         if(node.spreadObject) spreading = `${node.spreadObject}.except(['${attr}']);`;
 
-        return {bind: `{
+        return {bind: `
             ${spreading}
-            let $element=${makeEl()};
-            let $$w = $watchReadOnly($cd, () => (${watchExp}), (value) => { if(value != $element.${attr}) $element.${attr} = value; });
-            $runtime.addEvent($cd, $element, 'input', () => { $$w.value = ${exp} = $element.${attr}; $$apply(); });
-        }`};
+            $runtime.bindInput($cd, ${makeEl()}, '${attr}', () => ${exp}, ${exp}_ => {${exp} = ${exp}_; $$apply();});
+        `};
     } else if(name == 'style' && arg) {
         let styleName = arg;
         let exp = prop.value ? getExpression() : styleName;
