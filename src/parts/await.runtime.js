@@ -1,5 +1,5 @@
 
-import { $$removeElements } from '../runtime/base';
+import { $$removeElements, firstChild } from '../runtime/base';
 import { $watchReadOnly } from '../runtime/cd';
 
 export function $$awaitBlock($cd, label, fn, $$apply, build_main, build_then, build_catch, tpl_main, tpl_then, tpl_catch) {
@@ -21,7 +21,7 @@ export function $$awaitBlock($cd, label, fn, $$apply, build_main, build_then, bu
         let fr = tpl.cloneNode(true);
         build(childCD, fr, value);
         $$apply();
-        first = fr.firstChild;
+        first = fr[firstChild];
         last = fr.lastChild;
         label.parentNode.insertBefore(fr, label.nextSibling);
     };

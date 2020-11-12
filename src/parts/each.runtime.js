@@ -1,5 +1,5 @@
 
-import { $$removeElements } from '../runtime/base';
+import { $$removeElements, childNodes, firstChild } from '../runtime/base';
 import { $watch, $$compareArray, isArray } from '../runtime/cd';
 
 export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, itemTemplate, bind) {
@@ -8,8 +8,8 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, itemTemplat
     let mapping = new Map();
     let lineArray = [];
     let lastNode;
-    let tplLength = itemTemplate.childNodes.length;
-    if(onlyChild) while(label.firstChild) label.firstChild.remove(); // FIXME
+    let tplLength = itemTemplate[childNodes].length;
+    if(onlyChild) while(label[firstChild]) label[firstChild].remove(); // FIXME
 
     $watch($cd, fn, (array) => {
         if(!array) array = [];
@@ -68,7 +68,7 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, itemTemplat
                 next_ctx = null;
             } else ctx = mapping.get(getKey(item, i));
             if(ctx) {
-                nextEl = i == 0 && onlyChild ? parentNode.firstChild : prevNode.nextSibling;
+                nextEl = i == 0 && onlyChild ? parentNode[firstChild] : prevNode.nextSibling;
                 if(nextEl != ctx.first) {
                     let insert = true;
 
@@ -97,7 +97,7 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, itemTemplat
                 let childCD = $cd.new();
                 ctx = {cd: childCD};
                 bind(ctx, tpl, item, i);
-                ctx.first = tpl.firstChild;
+                ctx.first = tpl[firstChild];
                 ctx.last = tpl.lastChild;
                 parentNode.insertBefore(tpl, prevNode && prevNode.nextSibling);
             }

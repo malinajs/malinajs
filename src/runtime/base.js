@@ -6,8 +6,8 @@ let templatecache = {false: {}, true: {}, svg: {}};
 
 let $$uniqIndex = 1;
 
-export const $$childNodes = 'childNodes';
-export const $$firstChild = 'firstChild';
+export const childNodes = 'childNodes';
+export const firstChild = 'firstChild';
 
 export function $$htmlToFragment(html, lastNotTag) {
     lastNotTag = !!lastNotTag;
@@ -40,8 +40,8 @@ export function svgToFragment(content) {
     t.innerHTML = '<svg>' + content + '</svg>';
 
     let result = document.createDocumentFragment();
-    let svg = t.content.firstChild;
-    while(svg.firstChild) result.appendChild(svg.firstChild);
+    let svg = t.content[firstChild];
+    while(svg[firstChild]) result.appendChild(svg[firstChild]);
     templatecache.svg[content] = result.cloneNode(true);
     return result;
 };
