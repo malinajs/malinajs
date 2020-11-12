@@ -259,33 +259,39 @@ export function buildBlock(data) {
     go(0, data, true);
 
     let source = [];
-    result.name = '$$build' + (this.uniqIndex++);
     result.tpl = this.Q(tpl.join(''));
-    
-    let args = ['$cd', '$parentElement'];
-    if(data.args) args.push.apply(args, data.args);
-    source.push(`function ${result.name}(${args.join(', ')}) {\n`);
 
-    const buildNodes = (d, lvl) => {
-        let keys = Object.keys(d).filter(k => k != 'name');
-        if(keys.length > 1 && !d.name) d.name = 'el' + (this.uniqIndex++);
+    if(binds.length) {
+        result.name = '$$build' + (this.uniqIndex++);
+        
+        let args = ['$cd', '$parentElement'];
+        if(data.args) args.push.apply(args, data.args);
+        source.push(`function ${result.name}(${args.join(', ')}) {\n`);
 
-        if(d.name) {
-            let line = lvl.join('');
-            source.push(`const ${d.name} = ${line};\n`);
-            lvl = [d.name];
+        const buildNodes = (d, lvl) => {
+            let keys = Object.keys(d).filter(k => k != 'name');
+            if(keys.length > 1 && !d.name) d.name = 'el' + (this.uniqIndex++);
+
+            if(d.name) {
+                let line = lvl.join('');
+                source.push(`let ${d.name} = ${line};\n`);
+                lvl = [d.name];
+            }
+
+            keys.forEach(k => {
+                const p = k == 0 ? `[$runtime.$$firstChild]` : `[$runtime.$$childNodes][${k}]`;
+                buildNodes(d[k], lvl.concat([p]))
+            });
         }
+        buildNodes(DN, ['$parentElement']);
 
-        keys.forEach(k => {
-            const p = k == 0 ? `[$runtime.$$firstChild]` : `[$runtime.$$childNodes][${k}]`;
-            buildNodes(d[k], lvl.concat([p]))
-        });
+        source.push(binds.join('\n'));
+        source.push(`};`);
+        result.source = source.join('');
+    } else {
+        result.name = '$runtime.noop';
+        result.source = '';
     }
-    buildNodes(DN, ['$parentElement']);
-
-    source.push(binds.join('\n'));
-    source.push(`};`);
-    result.source = source.join('');
     return result;
 };
 
