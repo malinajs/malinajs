@@ -65,7 +65,7 @@ export function makeEachBlock(data, option) {
     if(keyName == itemName) keyName = null;
     if(keyName) assert(detectExpressionType(keyName) == 'identifier', `Wrong key '${keyName}'`);
 
-    if(!keyName) keyFunction = 'function getKey(item) {return item;}';
+    if(!keyName) keyFunction = 'let getKey = $runtime.noop;';
     else if(keyName == indexName) keyFunction = 'function getKey(_, i) {return i;}';
     else keyFunction = `function getKey(${itemName}) {return ${keyName};}`;
 

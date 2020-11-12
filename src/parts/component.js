@@ -230,6 +230,8 @@ export function makeComponent(node, makeEl) {
             propLevelType = 'prop';
             let propObject = propLevel ? `$$lvl[${propLevel}]` : 'props';
 
+            passOption.props = true;
+            passOption.push = true;
             head.push(`
                 $runtime.fire($watch($cd, () => (${exp}), _${name} => {
                     ${propObject}.${name} = _${name};

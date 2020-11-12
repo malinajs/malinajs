@@ -284,29 +284,31 @@ export function transform() {
     let header = [];
     header.push(rawNode('if(!$option) $option = {};'));
     header.push(rawNode('const $component = $runtime.$$makeComponent($element, $option);'));
-    header.push(rawNode('const $props = $option.props;'));
+    header.push(rawNode('const $props = $option.props;', {_name: '$props'}));
     header.push(rawNode('const $$apply = $component.apply;'));
     header.push(rawNode('$$runtimeHeader();'));
 
     if(lastPropIndex != null) {
-        resultBody.splice(lastPropIndex, 0, rawNode('let $attributes = $runtime.$$componentCompleteProps($component);'));
+        resultBody.splice(lastPropIndex, 0, rawNode('let $attributes = $runtime.$$componentCompleteProps($component);', {_name: '$attributes'}));
         header.push(rawNode('$component.bindProp = $runtime.componentPropBinder($component);'));
     } else {
-        header.push(rawNode('const $attributes = $props;'));
+        header.push(rawNode('const $attributes = $props;', {_name: '$attributes'}));
         header.push(rawNode('$component.bindProp = $runtime.componentPropBinderError;'));
     }
 
     if(this.config.autoSubscribe) {
         result.importedNames.forEach(name => {
-            header.push(rawNode(`$runtime.autoSubscribe($component.$cd, $$apply, ${name});`));
+            header.push(rawNode(`$runtime.autoSubscribe($component, ${name});`));
         });
     }
 
-    if(!rootFunctions.$emit) header.push(rawNode('const $emit = $runtime.$makeEmitter($option);'));
+    if(!rootFunctions.$emit) header.push(rawNode('const $emit = $runtime.$makeEmitter($option);', {_name: '$emit'}));
     if(insertOnDestroy) header.push(rawNode('function $onDestroy(fn) {$runtime.cd_onDestroy($component.$cd, fn);};'));
     while(header.length) {
         resultBody.unshift(header.pop());
     }
+
+    this.script.rootLevel = resultBody;
 
     let widgetFunc = {
         body: {
@@ -353,9 +355,9 @@ export function build() {
 }
 
 
-function rawNode(exp) {
-    return {
-        type: 'Raw',
-        value: exp
-    };
+function rawNode(exp, n) {
+    n = n || {};
+    n.type = 'Raw';
+    n.value = exp;
+    return n;
 }

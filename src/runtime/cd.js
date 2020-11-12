@@ -124,7 +124,7 @@ const compareDeep = (a, b, lvl) => {
     return false;
 };
 
-function cloneDeep(d, lvl) {
+export function cloneDeep(d, lvl) {
     if(lvl < 0 || !d) return d;
 
     if(typeof(d) == 'object') {

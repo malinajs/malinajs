@@ -4,6 +4,7 @@ import { parse as parseHTML } from './parser';
 import * as codelib from './code';
 import { buildRuntime, buildBlock } from './builder';
 import { processCSS } from './css/index';
+import js_shaking from './shaking';
 
 import * as utils from './utils.js'
 import { parseText } from './parser.js'
@@ -17,7 +18,7 @@ import { attachSlot } from './parts/slot.js'
 import { makeFragment, attachFragment } from './parts/fragment.js'
 
 
-export const version = '0.6.4';
+export const version = '0.6.5';
 
 
 export async function compile(source, config = {}) {
@@ -62,6 +63,7 @@ export async function compile(source, config = {}) {
         js_parse: codelib.parse,
         js_transform: codelib.transform,
         js_build: codelib.build,
+        js_shaking,
 
         styleNodes: null,
         css: null,
@@ -111,6 +113,8 @@ export async function compile(source, config = {}) {
 
 
     await hook(ctx, 'build:before');
+    ctx.js_shaking();
+    await hook(ctx, 'build:shaking');
     ctx.js_build();
     await hook(ctx, 'build:assemble');
     let code = `

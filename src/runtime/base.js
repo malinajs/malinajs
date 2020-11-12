@@ -1,5 +1,5 @@
 
-import { $watch, $watchReadOnly, $$deepComparator, $$cloneDeep, $ChangeDetector, $digest, $$compareDeep, cd_onDestroy } from './cd';
+import { $watch, $watchReadOnly, $$deepComparator, cloneDeep, $$cloneDeep, $ChangeDetector, $digest, $$compareDeep, cd_onDestroy, addEvent } from './cd';
 import { __app_onerror } from './utils';
 
 let templatecache = {false: {}, true: {}, svg: {}};
@@ -234,7 +234,7 @@ export const $$makeComponent = ($element, $option) => {
         exportedProps: {},
         apply,
         push: apply,
-        destroy: () => $component.$cd.destroy()
+        destroy: () => $cd.destroy()
     };
 
     $component.$$render = (rootTemplate) => {
@@ -283,10 +283,10 @@ export const callComponent = (cd, component, el, option) => {
     return $component;
 };
 
-export const autoSubscribe = (cd, apply, obj) => {
+export const autoSubscribe = (component, obj) => {
     if(obj && 'value' in obj && obj.subscribe) {
-        let unsub = obj.subscribe(apply);
-        if(typeof unsub == 'function') cd_onDestroy(cd, unsub);
+        let unsub = obj.subscribe(component.$apply);
+        if(typeof unsub == 'function') cd_onDestroy(component.$cd, unsub);
     }
 }
 
@@ -343,6 +343,51 @@ export const bindText = (cd, element, fn) => {
 };
 
 
+export const bindStyle = (cd, element, name, fn) => {
+    $watchReadOnly(cd, fn, (value) => {
+        element.style[name] = value;
+    });
+};
+
+
+export const bindAttribute = (cd, element, name, fn) => {
+    $watchReadOnly(cd, fn, (value) => {
+        if(value != null) element.setAttribute(name, value);
+        else element.removeAttribute(name);
+    });
+};
+
+
+export const bindAction = (cd, element, action, fn) => {
+    $tick(() => {
+        let handler, value;
+        if(fn) {
+            value = fn();
+            handler = action.apply(null, [element].concat(value));
+        } else handler = action(element);
+
+        if(handler) {
+            if(handler.update && fn) {
+                $watch(cd, fn, args => {
+                    handler.update.apply(handler, args);
+                }, {cmp: $$deepComparator(1), value: cloneDeep(value, 1) });
+            }
+            if(handler.destroy) cd_onDestroy(cd, handler.destroy);
+        }
+    });
+};
+
+
+export const bindInput = (cd, element, name, get, set) => {
+    let w = $watchReadOnly(cd, name == 'checked' ? () => !!get() : get, value => {
+        if(value != element[name]) element[name] = value;
+    });
+    addEvent(cd, element, 'input', () => {
+        set(w.value = element[name]);
+    });
+};
+
+
 export const makeClassResolver = ($option, classMap, metaClass, mainName) => {
     if(!$option.$class) $option.$class = {};
     if(!mainName && metaClass.main) mainName = 'main';
@@ -392,4 +437,4 @@ export const spreadObject = (d, src) => {
 };
 
 
-export function noop() {};
+export let noop = a => a;
