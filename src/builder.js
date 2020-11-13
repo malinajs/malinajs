@@ -63,12 +63,13 @@ export function buildRuntime() {
 }
 
 
-export function buildBlock(data) {
+export function buildBlock(data, option) {
     let tpl = [];
     let lvl = [];
     let binds = [];
     let DN = {};
     let result = {};
+    let lastTag = false;
 
     const go = (level, data, isRoot) => {
         let index = 0;
@@ -151,6 +152,7 @@ export function buildBlock(data) {
                     else tpl.push(`<!-- ${n.name} -->`);
                     let b = this.makeComponent(n, getElementName);
                     binds.push(b.bind);
+                    lastTag = true;
                     return;
                 }
                 if(n.name == 'slot') {
@@ -159,6 +161,7 @@ export function buildBlock(data) {
                     else tpl.push(`<!-- Slot ${slotName} -->`);
                     let b = this.attachSlot(slotName, getElementName(), n);
                     binds.push(b.source);
+                    lastTag = true;
                     return;
                 }
                 if(n.name == 'fragment') {
@@ -166,6 +169,7 @@ export function buildBlock(data) {
                     else tpl.push(`<!-- Fragment ${n.name} -->`);
                     let b = this.attachFragment(n, getElementName());
                     binds.push(b.source);
+                    lastTag = true;
                     return;
                 }
 
@@ -217,6 +221,8 @@ export function buildBlock(data) {
                     n.parent = data;
                     let eachBlock = this.makeEachBlock(n, {elName: getElementName()});
                     binds.push(eachBlock.source);
+                    lastTag = true;
+                    return;
                 }
             } else if(n.type === 'if') {
                 setLvl();
@@ -224,6 +230,8 @@ export function buildBlock(data) {
                 else tpl.push(`<!-- ${n.value} -->`);
                 let ifBlock = this.makeifBlock(n, getElementName());
                 binds.push(ifBlock.source);
+                lastTag = true;
+                return;
             } else if(n.type === 'systag') {
                 let r = n.value.match(/^@(\w+)\s+(.*)$/)
                 let name = r[1];
@@ -234,6 +242,8 @@ export function buildBlock(data) {
                     if(this.config.hideLabel) tpl.push(`<!---->`);
                     else tpl.push(`<!-- html -->`);
                     binds.push(this.makeHtmlBlock(exp, getElementName()));
+                    lastTag = true;
+                    return;
                 } else throw 'Wrong tag';
             } else if(n.type === 'await') {
                 setLvl();
@@ -241,10 +251,13 @@ export function buildBlock(data) {
                 else tpl.push(`<!-- ${n.value} -->`);
                 let block = this.makeAwaitBlock(n, getElementName());
                 binds.push(block.source);
+                lastTag = true;
+                return;
             } else if(n.type === 'comment') {
                 setLvl();
                 tpl.push(n.content);
             }
+            lastTag = false;
         }
         body.some(node => {
             try {
@@ -257,6 +270,7 @@ export function buildBlock(data) {
         lvl.length = level;
     };
     go(0, data, true);
+    if(lastTag && option && option.protectLastTag) tpl.push('<!---->');
 
     let source = [];
     result.tpl = this.Q(tpl.join(''));

@@ -144,7 +144,7 @@ export function makeComponent(node, makeEl) {
                     $runtime.fire($watch($cd, () => (${name}), (value) => {
                         $runtime.spreadObject(${propObject}, value);
                         $$push();
-                    }, {cmp: $runtime.$$deepComparator(0)}));
+                    }, {ro: true, cmp: $runtime.$$deepComparator(0)}));
                 `);
                 return;
             };

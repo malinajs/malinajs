@@ -18,7 +18,7 @@ export function makeEachBlock(data, option) {
     }
     if(!nodeItems.length) nodeItems = [data.body[0]];
 
-    let itemData = this.buildBlock({body: nodeItems});
+    let itemData = this.buildBlock({body: nodeItems}, {protectLastTag: true});
 
     // #each items as item, index (key)
     let rx = data.value.match(/^#each\s+(\S+)\s+as\s+(.+)$/);
@@ -85,7 +85,7 @@ export function makeEachBlock(data, option) {
 
             ${keyFunction};
 
-            let itemTemplate = ${convert}(\`${this.Q(itemData.tpl)}\`, true);
+            let itemTemplate = ${convert}(\`${this.Q(itemData.tpl)}\`);
 
             $runtime.$$eachBlock($cd, ${option.elName}, ${option.onlyChild?1:0}, () => (${arrayName}), getKey, itemTemplate, bind);
         }

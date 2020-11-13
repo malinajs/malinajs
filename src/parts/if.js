@@ -13,20 +13,20 @@ export function makeifBlock(data, topElementName) {
     source.push(`function ${ifBlockName}($cd, $parentElement) {`);
     let mainBlock, elseBlock;
     if(data.bodyMain) {
-        mainBlock = this.buildBlock({body: data.bodyMain});
-        elseBlock = this.buildBlock(data);
+        mainBlock = this.buildBlock({body: data.bodyMain}, {protectLastTag: true});
+        elseBlock = this.buildBlock(data, {protectLastTag: true});
 
         const convert = elseBlock.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
         source.push(`
-            let elsefr = ${convert}(\`${this.Q(elseBlock.tpl)}\`, true);
+            let elsefr = ${convert}(\`${this.Q(elseBlock.tpl)}\`);
             ${elseBlock.source}
         `);
     } else {
-        mainBlock = this.buildBlock(data);
+        mainBlock = this.buildBlock(data, {protectLastTag: true});
     }
     const convert = mainBlock.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
     source.push(`
-        let mainfr = ${convert}(\`${this.Q(mainBlock.tpl)}\`, true);
+        let mainfr = ${convert}(\`${this.Q(mainBlock.tpl)}\`);
         ${mainBlock.source}
     `);
 

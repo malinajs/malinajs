@@ -184,7 +184,7 @@ export function bindProp(prop, makeEl, node) {
 
         return {bind: `
             ${spreading}
-            $runtime.bindInput($cd, ${makeEl()}, '${attr}', () => ${exp}, ${exp}_ => {${exp} = ${exp}_; $$apply();});
+            $runtime.bindInput($cd, ${makeEl()}, '${attr}', () => ${exp}, _${exp} => {${exp} = _${exp}; $$apply();});
         `};
     } else if(name == 'style' && arg) {
         let styleName = arg;

@@ -2,47 +2,49 @@
 import { $watch, $watchReadOnly, $$deepComparator, cloneDeep, $$cloneDeep, $ChangeDetector, $digest, $$compareDeep, cd_onDestroy, addEvent } from './cd';
 import { __app_onerror } from './utils';
 
-let templatecache = {false: {}, true: {}, svg: {}};
+let templatecache = {};
+let templatecacheSvg = {};
 
 let $$uniqIndex = 1;
 
 export const childNodes = 'childNodes';
 export const firstChild = 'firstChild';
 
-export function $$htmlToFragment(html, lastNotTag) {
-    lastNotTag = !!lastNotTag;
-    if(templatecache[lastNotTag][html]) return templatecache[lastNotTag][html].cloneNode(true);
+export function $$htmlToFragment(html) {
+    if(templatecache[html]) return templatecache[html].cloneNode(true);
 
     let t = document.createElement('template');
     t.innerHTML = html;
     let result = t.content;
-    if(lastNotTag && result.lastChild.nodeType == 8) result.appendChild(document.createTextNode(''));
-    templatecache[lastNotTag][html] = result.cloneNode(true);
+    templatecache[html] = result.cloneNode(true);
     return result;
 };
 
-export function $$htmlToFragmentClean(html, lastNotTag) {
-    lastNotTag = !!lastNotTag;
-    if(templatecache[lastNotTag][html]) return templatecache[lastNotTag][html].cloneNode(true);
-    let result = $$htmlToFragment(html, lastNotTag);
+export function $$htmlToFragmentClean(html) {
+    if(templatecache[html]) return templatecache[html].cloneNode(true);
+
+    let t = document.createElement('template');
+    t.innerHTML = html;
+    let result = t.content;
+
     let it = document.createNodeIterator(result, 128);
     let n;
     while(n = it.nextNode()) {
         if(!n.nodeValue) n.parentNode.replaceChild(document.createTextNode(''), n);
     };
-    templatecache[lastNotTag][html] = result.cloneNode(true);
+    templatecache[html] = result.cloneNode(true);
     return result;
 };
 
 export function svgToFragment(content) {
-    if(templatecache.svg[content]) return templatecache.svg[content].cloneNode(true);
+    if(templatecacheSvg[content]) return templatecacheSvg[content].cloneNode(true);
     let t = document.createElement('template');
     t.innerHTML = '<svg>' + content + '</svg>';
 
     let result = document.createDocumentFragment();
     let svg = t.content[firstChild];
     while(svg[firstChild]) result.appendChild(svg[firstChild]);
-    templatecache.svg[content] = result.cloneNode(true);
+    templatecacheSvg[content] = result.cloneNode(true);
     return result;
 };
 
