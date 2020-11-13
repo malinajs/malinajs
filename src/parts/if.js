@@ -12,6 +12,7 @@ export function makeifBlock(data, topElementName) {
     let ifBlockName = 'ifBlock' + (this.uniqIndex++);
     source.push(`function ${ifBlockName}($cd, $parentElement) {`);
     let mainBlock, elseBlock;
+
     if(data.bodyMain) {
         mainBlock = this.buildBlock({body: data.bodyMain}, {protectLastTag: true});
         elseBlock = this.buildBlock(data, {protectLastTag: true});

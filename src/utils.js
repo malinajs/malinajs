@@ -183,6 +183,10 @@ export function compactDOM() {
                         body.splice(i, 1);
                         continue;
                     }
+                    if(parentNode.type == 'node' && (prev && prev.type == 'each' || next && next.type == 'each')) {
+                        body.splice(i, 1);
+                        continue;
+                    }
                 }
             }
             i++;

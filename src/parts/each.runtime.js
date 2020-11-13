@@ -6,19 +6,13 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, itemTemplat
     let $cd = $parentCD.new();
 
     let mapping = new Map();
-    let lineArray = [];
     let lastNode;
     let tplLength = itemTemplate[childNodes].length;
-    if(onlyChild) while(label[firstChild]) label[firstChild].remove(); // FIXME
 
     $watch($cd, fn, (array) => {
         if(!array) array = [];
-        if(typeof(array) == 'number') {
-            lineArray.length = array;
-            array--;
-            while(array >= 0 && !lineArray[array]) lineArray[array] = array-- + 1;
-            array = lineArray;
-        } else if(!isArray(array)) array = [];
+        if(typeof(array) == 'number') array = [...Array(array)].map((_,i) => i + 1);
+        else if(!isArray(array)) array = [];
 
         let newMapping = new Map();
         let prevNode, parentNode;

@@ -200,25 +200,17 @@ export function buildBlock(data, option) {
                     tpl.push(`</${n.name}>`);
                 }
             } else if(n.type === 'each') {
-                n.parent = data;
-                let onlyChild = data.type == 'node' && !body.some(sibling => {
-                    if(sibling.type == 'text' && !sibling.value.trim()) return false;
-                    if(sibling === n) return false;
-                    return true;
-                });
-
                 setLvl();
-                if(onlyChild) {
+                if(data.type == 'node' && data.body.length == 1) {
                     let eachBlock = this.makeEachBlock(n, {
                         elName: getElementName(-1),
                         onlyChild: true
                     });
                     binds.push(eachBlock.source);
-                    return 'stop';
+                    return;
                 } else {
                     if(this.config.hideLabel) tpl.push(`<!---->`);
                     else tpl.push(`<!-- ${n.value} -->`);
-                    n.parent = data;
                     let eachBlock = this.makeEachBlock(n, {elName: getElementName()});
                     binds.push(eachBlock.source);
                     lastTag = true;
@@ -259,9 +251,9 @@ export function buildBlock(data, option) {
             }
             lastTag = false;
         }
-        body.some(node => {
+        body.forEach(node => {
             try {
-                return bindNode(node) == 'stop';
+                bindNode(node);
             } catch (e) {
                 wrapException(e, node);
             }
