@@ -10,6 +10,8 @@ let $$uniqIndex = 1;
 export const childNodes = 'childNodes';
 export const firstChild = 'firstChild';
 
+export let noop = a => a;
+
 export function $$htmlToFragment(html) {
     if(templatecache[html]) return templatecache[html].cloneNode(true);
 
@@ -112,6 +114,7 @@ export function $makeEmitter(option) {
     };
 };
 
+
 export function $$addEventForComponent(list, event, fn) {
     let prev = list[event];
     if(prev) {
@@ -188,17 +191,6 @@ export function $$makeSpreadObject($cd, el, css) {
 };
 
 
-export function $$makeProp($component, name, getter, setter) {
-    let value = $component.$option.props[name];
-    if(value !== void 0) setter(value);
-    $component.exportedProps[name] = {getter, setter};
-
-    Object.defineProperty($component, name, {
-        get: getter,
-        set: v => {setter(v); $component.apply();}
-    });
-}
-
 export function $$groupCall(emit) {
     let id = `gc${$$uniqIndex++}`;
     const fn = function() {
@@ -209,6 +201,7 @@ export function $$groupCall(emit) {
     fn.emit = emit;
     return fn;
 };
+
 
 export const $$makeComponent = ($element, $option) => {
     if(!$option.events) $option.events = {};
@@ -233,7 +226,6 @@ export const $$makeComponent = ($element, $option) => {
     let $component = {
         $option,
         $cd,
-        exportedProps: {},
         apply,
         push: apply,
         destroy: () => $cd.destroy()
@@ -250,28 +242,6 @@ export const $$makeComponent = ($element, $option) => {
 
     return $component;
 };
-
-
-export const componentPropBinderError = (name) => {
-    $runtime.__app_onerror(`Component doesn't have prop ${name}`);
-}
-
-
-export const componentPropBinder = ($component) => {
-    return (name, up, initValue) => {
-        let p = $component.exportedProps[name];
-        if(p) {
-            let w = $watch($component.$cd, p.getter, (value) => {
-                up(w.value, value);
-            }, {value: initValue, cmp: $$compareDeep});
-            return (wvalue, value) => {
-                w.value = wvalue;
-                p.setter(value);
-                $component.push();
-            };
-        } else componentPropBinderError(name);
-    }
-}
 
 
 export const callComponent = (cd, component, el, option) => {
@@ -291,28 +261,6 @@ export const autoSubscribe = (component, obj) => {
         if(typeof unsub == 'function') cd_onDestroy(component.$cd, unsub);
     }
 }
-
-export function $$componentCompleteProps($component) {
-    if(Object.keys($component.exportedProps).length) {
-        let $attributes = {};
-        let $props = $component.$option.props;
-        const recalc = () => {
-            for(let k in $props) {
-                if(!(k in $component.exportedProps)) $attributes[k] = $props[k];
-            }
-            for(let k in $attributes) {
-                if(!(k in $props)) delete $attributes[k];
-            }
-        }
-        $component.push = () => {
-            recalc();
-            $component.apply();
-        };
-        recalc();
-        return $attributes;
-    };
-    return $component.$option.props;
-};
 
 
 export const addStyles = (id, content) => {
@@ -439,4 +387,39 @@ export const spreadObject = (d, src) => {
 };
 
 
-export let noop = a => a;
+export const recalcAttributes = (props, skip) => {
+    let result = {};
+    for(let k in props)
+        if(!skip[k]) result[k] = props[k];
+    return result;
+};
+
+
+export const completeProps = ($component, setter, getters) => {
+    $component.push = () => {
+        setter();
+        $component.apply();
+    }
+    $component.exportedProps = getters;
+};
+
+
+export const bindPropToComponent = ($component, name, parentWatch, up) => {
+    let getter = $component.exportedProps[name];
+    if(!getter) return __app_onerror(`Component doesn't have prop ${name}`);
+
+    let w = $watch($component.$cd, getter, value => {
+        parentWatch.value = w.value;
+        $component.$option.props[name] = value;
+        up(value);
+    }, { value: parentWatch.value, cmp: $$compareDeep });
+    parentWatch.pair = value => w.value = value;
+}
+
+
+export const makeExternalProperty = ($component, name, getter, setter) => {
+    Object.defineProperty($component, name, {
+        get: getter,
+        set: v => {setter(v); $component.apply();}
+    });
+}

@@ -245,15 +245,33 @@ export function transform() {
             return;
         } else if(n.type == 'ExportNamedDeclaration') {
             assert(n.declaration.type == 'VariableDeclaration', 'Wrong export');
-            let forInit = [];
             n.declaration.declarations.forEach(d => {
                 assert(d.type == 'VariableDeclarator', 'Wrong export');
                 result.props.push(d.id.name);
-                forInit.push(d.id.name);
-            });
-            resultBody.push(n.declaration);
-            forInit.forEach(n => {
-                resultBody.push(rawNode(`$runtime.$$makeProp($component, '${n}', () => ${n}, _${n} => {${n} = _${n};});`));
+                resultBody.push({
+                    type: 'VariableDeclaration',
+                    kind: 'let',
+                    declarations: [{
+                        type: 'VariableDeclarator',
+                        id: {
+                            type: 'ObjectPattern',
+                            properties: [{
+                                type: 'Property',
+                                method: false,
+                                shorthand: true,
+                                computed: false,
+                                kind: 'init',
+                                key: d.id,
+                                value: d.init ? {
+                                    type: 'AssignmentPattern',
+                                    left: d.id,
+                                    right: d.init
+                                } : d.id
+                            }]
+                        },
+                        init: {type: 'Identifier', name: '$props'}
+                    }]
+                });
                 lastPropIndex = resultBody.length;
             });
             return;
@@ -270,30 +288,24 @@ export function transform() {
         resultBody.push(n);
     });
 
-    resultBody.push({
-        type: 'ExpressionStatement',
-        expression: {
-            callee: {
-                type: 'Identifier',
-                name: '$$runtime'
-            },
-            type: 'CallExpression'
-        }
-    });
-
     let header = [];
-    header.push(rawNode('if(!$option) $option = {};'));
     header.push(rawNode('const $component = $runtime.$$makeComponent($element, $option);'));
-    header.push(rawNode('const $props = $option.props;', {_name: '$props'}));
     header.push(rawNode('const $$apply = $component.apply;'));
     header.push(rawNode('$$runtimeHeader();'));
 
     if(lastPropIndex != null) {
-        resultBody.splice(lastPropIndex, 0, rawNode('let $attributes = $runtime.$$componentCompleteProps($component);', {_name: '$attributes'}));
-        header.push(rawNode('$component.bindProp = $runtime.componentPropBinder($component);'));
+        header.push(rawNode('const $props = $option.props;'));
+        resultBody.splice(lastPropIndex, 0,
+            rawNode(`let $$skipAttrs = {${result.props.map(n => n + ':1').join(',')}};`, {_name: '$attributes'}),
+            rawNode('let $attributes = $runtime.recalcAttributes($props, $$skipAttrs);', {_name: '$attributes'}),
+            rawNode(`$runtime.completeProps($component, () => {
+                ({${result.props.join(',')}} = $props);`),
+            rawNode('$attributes = $runtime.recalcAttributes($props, $$skipAttrs);', {_name: '$attributes'}),
+            rawNode(`}, {${result.props.map(n => n + ': () => '+n).join(',')}});`)
+        );
     } else {
-        header.push(rawNode('const $attributes = $props;', {_name: '$attributes'}));
-        header.push(rawNode('$component.bindProp = $runtime.componentPropBinderError;'));
+        header.push(rawNode('const $props = $option.props;', {_name: '$props'}));
+        header.push(rawNode('let $attributes = $props;', {_name: '$attributes'}));
     }
 
     if(this.config.autoSubscribe) {
@@ -308,6 +320,13 @@ export function transform() {
         resultBody.unshift(header.pop());
     }
 
+    if(this.scriptNodes[0] && this.scriptNodes[0].attributes.some(a => a.name == 'property')) {
+        result.props.forEach(name => {
+            resultBody.push(rawNode(`$runtime.makeExternalProperty($component, '${name}', () => ${name}, _${name} => ${name} = _${name});`));
+        });
+    }
+
+    resultBody.push(rawNode('$$runtime();'));
     this.script.rootLevel = resultBody;
 
     let widgetFunc = {
@@ -323,8 +342,15 @@ export function transform() {
             type: 'Identifier',
             name: '$element'
         }, {
-            type: 'Identifier',
-            name: '$option'
+            type: 'AssignmentPattern',
+            left: {
+                type: 'Identifier',
+                name: '$option'
+            },
+            right: {
+                type: 'ObjectExpression',
+                properties: []
+            }
         }],
         type: 'FunctionDeclaration'
     };

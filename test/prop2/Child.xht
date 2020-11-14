@@ -1,0 +1,13 @@
+<script>
+    export let name;
+    export let value;
+    const json = (x) => JSON.stringify(x);
+
+    document.__fix = n => name = n;
+</script>
+
+<div id="result">
+    [{name}:{value}]
+    [$props={json($props)}]
+    [$attrs={json($attributes)}]
+</div>

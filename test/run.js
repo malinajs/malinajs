@@ -7,6 +7,7 @@ async function main() {
         'each1',
         'each2',
         'prop1',
+        'prop2',
         'css1',
         'css2',
         'css3',

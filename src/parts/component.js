@@ -100,16 +100,16 @@ export function makeComponent(node, makeEl) {
             head.push(`
                 const ${watchName} = $watch($cd, () => (${outer}), _${inner} => {
                     props.${inner} = _${inner};
-                    if(${watchName}.pair) ${watchName}.pair(${watchName}.value, _${inner});
+                    ${watchName}.pair && ${watchName}.pair(${watchName}.value);
+                    $$push();
                 }, {ro: true, cmp: $runtime.$$compareDeep});
                 $runtime.fire(${watchName});
             `);
             binds.push(`
-                ${watchName}.pair = $component.bindProp('${inner}', (_${outer}w, _${outer}) => {
-                    ${watchName}.value = _${outer}w;
-                    props.${inner} = ${outer} = _${outer};
+                $runtime.bindPropToComponent($component, '${inner}', ${watchName}, _${outer} => {
+                    ${outer} = _${outer};
                     $$apply();
-                }, ${watchName}.value);
+                });
             `);
             return false;
         } else if(name == 'this') {
