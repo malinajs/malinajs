@@ -1,6 +1,6 @@
 
 export default function shaking() {
-    let src = this.runtime.header + this.runtime.body;
+    let src = this.runtime.header + this.runtime.body + (this.script.source || '');
 
     const remove = (name) => {
         let root = this.script.rootLevel;
