@@ -1,12 +1,13 @@
 {
   "name": "malinajs",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "license": "MIT",
   "scripts": {
     "prepare": "npm run build",
     "build": "npm run build_runtime && rollup -c",
     "build_runtime": "rollup -c ./rollup.config.runtime.js",
     "build_app": "NODE_PATH=.. rollup -c rollup.config.app.js && babel ./example/public/app.js -o ./example/public/app.js && uglifyjs ./example/public/app.js -o ./example/public/app.min.js -m -c",
+    "terser": "terser ./example/public/app.js -o ./example/public/app.min2.js -m -c",
     "build_app_es5": "NODE_PATH=.. babel ./example/public/app.js -o ./example/public/app.es5.js --presets babel-preset-es2015 && uglifyjs ./example/public/app.es5.js -o ./example/public/app.es5.min.js -m -c",
     "web": "http-server ./example/public",
     "test": "NODE_PATH=.. node ./node_modules/.bin/mocha ./test/run.js",
@@ -25,6 +26,7 @@
     "jsdom": "^16.4.0",
     "mocha": "^8.2.1",
     "rollup": "^2.17.1",
+    "terser": "^5.4.0",
     "uglify-es": "^3.3.9"
   },
   "main": "malina",

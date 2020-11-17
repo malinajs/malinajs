@@ -182,9 +182,11 @@ export function bindProp(prop, makeEl, node) {
         let spreading = '';
         if(node.spreadObject) spreading = `${node.spreadObject}.except(['${attr}']);`;
 
+        let argName = 'a' + (this.uniqIndex++);
+
         return {bind: `
             ${spreading}
-            $runtime.bindInput($cd, ${makeEl()}, '${attr}', () => ${exp}, _${exp} => {${exp} = _${exp}; $$apply();});
+            $runtime.bindInput($cd, ${makeEl()}, '${attr}', () => ${exp}, ${argName} => {${exp} = ${argName}; $$apply();});
         `};
     } else if(name == 'style' && arg) {
         let styleName = arg;
