@@ -7,6 +7,7 @@
 * Deprecated: passing class from 0.5
 * plugins
 * esbuild-plugin (by AlexxNB)
+* $context
 
 ## 0.5.x
 
