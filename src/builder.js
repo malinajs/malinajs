@@ -55,6 +55,10 @@ export function buildRuntime() {
                     $option, {${classMap}}, {${metaClass}}, ${main}
                 );
             `);
+        } else {
+            this.runtime.componentHeader.push(`
+                const $$resolveClass = $runtime.noop;
+            `);
         }
     }
 
