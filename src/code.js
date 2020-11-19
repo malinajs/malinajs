@@ -307,6 +307,7 @@ export function transform() {
         header.push(rawNode('const $props = $option.props;', {_name: '$props'}));
         header.push(rawNode('let $attributes = $props;', {_name: '$attributes'}));
     }
+    header.push(rawNode('const $context = $component.context;', {_name: '$context'}));
 
     if(this.config.autoSubscribe) {
         result.importedNames.forEach(name => {

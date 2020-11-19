@@ -21,4 +21,8 @@ export default function shaking() {
     if(src.indexOf('$emit') < 0) {
         remove('$emit');
     }
+
+    if(src.indexOf('$context') < 0) {
+        remove('$context');
+    }
 };

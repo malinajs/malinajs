@@ -7,7 +7,7 @@ export function makeComponent(node, makeEl) {
     let binds = [];
     let head = [];
     let forwardAllEvents = false;
-    let options = [];
+    let options = ['$$: $component'];
     let dynamicComponent;
 
     let propLevel = 0, propLevelType;
@@ -106,7 +106,7 @@ export function makeComponent(node, makeEl) {
                 $runtime.fire(${watchName});
             `);
             binds.push(`
-                $runtime.bindPropToComponent($component, '${inner}', ${watchName}, _${outer} => {
+                $runtime.bindPropToComponent($child, '${inner}', ${watchName}, _${outer} => {
                     ${outer} = _${outer};
                     $$apply();
                 });
@@ -127,7 +127,7 @@ export function makeComponent(node, makeEl) {
             let name = name.substring(1);
             assert(isSimpleName(name), name);
             this.checkRootName(name);
-            binds.push(`${name} = $component;`);
+            binds.push(`${name} = $child;`);
             return;
         } else if(name[0] == '{') {
             value = name;
@@ -255,7 +255,7 @@ export function makeComponent(node, makeEl) {
     let rootHead = [];
     if(passOption.push) {
         rootHead.push(`let $$push = $runtime.noop;`);
-        binds.push(`$$push = $component.push;`);
+        binds.push(`$$push = $child.push;`);
     }
 
     if(passOption.class) {
@@ -295,8 +295,8 @@ export function makeComponent(node, makeEl) {
         if(binds.length) {
             scope = true;
             result += `
-                let $component = $runtime.callComponent($cd, ${componentName}, ${makeEl()}, {${options.join(', ')}});
-                if($component) {
+                let $child = $runtime.callComponent($cd, ${componentName}, ${makeEl()}, {${options.join(', ')}});
+                if($child) {
                     ${binds.join('\n')};
                 }
             `;
