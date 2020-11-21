@@ -2,7 +2,7 @@
 import { assert, xNode } from '../utils.js'
 
 
-export function makeifBlock(data, topElementName) {
+export function makeifBlock(data, element) {
     let r = data.value.match(/^#if (.*)$/);
     let exp = r[1];
     assert(exp, 'Wrong binding: ' + data.value);
@@ -29,7 +29,8 @@ export function makeifBlock(data, topElementName) {
 
     source.push(xNode('if:main', ctx => {
         const convert = mainBlock.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
-        ctx.writeLine(`let mainfr = ${convert}(\`${this.Q(mainBlock.tpl)}\`);`);
+        let template = this.xBuild(mainBlock.tpl);
+        ctx.writeLine(`let mainfr = ${convert}(\`${this.Q(template)}\`);`);
         ctx.build(mainBlock.source);
     }));
 
@@ -44,11 +45,13 @@ export function makeifBlock(data, topElementName) {
     this.require('apply');
     
     return {
-        source: xNode('if', ctx => {
+        source: xNode('if', {
+            el: element.bindName()
+        }, (ctx, data) => {
             ctx.build(xNode('block', {
                 body: [
                     source,
-                    `${source.name}($cd, ${topElementName});`
+                    `${source.name}($cd, ${data.el});`
                 ]
             }))
         })

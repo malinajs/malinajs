@@ -102,7 +102,8 @@ export function makeEachBlock(data, option) {
     source.push(keyFunction);
     source.push(xNode('each:template', ctx => {
         const convert = itemData.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
-        ctx.writeLine(`let itemTemplate = ${convert}(\`${this.Q(itemData.tpl)}\`);`);
+        let template = this.xBuild(itemData.tpl);
+        ctx.writeLine(`let itemTemplate = ${convert}(\`${this.Q(template)}\`);`);
     }));
     source.push(xNode('each', ctx => {
         let getKey = keyFunction ? 'getKey' : '$runtime.noop';

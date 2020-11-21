@@ -1,9 +1,8 @@
 
-import { parseText } from '../parser.js';
 import { assert, detectExpressionType, isSimpleName, unwrapExp, xNode } from '../utils.js'
 
 
-export function bindProp(prop, makeEl, node) {
+export function bindProp(prop, node, element) {
     let name, arg;
     if(prop.name[0] == '@') {
         arg = prop.name.substring(1);
@@ -56,13 +55,13 @@ export function bindProp(prop, makeEl, node) {
         let target = name.substring(1);
         assert(isSimpleName(target), target);
         this.checkRootName(target);
-        return {bind: `${target}=${makeEl()};`};
+        return {bind: `${target}=${element.bindName()};`};
     } else if(name == 'on') {
         if(arg == '@') {
             assert(!prop.value);
             return {bind: `
                 for(let event in $option.events) {
-                    $runtime.addEvent($cd, ${makeEl()}, event, $option.events[event]);
+                    $runtime.addEvent($cd, ${element.bindName()}, event, $option.events[event]);
                 }
             `};
         }
@@ -75,7 +74,7 @@ export function bindProp(prop, makeEl, node) {
             if(!opts.length) {
                 // forwarding
                 return {bind: `
-                    $runtime.addEvent($cd, ${makeEl()}, "${event}", ($event) => {
+                    $runtime.addEvent($cd, ${element.bindName()}, "${event}", ($event) => {
                         const fn = $option.events.${event};
                         if(fn) fn($event);
                     });\n`
@@ -122,7 +121,7 @@ export function bindProp(prop, makeEl, node) {
                 mod,
                 funcName,
                 exp,
-                el: makeEl(),
+                el: element.bindName(),
                 $element: exp.indexOf('$element') >= 0
             }, (ctx, n) => {
                 if(n.$element) {
@@ -141,7 +140,7 @@ export function bindProp(prop, makeEl, node) {
         } else {
             this.require('apply');
             let bind = xNode('bindEvent', {
-                el: makeEl(),
+                el: element.bindName(),
                 event,
                 mod
             }, (ctx, data) => {
@@ -193,7 +192,7 @@ export function bindProp(prop, makeEl, node) {
         let argName = 'a' + (this.uniqIndex++);
 
         return {bind: xNode('bindInput', {
-            el: makeEl()
+            el: element.bindName()
         }, (ctx, n) => {
             if(spreading) ctx.writeLine(spreading);
             ctx.writeLine(`$runtime.bindInput($cd, ${n.el}, '${attr}', () => ${exp}, ${argName} => {${exp} = ${argName}; $$apply();});`);
@@ -204,12 +203,12 @@ export function bindProp(prop, makeEl, node) {
         let exp = prop.value ? getExpression() : styleName;
         if(exp.indexOf('$element') >= 0) {
             return {bind: `{
-                    let $element = ${makeEl()};
+                    let $element = ${element.bindName()};
                     $runtime.bindStyle($cd, $element, '${styleName}', () => (${exp}));
                 }`};
         } else {
             return {bind: `
-                $runtime.bindStyle($cd, ${makeEl()}, '${styleName}', () => (${exp}));
+                $runtime.bindStyle($cd, ${element.bindName()}, '${styleName}', () => (${exp}));
             `};
         }
     } else if(name == 'use') {
@@ -218,14 +217,17 @@ export function bindProp(prop, makeEl, node) {
             assert(isSimpleName(arg), 'Wrong name: ' + arg);
             this.checkRootName(arg);
             let args = prop.value ? `, () => [${getExpression()}]` : '';
-            return {bind: `$runtime.bindAction($cd, ${makeEl()}, ${arg}${args});`};
+            return {bind: `$runtime.bindAction($cd, ${element.bindName()}, ${arg}${args});`};
         }
         let exp = getExpression();
-        return {bind: `$tick(() => { let $element=${makeEl()}; ${exp}; $$apply(); });`};
+        return {bind: `$tick(() => { let $element=${element.bindName()}; ${exp}; $$apply(); });`};
     } else if(name == 'class') {
         if(node.__skipClass) return {};
-        if(!this.css) return {prop: prop.content};
-        
+        if(!this.css) {
+            element.attributes.push({name: prop.name, value: prop.value});
+            return;
+        }
+
         node.__skipClass = true;
         let props = node.attributes.filter(a => a.name == 'class' || a.name.startsWith('class:'));
 
@@ -257,10 +259,10 @@ export function bindProp(prop, makeEl, node) {
                 }
             }).join(') + \' \' + (');
             return {bind: `
-                $watchReadOnly($cd, () => $$resolveClass((${exp})${defaultHash}), value => $runtime.setClassToElement(${makeEl()}, value));
+                $watchReadOnly($cd, () => $$resolveClass((${exp})${defaultHash}), value => $runtime.setClassToElement(${element.bindName()}, value));
             `};
         } else {
-            let bind = [];
+            let bind = xNode('block');
             props.forEach(prop => {
                 if(prop.name == 'class') {
                     prop.value.trim().split(/\s+/).forEach(name => {
@@ -270,11 +272,16 @@ export function bindProp(prop, makeEl, node) {
                     this.require('apply');
                     let className = prop.name.slice(6);
                     assert(className);
-                    let exp = prop.value ? unwrapExp(prop.value) : className;
-                    bind.push(`$runtime.bindClass($cd, ${makeEl()}, () => !!(${exp}), '${className}');`);
+                    bind.push(xNode('bindClass', {
+                        el: element.bindName(),
+                        className,
+                        exp: prop.value ? unwrapExp(prop.value) : className
+                    }, (ctx, data) => {
+                        ctx.writeLine(`$runtime.bindClass($cd, ${data.el}, () => !!(${data.exp}), '${data.className}');`)
+                    }));
                 }
             });
-            return {bind: bind.join('\n')};
+            return {bind};
         }
     } else {
         if(prop.value && prop.value.indexOf('{') >= 0) {
@@ -302,22 +309,22 @@ export function bindProp(prop, makeEl, node) {
             if(propList[name]) {
                 if(hasElement) {
                     return {bind: `{
-                        let $element=${makeEl()};
+                        let $element=${element.bindName()};
                         $watchReadOnly($cd, () => (${exp}), (value) => {$element.${name} = value;});
                     }`};
                 } else {
-                    return {bind: `$watchReadOnly($cd, () => (${exp}), (value) => {${makeEl()}.${name} = value;});`};
+                    return {bind: `$watchReadOnly($cd, () => (${exp}), (value) => {${element.bindName()}.${name} = value;});`};
                 }
             } else {
                 if(hasElement) {
                     return {
                         bind: `{
-                            let $element=${makeEl()};
+                            let $element=${element.bindName()};
                             $runtime.bindAttribute($cd, $element, '${name}', () => (${exp}));
                         }`
                     };
                 } else {
-                    let el = makeEl();
+                    let el = element.bindName();
                     return {
                         bind: `
                             $runtime.bindAttribute($cd, ${el}, '${name}', () => (${exp}));
@@ -333,8 +340,9 @@ export function bindProp(prop, makeEl, node) {
             `};
         }
 
-        return {
-            prop: prop.content
-        }
+        element.attributes.push({
+            name: prop.name,
+            value: prop.value
+        });
     }
 };

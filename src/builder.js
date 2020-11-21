@@ -1,5 +1,5 @@
 
-import {assert, svgElements, xNode} from './utils.js'
+import {assert, svgElements, xNode, last} from './utils.js'
 
 
 export function buildRuntime() {
@@ -16,7 +16,10 @@ export function buildRuntime() {
     if(bb.svg) {
         runtime.push(`const rootTemplate = $runtime.svgToFragment(\`${this.Q(rootTemplate)}\`);`);
     } else {
-        runtime.push(`const rootTemplate = $$htmlToFragment(\`${this.Q(rootTemplate)}\`);`);
+        runtime.push(xNode('makeTemplate', ctx => {
+            let template = this.xBuild(rootTemplate);
+            ctx.writeLine(`const rootTemplate = $$htmlToFragment(\`${this.Q(template)}\`);`);
+        }));
     }
     runtime.push(xNode('raw:template', {
         name: bb.name
@@ -71,7 +74,7 @@ export function buildRuntime() {
             ctx.indent++;
             ctx.writeLine(`$option, {${classMap}}, {${metaClass}}, ${main}`)
             ctx.indent--;
-            ctx.writeLine(`};`)
+            ctx.writeLine(`);`)
         } else {
             ctx.writeLine(`const $$resolveClass = $runtime.noop;`);
         }
@@ -80,31 +83,11 @@ export function buildRuntime() {
 
 
 export function buildBlock(data, option) {
-    let tpl = [];
-    let lvl = [];
+    let rootTemplate = xNode('node', {inline: true, _ctx: this});
     let binds = xNode('block');
-    let DN = {};
     let result = {};
-    let lastTag = false;
 
-    const go = (level, data, isRoot) => {
-        let index = 0;
-        const setLvl = () => {lvl[level] = index++;}
-
-        const getElementName = (shift) => {
-            let cl;
-            if(shift) cl = lvl.slice(0, lvl.length + shift);
-            else cl = lvl.slice();
-
-            let d = DN;
-            cl.forEach(n => {
-                if(d[n] == null) d[n] = {};
-                d = d[n];
-            });
-            if(!d.name) d.name = `el${this.uniqIndex++}`;
-            return d.name;
-        };
-
+    const go = (data, isRoot, tpl) => {
         let body = data.body.filter(n => {
             if(n.type == 'script' || n.type == 'style' || n.type == 'slot') return false;
             if(n.type == 'comment' && !this.config.preserveComments) return false;
@@ -130,53 +113,34 @@ export function buildBlock(data, option) {
             if(svg && !other) result.svg = true;
         }
 
-        {
-            let i = 0;
-            while(i < body.length - 1) {
-                let node = body[i];
-                let next = body[i + 1];
-                if(node.type == 'text' && next.type == 'text') {
-                    node.value += next.value;
-                    body.splice(i + 1, 1);
-                    continue;
-                }
-                i++;
-            }
-        }
-
-        let lastText;
         const bindNode = (n) => {
             if(n.type === 'text') {
-                assert(lastText !== tpl.length);
-                setLvl();
                 if(n.value.indexOf('{') >= 0) {
-                    tpl.push(' ');
+                    let t = tpl.push(' ');
                     let exp = this.parseText(n.value).result;
 
                     binds.push(xNode('bindText', {
-                        el: getElementName(),
+                        el: t.bindName(),
                         exp: exp
                     }, (ctx, n) => {
                         if(this.inuse.apply) ctx.writeLine(`$runtime.bindText($cd, ${n.el}, () => ${n.exp});`);
                         else ctx.writeLine(`${n.el}.textContent = ${n.exp};`);
                     }));
 
-                } else tpl.push(n.value);
-                lastText = tpl.length;
+                } else {
+                    tpl.push(n.value);
+                }
             } else if(n.type === 'template') {
-                setLvl();
                 tpl.push(n.openTag);
                 tpl.push(n.content);
                 tpl.push('</template>');
             } else if(n.type === 'node') {
-                setLvl();
                 if(n.name == 'component' || n.name.match(/^[A-Z]/)) {
                     // component
-                    if(this.config.hideLabel) tpl.push(`<!---->`);
-                    else tpl.push(`<!-- ${n.name} -->`);
-                    let b = this.makeComponent(n, getElementName);
+                    let el = xNode('node:comment', {label: true, value: n.name})
+                    tpl.push(el);
+                    let b = this.makeComponent(n, el);
                     binds.push(b.bind);
-                    lastTag = true;
                     return;
                 }
                 if(n.name == 'slot') {
@@ -185,7 +149,6 @@ export function buildBlock(data, option) {
                     else tpl.push(`<!-- Slot ${slotName} -->`);
                     let b = this.attachSlot(slotName, getElementName(), n);
                     binds.push(b.source);
-                    lastTag = true;
                     return;
                 }
                 if(n.name == 'fragment') {
@@ -193,12 +156,13 @@ export function buildBlock(data, option) {
                     else tpl.push(`<!-- Fragment ${n.name} -->`);
                     let b = this.attachFragment(n, getElementName());
                     binds.push(b.source);
-                    lastTag = true;
                     return;
                 }
 
-                let el = ['<' + n.name];
-                if(n.attributes.some(a => a.name.startsWith('{...'))) {
+                let el = xNode('node', {name: n.name});
+                tpl.push(el);
+
+                if(n.attributes.some(a => a.name.startsWith('{...'))) {  // TODO: fix
                     n.spreadObject = 'spread' + (this.uniqIndex++);
                     if(this.css) n.classes.add(this.css.id);
                     this.require('apply');
@@ -207,47 +171,35 @@ export function buildBlock(data, option) {
                     `);
                 }
                 n.attributes.forEach(p => {
-                    let b = this.bindProp(p, getElementName, n);
-                    if(b.prop) el.push(b.prop);
-                    if(b.bind) binds.push(b.bind);
+                    let b = this.bindProp(p, n, el);
+                    if(b && b.bind) binds.push(b.bind);
                 });
-                let className = Array.from(n.classes).join(' ');
-                if(className) el.push(`class="${className}"`);
+                n.classes.forEach(n => el.class.add(n));
 
-                el = el.join(' ');
-                if(n.closedTag) {
-                    el += n.voidTag ? '/>' : `></${n.name}>`;
-                } else el += '>';
-                tpl.push(el);
-
+                el.voidTag = n.voidTag;
                 if(!n.closedTag) {
-                    go(level + 1, n);
-                    tpl.push(`</${n.name}>`);
+                    go(n, false, el);
                 }
             } else if(n.type === 'each') {
-                setLvl();
                 if(data.type == 'node' && data.body.length == 1) {
                     let eachBlock = this.makeEachBlock(n, {
-                        elName: getElementName(-1),
+                        elName: tpl.bindName(),
                         onlyChild: true
                     });
                     binds.push(eachBlock.source);
                     return;
                 } else {
-                    if(this.config.hideLabel) tpl.push(`<!---->`);
-                    else tpl.push(`<!-- ${n.value} -->`);
-                    let eachBlock = this.makeEachBlock(n, {elName: getElementName()});
+                    let element = xNode('node:comment', {label: true, value: `${n.value}`});
+                    tpl.push(element);
+                    let eachBlock = this.makeEachBlock(n, {elName: element.bindName()});
                     binds.push(eachBlock.source);
-                    lastTag = true;
                     return;
                 }
             } else if(n.type === 'if') {
-                setLvl();
-                if(this.config.hideLabel) tpl.push(`<!---->`);
-                else tpl.push(`<!-- ${n.value} -->`);
-                let ifBlock = this.makeifBlock(n, getElementName());
+                let element = xNode('node:comment', {label: true, value: n.value});
+                tpl.push(element);
+                let ifBlock = this.makeifBlock(n, element);
                 binds.push(ifBlock.source);
-                lastTag = true;
                 return;
             } else if(n.type === 'systag') {
                 let r = n.value.match(/^@(\w+)\s+(.*)$/)
@@ -255,26 +207,20 @@ export function buildBlock(data, option) {
                 let exp = r[2];
 
                 if(name == 'html') {
-                    setLvl();
                     if(this.config.hideLabel) tpl.push(`<!---->`);
                     else tpl.push(`<!-- html -->`);
                     binds.push(this.makeHtmlBlock(exp, getElementName()));
-                    lastTag = true;
                     return;
                 } else throw 'Wrong tag';
             } else if(n.type === 'await') {
-                setLvl();
                 if(this.config.hideLabel) tpl.push(`<!---->`);
                 else tpl.push(`<!-- ${n.value} -->`);
                 let block = this.makeAwaitBlock(n, getElementName());
                 binds.push(block.source);
-                lastTag = true;
                 return;
             } else if(n.type === 'comment') {
-                setLvl();
                 tpl.push(n.content);
             }
-            lastTag = false;
         }
         body.forEach(node => {
             try {
@@ -283,13 +229,16 @@ export function buildBlock(data, option) {
                 wrapException(e, node);
             }
         });
-
-        lvl.length = level;
     };
-    go(0, data, true);
-    if(lastTag && option && option.protectLastTag) tpl.push('<!---->');
+    go(data, true, rootTemplate);
+    if(option && option.protectLastTag) {
+        let l = last(rootTemplate.children);
+        if(l && l.type == 'node:comment' && l.label) {
+            rootTemplate.push(xNode('node:comment', {value: ''}));
+        }
+    }
 
-    result.tpl = this.Q(tpl.join(''));
+    result.tpl = rootTemplate;
 
     if(!binds.empty()) {
         result.name = '$$build' + (this.uniqIndex++);
@@ -299,22 +248,22 @@ export function buildBlock(data, option) {
             args: ['$cd', '$parentElement'].concat([] || data.args)
         });
 
-        const buildNodes = (d, lvl) => {
-            let keys = Object.keys(d).filter(k => k != 'name');
-            if(keys.length > 1 && !d.name) d.name = 'el' + (this.uniqIndex++);
+        source.push(xNode('bindNodes', ctx => {
 
-            if(d.name) {
-                let line = lvl.join('');
-                source.push(`let ${d.name} = ${line};`);
-                lvl = [d.name];
+            const gen = (parent, parentName) => {
+                for(let i=0; i < parent.children.length; i++) {
+                    let node = parent.children[i];
+                    let diff = i == 0 ? '[$runtime.firstChild]' : `[$runtime.childNodes][${i}]`;
+
+                    if(node._boundName) ctx.writeLine(`let ${node._boundName} = ${parentName() + diff};`);
+                    if(node.children) gen(node, () => {
+                        if(node._boundName) return node._boundName;
+                        return parentName() + diff;
+                    })
+                }
             }
-
-            keys.forEach(k => {
-                const p = k == 0 ? `[$runtime.firstChild]` : `[$runtime.childNodes][${k}]`;
-                buildNodes(d[k], lvl.concat([p]))
-            });
-        }
-        buildNodes(DN, ['$parentElement']);
+            gen(rootTemplate, () => '$parentElement');
+        }))
 
         source.push(binds);
         result.source = source;

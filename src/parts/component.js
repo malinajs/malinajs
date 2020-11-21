@@ -2,7 +2,8 @@
 import { assert, detectExpressionType, isSimpleName, unwrapExp, genId } from '../utils'
 
 
-export function makeComponent(node, makeEl) {
+export function makeComponent(node, element) {
+    this.require('apply');
     let propList = node.attributes;
     let binds = [];
     let head = [];
@@ -295,14 +296,14 @@ export function makeComponent(node, makeEl) {
         if(binds.length) {
             scope = true;
             result += `
-                let $component = $runtime.callComponent($cd, ${componentName}, ${makeEl()}, {${options.join(', ')}});
+                let $component = $runtime.callComponent($cd, ${componentName}, ${element.bindName()}, {${options.join(', ')}});
                 if($component) {
                     ${binds.join('\n')};
                 }
             `;
         } else {
             result += `
-                $runtime.callComponent($cd, ${componentName}, ${makeEl()}, {${options.join(', ')}});
+                $runtime.callComponent($cd, ${componentName}, ${element.bindName()}, {${options.join(', ')}});
             `;
         }
         if(brackets && scope) return '{' + result + '}';
@@ -318,11 +319,11 @@ export function makeComponent(node, makeEl) {
             const ${componentName} = ($cd, $ComponentConstructor) => {
                 ${makeSrc('$ComponentConstructor')}
             };
-            let childCD, finalLabel = $runtime.getFinalLabel(${makeEl()});
+            let childCD, finalLabel = $runtime.getFinalLabel(${element.bindName()});
             $watch($cd, () => (${dynamicComponent}), ($ComponentConstructor) => {
                 if(childCD) {
                     childCD.destroy();
-                    $runtime.removeElementsBetween(${makeEl()}, finalLabel);
+                    $runtime.removeElementsBetween(${element.bindName()}, finalLabel);
                 }
                 childCD = null;
                 if($ComponentConstructor) {

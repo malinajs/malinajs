@@ -7,6 +7,8 @@ _svgElements.split(',').forEach(k => svgElements[k] = true);
 
 export { svgElements };
 
+export const last = a => a[a.length - 1];
+
 export function assert(x, info) {
     if(!x) throw info || (new Error('AssertError'));
 }
@@ -205,7 +207,8 @@ export const genId = () => {
 };
 
 
-export function xWriter() {
+export function xWriter(ctx) {
+    this._ctx = ctx;
     this.result = [];
     this.indent = 0;
 
@@ -316,6 +319,82 @@ xNode.init = {
             ctx.indent--;
             if(node.inline) ctx.write(ctx.getIdent() + '}');
             else ctx.writeLine('}');
+        }
+    },
+    node: {
+        init: (node) => {
+            node.children = [];
+            node.attributes = [];
+            node.class = new Set();
+            node.voidTag = false;
+
+            node.bindName = xNode.init.node.bindName;
+            node.push = function(n) {
+                if(typeof n == 'string') {
+                    let p = last(this.children);
+                    if(p && p.type == 'node:text') {
+                        p.value += n;
+                        return p;
+                    }
+                    n = xNode('node:text', {value: n});
+                }
+                assert(n instanceof xNode);
+                this.children.push(n);
+                n._ctx = this._ctx;
+                return n;
+            }
+        },
+        handler: (ctx, node) => {
+            if(node.inline) {
+                node.children.forEach(n => ctx.build(n));
+            } else {
+                ctx.write(`<${node.name}`);
+
+                if(node.attributes.length) {
+                    node.attributes.forEach(p => {
+                        if(p.name == 'class') {
+                            if(p.value) p.value.split(/\s+/).forEach(name => node.class.add(name));
+                            return;
+                        }
+
+                        if(p.value) ctx.write(` ${p.name}="${p.value}"`);
+                        else ctx.write(` ${p.name}`);
+                    })
+                }
+
+                let className = Array.from(node.class).join(' ');
+                if(className) ctx.write(` class="${className}"`);
+
+                if(node.children.length) {
+                    ctx.write('>');
+                    node.children.forEach(n => ctx.build(n));
+                    ctx.write(`</${node.name}>`);
+                } else {
+                    if(node.voidTag) ctx.write(`/>`);
+                    else ctx.write(`></${node.name}>`);
+                }
+            }
+        },
+        bindName: function() {
+            if(!this._boundName) this._boundName = `el${this._ctx.uniqIndex++}`
+            return this._boundName;
+        }
+    },
+    'node:text': {
+        init: (node) => {
+            node.bindName = xNode.init.node.bindName;
+        },
+        handler: (ctx, node) => {
+            ctx.write(node.value);
+        }
+    },
+    'node:comment': {
+        init: (node) => {
+            node.bindName = xNode.init.node.bindName;
+        },
+        handler: (ctx, node) => {
+            if(ctx._ctx.config.debug && !ctx._ctx.config.hideLabel) ctx.write(`<!-- ${node.value} -->`);
+            else ctx.write(`<!---->`);
         }
     }
 };

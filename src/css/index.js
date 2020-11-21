@@ -1,6 +1,6 @@
 
 import csstree from 'css-tree';
-import { assert, genId as utilsGenId } from '../utils.js';
+import { assert, genId as utilsGenId, last } from '../utils.js';
 import nwsapi from './ext/nwsapi';
 
 
@@ -34,8 +34,6 @@ export function processCSS() {
         let ast = csstree.parse(content, option);
         return convertAst(ast, null);
     }
-
-    const last = a => a[a.length - 1];
 
     const isKeyframes = (name) => name == 'keyframes' || name == '-webkit-keyframes' || name == '-moz-keyframes' || name == '-o-keyframes';
 

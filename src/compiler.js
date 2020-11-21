@@ -31,7 +31,8 @@ export async function compile(source, config = {}) {
         compact: true,
         autoSubscribe: true,
         cssGenId: null,
-        plugins: []
+        plugins: [],
+        debug: true
     }, config);
 
     const ctx = {
@@ -83,6 +84,12 @@ export async function compile(source, config = {}) {
             head: xNode('block'),
             code: xNode('block'),
             body: xNode('block')
+        },
+
+        xBuild: node => {
+            let w = new xWriter(ctx);
+            w.build(node);
+            return w.toString();
         }
     };
 
@@ -151,9 +158,7 @@ export async function compile(source, config = {}) {
         body: [ctx.module.head, ctx.module.code, ctx.module.body]
     }));
 
-    const w = new xWriter();
-    w.build(result);
-    ctx.result = w.toString();
+    ctx.result = ctx.xBuild(result);
 
     await hook(ctx, 'build');
     return ctx.result;
