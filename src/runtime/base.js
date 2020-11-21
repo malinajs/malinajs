@@ -1,5 +1,6 @@
 
-import { $watch, $watchReadOnly, $$deepComparator, cloneDeep, $$cloneDeep, $ChangeDetector, $digest, $$compareDeep, cd_onDestroy, addEvent } from './cd';
+import { $watch, $watchReadOnly, $$deepComparator, cloneDeep, $$cloneDeep, $ChangeDetector, $digest,
+    $$compareDeep, cd_onDestroy, addEvent } from './cd';
 import { __app_onerror } from './utils';
 
 let templatecache = {};
@@ -203,9 +204,27 @@ export function $$groupCall(emit) {
 };
 
 
-export const $$makeComponent = ($element, $option) => {
+export const makeComponentBase = ($element, $option) => {
     if(!$option.events) $option.events = {};
     if(!$option.props) $option.props = {};
+
+    return {
+        $option,
+        destroy: noop,
+        $$render: (rootTemplate) => {
+            if ($option.afterElement) {
+                $element.parentNode.insertBefore(rootTemplate, $element.nextSibling);
+            } else {
+                $element.innerHTML = '';
+                $element.appendChild(rootTemplate);
+            }
+        }
+    };
+};
+
+
+export const makeComponent = ($element, $option) => {
+    let $component = makeComponentBase($element, $option);
     let $cd = new $ChangeDetector();
 
     let id = `a${$$uniqIndex++}`;
@@ -223,23 +242,10 @@ export const $$makeComponent = ($element, $option) => {
         return r;
     };
 
-    let $component = {
-        $option,
-        $cd,
-        apply,
-        push: apply,
-        destroy: () => $cd.destroy()
-    };
-
-    $component.$$render = (rootTemplate) => {
-        if ($option.afterElement) {
-            $element.parentNode.insertBefore(rootTemplate, $element.nextSibling);
-        } else {
-            $element.innerHTML = '';
-            $element.appendChild(rootTemplate);
-        }
-    }
-
+    $component.$cd = $cd;
+    $component.apply = apply;
+    $component.push = apply;
+    $component.destroy = () => $cd.destroy();
     return $component;
 };
 

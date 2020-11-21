@@ -219,7 +219,7 @@ export function makeComponent(node, makeEl) {
             `);
             passOption.class = true;
             passOption.push = true;
-            this.use.resolveClass = true;
+            this.require('resolveClass');
             return;
         }
         assert(isSimpleName(name), `Wrong property: '${name}'`);

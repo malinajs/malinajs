@@ -197,8 +197,125 @@ export function compactDOM() {
     go(data.body);
 };
 
+
 export const genId = () => {
     let id = Math.floor(Date.now() * Math.random()).toString(36);
     if(id.length > 6) id = id.substring(id.length - 6)
     return 'm' + id;
+};
+
+
+export function xWriter() {
+    this.result = [];
+    this.indent = 0;
+
+    this.getIdent = function() {
+        let p = '';
+        while(p.length < this.indent * 2) p += '  ';
+        return p;
+    };
+    this.writeIdent = function() {this.write(this.getIdent())};
+    this.write = function(s) {s && this.result.push(s)};
+    this.writeLine = function(s) {
+        this.write(this.getIdent());
+        this.write(s);
+        this.write('\n');
+    }
+    this.toString = function() {return this.result.join('');}
+    this.build = function(node) {
+        if(node != null) node.handler(this, node);
+    }
+}
+
+export function xNode(_type, _data, _handler) {
+    /*
+        xNode(type, data, handler)
+        xNode(type, handler)
+        xNode(data, handler)
+        xNode(handler)
+    */
+    if(!(this instanceof xNode)) return new xNode(_type, _data, _handler);
+
+    let type, data, handler;
+    if(typeof _type == 'string') {
+        type = _type;
+        if(typeof _data == 'function') {
+            assert(!_handler);
+            handler = _data;
+        } else {
+            data = _data;
+            handler = _handler;
+        }
+    } else if(typeof _type == 'function') {
+        assert(!_data && !_handler);
+        handler = _type;
+    } else {
+        assert(typeof _type == 'object');
+        data = _type;
+        handler = _data;
+    }
+
+    if(!handler) handler = xNode.init[type];
+    assert(handler);
+
+    if(data) Object.assign(this, data);
+    if(handler.init) {
+        handler.init(this);
+        handler = handler.handler;
+        assert(handler);
+    }
+
+    this.type = type;
+    this.handler = handler;
+    return this;
+}
+
+xNode.init = {
+    raw: (ctx, node) => {
+        ctx.writeLine(node.value);
+    },
+    block: {
+        init: (node) => {
+            if(!node.body) node.body = [];
+            node.push = function(child) {
+                assert(arguments.length == 1);
+                if(typeof child == 'string') child = xNode('raw', {value: child});
+                this.body.push(child)
+            };
+            node.empty = function() {return !this.body.length;};
+        },
+        handler: (ctx, node) => {
+            if(node.scope) {
+                ctx.writeLine('{');
+                ctx.indent++;
+            }
+            node.body.forEach(n => {
+                if(n == null) return;
+                if(typeof n == 'string') {
+                    if(n) ctx.writeLine(n);
+                } else n.handler(ctx, n);
+            });
+            if(node.scope) {
+                ctx.indent--;
+                ctx.writeLine('}');
+            }
+        }
+    },
+    function: {
+        init: (node) => {
+            if(!node.args) node.args = [];
+            xNode.init.block.init(node);
+        },
+        handler: (ctx, node) => {
+            if(!node.inline) ctx.writeIdent();
+            ctx.write('function');
+            if(node.name) ctx.write(' ' + node.name);
+            ctx.write(`(${node.args.join(', ')}) {\n`);
+            ctx.indent++;
+            xNode.init.block.handler(ctx, node);
+            ctx.indent--;
+            if(node.inline) ctx.write(ctx.getIdent() + '}');
+            else ctx.writeLine('}');
+        }
+    }
 };

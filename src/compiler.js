@@ -1,5 +1,5 @@
 
-import { assert, compactDOM, replace } from './utils.js'
+import { assert, compactDOM, replace, xNode, xWriter } from './utils.js'
 import { parse as parseHTML } from './parser';
 import * as codelib from './code';
 import { buildRuntime, buildBlock } from './builder';
@@ -18,14 +18,14 @@ import { attachSlot } from './parts/slot.js'
 import { makeFragment, attachFragment } from './parts/fragment.js'
 
 
-export const version = '0.6.5';
+export const version = '0.6.6';
 
 
 export async function compile(source, config = {}) {
     config = Object.assign({
         name: 'widget',
         warning: (w) => console.warn('!', w.message),
-        exportDefault: true,
+        exportDefault: true,  // TODO: fix
         inlineTemplate: false,
         hideLabel: false,
         compact: true,
@@ -52,7 +52,12 @@ export async function compile(source, config = {}) {
         makeFragment,
         attachFragment,
         checkRootName: utils.checkRootName,
-        use: {},
+
+        inuse: {},
+        require: name => {
+            ctx.inuse[name] = true;
+            if(name == '$attributes') ctx.inuse.$props = true;
+        },
 
         DOM: null,
         parseHTML,
@@ -69,9 +74,16 @@ export async function compile(source, config = {}) {
         css: null,
         processCSS,
 
-        runtime: {componentHeader: []},
+        runtime: {},
         result: null,
-        buildRuntime
+        buildRuntime,
+
+        module: {
+            top: xNode('block'),
+            head: xNode('block'),
+            code: xNode('block'),
+            body: xNode('block')
+        }
     };
 
     await hook(ctx, 'dom:before');
@@ -113,26 +125,36 @@ export async function compile(source, config = {}) {
 
 
     await hook(ctx, 'build:before');
-    ctx.js_shaking();
+    //ctx.js_shaking();  // TODO: fix
     await hook(ctx, 'build:shaking');
-    ctx.js_build();
+    //ctx.js_build();
     await hook(ctx, 'build:assemble');
-    let code = `
-        import * as $runtime from 'malinajs/runtime.js';
-        import { $watch, $watchReadOnly, $tick } from 'malinajs/runtime.js';
-    `;
 
+    const result = ctx.result = xNode('block');
+    result.push(`import * as $runtime from 'malinajs/runtime.js';`)
+    result.push(`import { $watch, $watchReadOnly, $tick } from 'malinajs/runtime.js';`)
     if(config.hideLabel) {
-        code += `import { $$htmlToFragmentClean as $$htmlToFragment } from 'malinajs/runtime.js';\n`;
+        result.push(`import { $$htmlToFragmentClean as $$htmlToFragment } from 'malinajs/runtime.js';`);
     } else {
-        code += `import { $$htmlToFragment } from 'malinajs/runtime.js';\n`;
+        result.push(`import { $$htmlToFragment } from 'malinajs/runtime.js';`);
     }
+    if(config.injectRuntime) result.push(config.injectRuntime);
+    result.push(ctx.module.top);
 
-    if(config.injectRuntime) code += config.injectRuntime + '\n';
+    result.push(xNode(ctx => {
+        ctx.write('export default ');
+    }));
+    result.push(xNode('function', {
+        name: ctx.config.name,
+        args: ['$element', '$option = {}'],
+        inline: true,
+        body: [ctx.module.head, ctx.module.code, ctx.module.body]
+    }));
 
-    let scriptCode = replace(ctx.script.code, '$$runtimeHeader()', ctx.runtime.header, 1);
-    scriptCode = replace(scriptCode, '$$runtime()', ctx.runtime.body, 1);
-    ctx.result = code + scriptCode;
+    const w = new xWriter();
+    w.build(result);
+    ctx.result = w.toString();
+
     await hook(ctx, 'build');
     return ctx.result;
 };

@@ -1,48 +1,56 @@
 
-import { assert } from '../utils.js'
+import { assert, xNode } from '../utils.js'
 
 
 export function makeifBlock(data, topElementName) {
-    let source = [];
-
     let r = data.value.match(/^#if (.*)$/);
     let exp = r[1];
     assert(exp, 'Wrong binding: ' + data.value);
 
-    let ifBlockName = 'ifBlock' + (this.uniqIndex++);
-    source.push(`function ${ifBlockName}($cd, $parentElement) {`);
+    const source = xNode('function', {
+        name: 'ifBlock' + (this.uniqIndex++),
+        args: ['$cd', '$parentElement']
+    })
+
     let mainBlock, elseBlock;
 
     if(data.bodyMain) {
         mainBlock = this.buildBlock({body: data.bodyMain}, {protectLastTag: true});
         elseBlock = this.buildBlock(data, {protectLastTag: true});
 
-        const convert = elseBlock.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
-        source.push(`
-            let elsefr = ${convert}(\`${this.Q(elseBlock.tpl)}\`);
-            ${elseBlock.source}
-        `);
+        source.push(xNode('if:else', ctx => {
+            const convert = elseBlock.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
+            ctx.writeLine(`let elsefr = ${convert}(\`${this.Q(elseBlock.tpl)}\`);`);
+            ctx.build(elseBlock.source);
+        }));
     } else {
         mainBlock = this.buildBlock(data, {protectLastTag: true});
     }
-    const convert = mainBlock.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
-    source.push(`
-        let mainfr = ${convert}(\`${this.Q(mainBlock.tpl)}\`);
-        ${mainBlock.source}
-    `);
 
-    if(elseBlock) {
-        source.push(`
-            $runtime.$$ifBlock($cd, $parentElement, () => !!(${exp}), mainfr, ${mainBlock.name}, elsefr, ${elseBlock.name});
-        `);
-    } else {
-        source.push(`
-            $runtime.$$ifBlock($cd, $parentElement, () => !!(${exp}), mainfr, ${mainBlock.name});
-        `);
-    }
-    source.push(`};\n ${ifBlockName}($cd, ${topElementName});`);
+    source.push(xNode('if:main', ctx => {
+        const convert = mainBlock.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
+        ctx.writeLine(`let mainfr = ${convert}(\`${this.Q(mainBlock.tpl)}\`);`);
+        ctx.build(mainBlock.source);
+    }));
+
+    source.push(xNode('if:bind', ctx => {
+        if(elseBlock) {
+            ctx.writeLine(`$runtime.$$ifBlock($cd, $parentElement, () => !!(${exp}), mainfr, ${mainBlock.name}, elsefr, ${elseBlock.name});`);
+        } else {
+            ctx.writeLine(`$runtime.$$ifBlock($cd, $parentElement, () => !!(${exp}), mainfr, ${mainBlock.name});`);
+        }
+    }))
+
+    this.require('apply');
     
     return {
-        source: source.join('\n')
-    }
+        source: xNode('if', ctx => {
+            ctx.build(xNode('block', {
+                body: [
+                    source,
+                    `${source.name}($cd, ${topElementName});`
+                ]
+            }))
+        })
+    };
 };

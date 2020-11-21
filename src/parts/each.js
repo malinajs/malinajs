@@ -1,9 +1,8 @@
 
-import { assert, isSimpleName, detectExpressionType } from '../utils.js'
+import { assert, isSimpleName, detectExpressionType, xNode } from '../utils.js'
 
 
 export function makeEachBlock(data, option) {
-    let source = [];
 
     let nodeItems = data.body;
     while(nodeItems.length) {
@@ -26,7 +25,6 @@ export function makeEachBlock(data, option) {
     let arrayName = rx[1];
     let right = rx[2];
     let keyName;
-    let keyFunction;
 
     // get keyName
     rx = right.match(/^(.*)\s*\(\s*([^\(\)]+)\s*\)\s*$/);
@@ -36,7 +34,7 @@ export function makeEachBlock(data, option) {
     }
     right = right.trim();
 
-    let itemName, indexName, keywords, bind0 = '';
+    let itemName, indexName, keywords, bind0 = null;
     if(right[0] == '{') {
         rx = right.match(/^\{([^}]+)\}(.*)$/);
         assert(rx, `Wrong #each expression '${data.value}'`);
@@ -47,12 +45,10 @@ export function makeEachBlock(data, option) {
         indexName = indexName || '$index';
 
         let assignVars = keywords.map(k => `${k} = $$item.${k}`).join(', ');
-        bind0 = `
-            var ${assignVars};
-            $ctx.cd.prefix.push(() => {
-                ${assignVars};
-            });
-        `;
+        bind0 = xNode('each:unwrap', ctx => {
+            ctx.writeLine(`var ${assignVars};`);
+            ctx.writeLine(`$ctx.cd.prefix.push(() => {${assignVars};});`);
+        });
     } else {
         rx = right.trim().split(/\s*\,\s*/);
         assert(rx.length <= 2, `Wrong #each expression '${data.value}'`);
@@ -65,33 +61,53 @@ export function makeEachBlock(data, option) {
     if(keyName == itemName) keyName = null;
     if(keyName) assert(detectExpressionType(keyName) == 'identifier', `Wrong key '${keyName}'`);
 
-    if(!keyName) keyFunction = 'let getKey = $runtime.noop;';
-    else if(keyName == indexName) keyFunction = 'function getKey(_, i) {return i;}';
-    else keyFunction = `function getKey(${itemName}) {return ${keyName};}`;
-
-    const convert = itemData.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
-
-    source.push(`
-        {
-            function bind($ctx, $template, ${itemName}, ${indexName}) {
-                ${bind0}
-                ${itemData.source};
-                ${itemData.name}($ctx.cd, $template);
-                $ctx.rebind = function(_${indexName}, _${itemName}) {
-                    ${indexName} = _${indexName};
-                    ${itemName} = _${itemName};
-                };
-            };
-
-            ${keyFunction};
-
-            let itemTemplate = ${convert}(\`${this.Q(itemData.tpl)}\`);
-
-            $runtime.$$eachBlock($cd, ${option.elName}, ${option.onlyChild?1:0}, () => (${arrayName}), getKey, itemTemplate, bind);
-        }
-    `);
-
-    return {
-        source: source.join('\n')
+    let keyFunction = null;
+    if(keyName) {
+        keyFunction = xNode('each:key', ctx => {
+            if(keyName == indexName) ctx.writeLine('function getKey(_, i) {return i;}');
+            else ctx.writeLine(`function getKey(${itemName}) {return ${keyName};}`);
+        });
     };
+
+    let bind;
+    if(itemData.source) {
+        bind = xNode('function', {
+            name: 'bind',
+            args: ['$ctx', '$template', itemName, indexName],
+            body: [
+                bind0,
+                itemData.source,
+                xNode(ctx => {
+                    ctx.writeLine(`${itemData.name}($ctx.cd, $template);`);
+                    ctx.writeLine(`$ctx.rebind = function(_${indexName}, _${itemName}) {`);
+                    ctx.indent++;
+                    ctx.writeLine(`${indexName} = _${indexName};`);
+                    ctx.writeLine(`${itemName} = _${itemName};`);
+                    ctx.indent--;
+                    ctx.writeLine(`};`);
+                })
+            ]
+        });
+    } else {
+        bind = xNode('function', {
+            name: 'bind',
+            args: ['$ctx'],
+            body: [`$ctx.rebind = $runtime.noop;`]
+        });
+    }
+
+    this.require('apply');
+    const source = xNode('block', {scope: true});
+    source.push(bind);
+    source.push(keyFunction);
+    source.push(xNode('each:template', ctx => {
+        const convert = itemData.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
+        ctx.writeLine(`let itemTemplate = ${convert}(\`${this.Q(itemData.tpl)}\`);`);
+    }));
+    source.push(xNode('each', ctx => {
+        let getKey = keyFunction ? 'getKey' : '$runtime.noop';
+        ctx.writeLine(`$runtime.$$eachBlock($cd, ${option.elName}, ${option.onlyChild?1:0}, () => (${arrayName}), ${getKey}, itemTemplate, bind);`);
+    }));
+
+    return {source};
 };

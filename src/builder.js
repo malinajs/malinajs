@@ -1,12 +1,12 @@
 
-import {assert, svgElements} from './utils.js'
+import {assert, svgElements, xNode} from './utils.js'
 
 
 export function buildRuntime() {
-    let runtime = [`
-        return (function() {
-            let $cd = $component.$cd;
-    `];
+    let runtime = xNode('function', {name: '', inline: true});
+    runtime.push(xNode((ctx) => {
+        if(this.inuse.apply) ctx.writeLine('let $cd = $component.$cd;');
+    }));
 
     let bb = this.buildBlock(this.DOM);
 
@@ -18,29 +18,45 @@ export function buildRuntime() {
     } else {
         runtime.push(`const rootTemplate = $$htmlToFragment(\`${this.Q(rootTemplate)}\`);`);
     }
-    runtime.push(`
-        ${bb.name}($cd, rootTemplate);
-        $component.$$render(rootTemplate);
-    `);
-    if(this.script.onMount) runtime.push(`
-        if($option.noMount) $component.onMount = onMount;
-        else $tick(onMount);
-    `);
+    runtime.push(xNode('raw:template', {
+        name: bb.name
+    }, (ctx, n) => {
+        if(this.inuse.apply) ctx.writeLine(`${n.name}($cd, rootTemplate);`);
+        else ctx.writeLine(`${n.name}(null, rootTemplate);`);
+        ctx.writeLine(`$component.$$render(rootTemplate);`);
+    }));
+
+    if(this.script.onMount) {
+        runtime.push(`if($option.noMount) $component.onMount = onMount;`);
+        runtime.push(`else $tick(onMount);`);
+    }
     if(this.script.onDestroy) runtime.push(`$runtime.cd_onDestroy($cd, onDestroy);`);
     if(this.script.watchers.length) {
-        runtime.push(this.script.watchers.join('\n'));
+        this.script.watchers.forEach(n => runtime.push(n));
     }
 
-    if(this.css) runtime.push(`
-        $runtime.addStyles('${this.css.id}', \`${this.Q(this.css.getContent())}\`);
-    `);
+    runtime.push(xNode('addStyle', ctx => {
+        if(!this.css) return;
+        ctx.writeLine(`$runtime.addStyles('${this.css.id}', \`${this.Q(this.css.getContent())}\`);`);
+    }));
 
-    runtime.push(`
-            $$apply();
-            return $component;
-        })();`);
+    runtime.push(xNode('raw:apply', ctx => {
+        if(this.inuse.apply) ctx.writeLine('$$apply();');
+    }));
 
-    if(this.use.resolveClass) {
+    runtime.push(`return $component;`);
+
+    let result = xNode(ctx => {
+        ctx.writeIdent();
+        ctx.write('return (');
+        ctx.build(runtime);
+        ctx.write(')();\n');
+    });
+
+    this.module.body.push(result);
+
+    this.module.head.push(xNode('resolveClass', (ctx) => {
+        if(!this.inuse.resolveClass) return;
         if(this.css) {
             let {classMap, metaClass, main} = this.css.getClassMap();
             if(main) main = `'${main}'`;
@@ -50,23 +66,23 @@ export function buildRuntime() {
                 let value = i[1] === true ? 'true' : `'${i[1]}'`;
                 return `'${i[0]}': ${value}`;
             }).join(', ');
-            this.runtime.componentHeader.push(`
-                const $$resolveClass = $runtime.makeClassResolver(
-                    $option, {${classMap}}, {${metaClass}}, ${main}
-                );
-            `);
-        }
-    }
 
-    this.runtime.header = this.runtime.componentHeader.join('\n');
-    this.runtime.body = runtime.join('\n');
+            ctx.writeLine(`const $$resolveClass = $runtime.makeClassResolver(`);
+            ctx.indent++;
+            ctx.writeLine(`$option, {${classMap}}, {${metaClass}}, ${main}`)
+            ctx.indent--;
+            ctx.writeLine(`};`)
+        } else {
+            ctx.writeLine(`const $$resolveClass = $runtime.noop;`);
+        }
+    }))
 }
 
 
 export function buildBlock(data, option) {
     let tpl = [];
     let lvl = [];
-    let binds = [];
+    let binds = xNode('block');
     let DN = {};
     let result = {};
     let lastTag = false;
@@ -136,7 +152,15 @@ export function buildBlock(data, option) {
                 if(n.value.indexOf('{') >= 0) {
                     tpl.push(' ');
                     let exp = this.parseText(n.value).result;
-                    binds.push(`$runtime.bindText($cd, ${getElementName()}, () => ${exp});`);
+
+                    binds.push(xNode('bindText', {
+                        el: getElementName(),
+                        exp: exp
+                    }, (ctx, n) => {
+                        if(this.inuse.apply) ctx.writeLine(`$runtime.bindText($cd, ${n.el}, () => ${n.exp});`);
+                        else ctx.writeLine(`${n.el}.textContent = ${n.exp};`);
+                    }));
+
                 } else tpl.push(n.value);
                 lastText = tpl.length;
             } else if(n.type === 'template') {
@@ -177,6 +201,7 @@ export function buildBlock(data, option) {
                 if(n.attributes.some(a => a.name.startsWith('{...'))) {
                     n.spreadObject = 'spread' + (this.uniqIndex++);
                     if(this.css) n.classes.add(this.css.id);
+                    this.require('apply');
                     binds.push(`
                         let ${n.spreadObject} = $runtime.$$makeSpreadObject($cd, ${getElementName()}, '${this.css && this.css.id}');
                     `);
@@ -264,15 +289,15 @@ export function buildBlock(data, option) {
     go(0, data, true);
     if(lastTag && option && option.protectLastTag) tpl.push('<!---->');
 
-    let source = [];
     result.tpl = this.Q(tpl.join(''));
 
-    if(binds.length) {
+    if(!binds.empty()) {
         result.name = '$$build' + (this.uniqIndex++);
-        
-        let args = ['$cd', '$parentElement'];
-        if(data.args) args.push.apply(args, data.args);
-        source.push(`function ${result.name}(${args.join(', ')}) {\n`);
+
+        let source = xNode('function', {
+            name: result.name,
+            args: ['$cd', '$parentElement'].concat([] || data.args)
+        });
 
         const buildNodes = (d, lvl) => {
             let keys = Object.keys(d).filter(k => k != 'name');
@@ -280,7 +305,7 @@ export function buildBlock(data, option) {
 
             if(d.name) {
                 let line = lvl.join('');
-                source.push(`let ${d.name} = ${line};\n`);
+                source.push(`let ${d.name} = ${line};`);
                 lvl = [d.name];
             }
 
@@ -291,12 +316,11 @@ export function buildBlock(data, option) {
         }
         buildNodes(DN, ['$parentElement']);
 
-        source.push(binds.join('\n'));
-        source.push(`};`);
-        result.source = source.join('');
+        source.push(binds);
+        result.source = source;
     } else {
         result.name = '$runtime.noop';
-        result.source = '';
+        result.source = null;
     }
     return result;
 };

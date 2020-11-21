@@ -1,7 +1,7 @@
 
 import acorn from 'acorn';
 import astring from 'astring';
-import { assert, replace, detectExpressionType } from './utils.js'
+import { assert, replace, detectExpressionType, xNode } from './utils.js'
 
 
 export function parse() {
@@ -24,6 +24,9 @@ export function parse() {
             return rx[1] + '$$_noCheck;';
         }).join('\n');
         this.script.ast = acorn.parse(source, {sourceType: 'module', ecmaVersion: 12});
+
+        if(source.indexOf('$props') >= 0) this.require('$props');
+        if(source.indexOf('$attributes') >= 0) this.require('$attributes');
     } else {
         this.script.ast = {
             body: [],
@@ -61,7 +64,8 @@ export function transform() {
         ArrowFunctionExpression: 1
     }
 
-    function applyBlock() {
+    const applyBlock = () => {
+        this.require('apply');
         return {
             _apply: true,
             type: 'ExpressionStatement',
@@ -75,7 +79,8 @@ export function transform() {
         }
     }
 
-    function returnApplyBlock(a) {
+    const returnApplyBlock = (a) => {
+        this.require('apply');
         return {
             _apply: true,
             callee: {
@@ -289,9 +294,16 @@ export function transform() {
     });
 
     let header = [];
-    header.push(rawNode('const $component = $runtime.$$makeComponent($element, $option);'));
-    header.push(rawNode('const $$apply = $component.apply;'));
-    header.push(rawNode('$$runtimeHeader();'));
+    header.push(rawNode(() => {
+        if(this.inuse.apply) {
+            return 'const $component = $runtime.makeComponent($element, $option);';
+        } else {
+            return 'const $component = $runtime.makeComponentBase($element, $option);';
+        }
+    }));
+    header.push(rawNode(() => {
+        if(this.inuse.apply) return 'const $$apply = $component.apply;';
+    }));
 
     if(lastPropIndex != null) {
         header.push(rawNode('const $props = $option.props;'));
@@ -304,8 +316,12 @@ export function transform() {
             rawNode(`}, {${result.props.map(n => n + ': () => '+n).join(',')}});`)
         );
     } else {
-        header.push(rawNode('const $props = $option.props;', {_name: '$props'}));
-        header.push(rawNode('let $attributes = $props;', {_name: '$attributes'}));
+        header.push(rawNode(() => {
+            if(this.inuse.$props) return 'const $props = $option.props;';
+        }, {_name: '$props'}));
+        header.push(rawNode(() => {
+            if(this.inuse.$attributes) return 'let $attributes = $props;';
+        }, {_name: '$attributes'}));
     }
 
     if(this.config.autoSubscribe) {
@@ -316,9 +332,6 @@ export function transform() {
 
     if(!rootFunctions.$emit) header.push(rawNode('const $emit = $runtime.$makeEmitter($option);', {_name: '$emit'}));
     if(insertOnDestroy) header.push(rawNode('function $onDestroy(fn) {$runtime.cd_onDestroy($component.$cd, fn);};'));
-    while(header.length) {
-        resultBody.unshift(header.pop());
-    }
 
     if(this.scriptNodes[0] && this.scriptNodes[0].attributes.some(a => a.name == 'property')) {
         result.props.forEach(name => {
@@ -326,44 +339,11 @@ export function transform() {
         });
     }
 
-    resultBody.push(rawNode('$$runtime();'));
     this.script.rootLevel = resultBody;
 
-    let widgetFunc = {
-        body: {
-            type: 'BlockStatement',
-            body: resultBody
-        },
-        id: {
-            type: 'Identifier"',
-            name: this.config.name
-        },
-        params: [{
-            type: 'Identifier',
-            name: '$element'
-        }, {
-            type: 'AssignmentPattern',
-            left: {
-                type: 'Identifier',
-                name: '$option'
-            },
-            right: {
-                type: 'ObjectExpression',
-                properties: []
-            }
-        }],
-        type: 'FunctionDeclaration'
-    };
-
-    if(this.config.exportDefault) {
-        widgetFunc = {
-            type: 'ExportDefaultDeclaration',
-            declaration: widgetFunc
-        }
-    };
-
-    ast.body = [widgetFunc];
-    ast.body.unshift.apply(ast.body, imports);
+    this.module.top.push(xNode('ast', {body: imports}));
+    this.module.head.push(xNode('ast', {body: header}));
+    this.module.code.push(xNode('ast', {body: resultBody}));
 };
 
 export function build() {
@@ -386,4 +366,28 @@ function rawNode(exp, n) {
     n.type = 'Raw';
     n.value = exp;
     return n;
+}
+
+
+const generator = Object.assign({
+    ImportExpression: function(node, state) {
+        state.write('import(');
+        this[node.source.type](node.source, state);
+        state.write(')');
+    },
+    Raw: function(node, state) {
+        let value = typeof node.value == 'function' ? node.value() : node.value;
+        if(value) state.write(value);
+    }
+}, astring.baseGenerator);
+
+
+xNode.init.ast = (ctx, node) => {
+    if(!node.body.length) return;
+    let code = astring.generate({
+        type: 'Program',
+        sourceType: 'module',
+        body: node.body
+    }, {generator, startingIndentLevel: ctx.indent});
+    ctx.write(code);
 }
