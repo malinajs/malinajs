@@ -45,7 +45,7 @@ export function attachSlot(slotName, label, node) {
     return {source: `{
         let $slot = $option.slots && $option.slots.${slotName};
         if($slot) {
-            let s = $slot(${label});
+            let s = $slot(${label}, $component);
             $runtime.cd_onDestroy($cd, s.destroy);
             ${bind.join('\n')}
         } ${placeholder};

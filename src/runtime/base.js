@@ -229,7 +229,7 @@ export const $$makeComponent = ($element, $option) => {
         apply,
         push: apply,
         destroy: () => $cd.destroy(),
-        context: $option.$$ ? Object.create($option.$$.context) : {}
+        context: $option.$$ ? Object.assign({}, $option.$$.context) : {}
     };
 
     $component.$$render = (rootTemplate) => {
