@@ -124,7 +124,7 @@ export function bindProp(prop, node, element) {
                 funcName,
                 exp,
                 el: element.bindName(),
-                $element: exp.indexOf('$element') >= 0
+                $element: exp.includes('$element')
             }, (ctx, n) => {
                 if(n.$element) {
                     ctx.writeLine('{');
@@ -141,7 +141,7 @@ export function bindProp(prop, node, element) {
             return {bind};
         } else {
             this.require('apply');
-            let bind = xNode('bindEvent', {
+            const bind = xNode('bindEvent', {
                 el: element.bindName(),
                 event,
                 mod
@@ -156,7 +156,7 @@ export function bindProp(prop, node, element) {
                 bind.handlerName = handler;
             } else {
                 bind.exp = this.Q(exp);
-                bind.$element = exp.indexOf('$element') >= 0;
+                bind.$element = exp.includes('$element');
             }
 
             return {bind};
@@ -205,16 +205,20 @@ export function bindProp(prop, node, element) {
         let styleName = arg;
         let exp = prop.value ? getExpression() : styleName;
         this.detectDependency(exp);
-        if(exp.indexOf('$element') >= 0) {
-            return {bind: `{
-                    let $element = ${element.bindName()};
-                    $runtime.bindStyle($cd, $element, '${styleName}', () => (${exp}));
-                }`};
-        } else {
-            return {bind: `
-                $runtime.bindStyle($cd, ${element.bindName()}, '${styleName}', () => (${exp}));
-            `};
-        }
+
+        let hasElement = exp.includes('$element');
+        return {bind: xNode('block', {
+            scope: hasElement,
+            body: [xNode('bindStyle', {
+                el: element.bindName(),
+                styleName,
+                exp,
+                hasElement
+            }, (ctx, data) => {
+                if(data.hasElement) ctx.writeLine(`let $element=${data.el};`);
+                ctx.writeLine(`$runtime.bindStyle($cd, ${data.el}, '${data.styleName}', () => (${data.exp}));`);
+            })]
+        })};
     } else if(name == 'use') {
         this.require('apply');
         if(arg) {
@@ -298,7 +302,7 @@ export function bindProp(prop, node, element) {
             const parsed = this.parseText(prop.value);
             this.detectDependency(parsed);
             let exp = parsed.result;
-            let hasElement = prop.value.indexOf('$element') >= 0;
+            let hasElement = prop.value.includes('$element');
 
             if(node.spreadObject) {
                 return {bind: `
@@ -316,32 +320,25 @@ export function bindProp(prop, node, element) {
                 placeholder: true,
                 src: true
             }
-            if(propList[name]) {
-                if(hasElement) {
-                    return {bind: `{
-                        let $element=${element.bindName()};
-                        $watchReadOnly($cd, () => (${exp}), (value) => {$element.${name} = value;});
-                    }`};
-                } else {
-                    return {bind: `$watchReadOnly($cd, () => (${exp}), (value) => {${element.bindName()}.${name} = value;});`};
-                }
-            } else {
-                if(hasElement) {
-                    return {
-                        bind: `{
-                            let $element=${element.bindName()};
-                            $runtime.bindAttribute($cd, $element, '${name}', () => (${exp}));
-                        }`
-                    };
-                } else {
-                    let el = element.bindName();
-                    return {
-                        bind: `
-                            $runtime.bindAttribute($cd, ${el}, '${name}', () => (${exp}));
-                        `
-                    };
-                }
-            }
+
+            return {bind: xNode('block', {
+                scope: hasElement,
+                body: [
+                    xNode('bindAttribute', {
+                        name,
+                        exp,
+                        hasElement,
+                        el: element.bindName()
+                    }, (ctx, data) => {
+                        if(data.hasElement) ctx.writeLine(`let $element=${data.el};`);
+                        if(propList[name]) {
+                            ctx.writeLine(`$watchReadOnly($cd, () => (${data.exp}), (value) => {${data.el}.${name} = value;});`);
+                        } else {
+                            ctx.writeLine(`$runtime.bindAttribute($cd, ${data.el}, '${data.name}', () => (${data.exp}));`);
+                        }
+                    })
+                ]
+            })};
         }
 
         if(node.spreadObject) {
