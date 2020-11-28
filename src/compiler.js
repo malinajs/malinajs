@@ -1,10 +1,9 @@
 
-import { assert, compactDOM, replace, xNode, xWriter } from './utils.js'
+import { assert, compactDOM, xNode, xWriter } from './utils.js'
 import { parse as parseHTML } from './parser';
 import * as codelib from './code';
 import { buildRuntime, buildBlock } from './builder';
 import { processCSS } from './css/index';
-import js_shaking from './shaking';
 
 import * as utils from './utils.js'
 import { parseText } from './parser.js'
@@ -18,7 +17,7 @@ import { attachSlot } from './parts/slot.js'
 import { makeFragment, attachFragment } from './parts/fragment.js'
 
 
-export const version = '0.6.6';
+export const version = '0.6.7';
 
 
 export async function compile(source, config = {}) {
@@ -59,6 +58,7 @@ export async function compile(source, config = {}) {
             ctx.inuse[name] = true;
             if(name == '$attributes') ctx.inuse.$props = true;
         },
+        detectDependency,
 
         DOM: null,
         parseHTML,
@@ -69,7 +69,6 @@ export async function compile(source, config = {}) {
         js_parse: codelib.parse,
         js_transform: codelib.transform,
         js_build: codelib.build,
-        js_shaking,
 
         styleNodes: null,
         css: null,
@@ -132,11 +131,6 @@ export async function compile(source, config = {}) {
 
 
     await hook(ctx, 'build:before');
-    //ctx.js_shaking();  // TODO: fix
-    await hook(ctx, 'build:shaking');
-    //ctx.js_build();
-    await hook(ctx, 'build:assemble');
-
     const result = ctx.result = xNode('block');
     result.push(`import * as $runtime from 'malinajs/runtime.js';`)
     result.push(`import { $watch, $watchReadOnly, $tick } from 'malinajs/runtime.js';`)
@@ -148,8 +142,8 @@ export async function compile(source, config = {}) {
     if(config.injectRuntime) result.push(config.injectRuntime);
     result.push(ctx.module.top);
 
-    result.push(xNode(ctx => {
-        ctx.write('export default ');
+    result.push(xNode('exportDefault', ctx => {
+        if(config.exportDefault) ctx.write('export default ');
     }));
     result.push(xNode('function', {
         name: ctx.config.name,
@@ -171,3 +165,22 @@ async function hook(ctx, name) {
         if(fn) await fn(ctx);
     }
 };
+
+
+function detectDependency(data) {
+    const check = name => {
+        for(let k of ['$props', '$attributes', '$emit']) {
+            if(name.includes(k)) this.require(k);
+        }
+    }
+
+    if(typeof data == 'string') {
+        check(data);
+    } else {
+        assert(data.parts);
+
+        for(let p of data.parts) {
+            if(p.type == 'exp') check(p.value);
+        }
+    }
+}

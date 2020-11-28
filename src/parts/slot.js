@@ -18,6 +18,7 @@ export function attachSlot(slotName, label, node) {
             assert(isSimpleName(name));
             if(value[0] == '{') {
                 value = unwrapExp(value);
+                this.detectDependency(value);
                 bind.push(`
                     if('set_${name}' in s) {
                         $watch($cd, () => (${value}), s.set_${name}, {ro: true, cmp: $runtime.$$compareDeep});

@@ -93,6 +93,7 @@ export function makeComponent(node, element) {
             else outer = inner;
             assert(isSimpleName(inner), `Wrong property: '${inner}'`);
             assert(detectExpressionType(outer) == 'identifier', 'Wrong bind name: ' + outer);
+            this.detectDependency(outer);
 
             let watchName = '$$w' + (this.uniqIndex++);
             propLevelType = 'binding';
@@ -139,6 +140,7 @@ export function makeComponent(node, element) {
 
                 name = name.substring(3);
                 assert(detectExpressionType(name) == 'identifier', 'Wrong prop');
+                this.detectDependency(name);
                 passOption.push = true;
                 let propObject = propLevel ? `$$lvl[${propLevel}]` : 'props';
                 head.push(`
@@ -180,6 +182,8 @@ export function makeComponent(node, element) {
                 } else isFunc = type == 'function';
             }
 
+            this.detectDependency(exp || handler);
+
             let callback;
             if(isFunc) {
                 callback = exp;
@@ -207,6 +211,7 @@ export function makeComponent(node, element) {
             assert(value);
 
             const parsed = this.parseText(prop.value);
+            this.detectDependency(parsed);
             let exp = parsed.result;
             let funcName = `$$pf${this.uniqIndex++}`;
             head.push(`
@@ -225,7 +230,9 @@ export function makeComponent(node, element) {
         }
         assert(isSimpleName(name), `Wrong property: '${name}'`);
         if(value && value.indexOf('{') >= 0) {
-            let exp = this.parseText(value).result;
+            const pe = this.parseText(value);
+            this.detectDependency(pe);
+            let exp = pe.result;
 
             if(propLevelType == 'spreading') propLevel++;
             propLevelType = 'prop';
@@ -313,6 +320,7 @@ export function makeComponent(node, element) {
     if(!dynamicComponent) {
         return {bind: `${makeSrc(node.name, true)}`};
     } else {
+        this.detectDependency(dynamicComponent);
         let componentName = '$$comp' + (this.uniqIndex++);
         return {bind: `
         {

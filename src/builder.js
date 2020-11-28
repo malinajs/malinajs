@@ -117,11 +117,11 @@ export function buildBlock(data, option) {
             if(n.type === 'text') {
                 if(n.value.indexOf('{') >= 0) {
                     let t = tpl.push(' ');
-                    let exp = this.parseText(n.value).result;
-
+                    const pe = this.parseText(n.value);
+                    this.detectDependency(pe);
                     binds.push(xNode('bindText', {
                         el: t.bindName(),
-                        exp: exp
+                        exp: pe.result
                     }, (ctx, n) => {
                         if(this.inuse.apply) ctx.writeLine(`$runtime.bindText($cd, ${n.el}, () => ${n.exp});`);
                         else ctx.writeLine(`${n.el}.textContent = ${n.exp};`);
@@ -137,7 +137,7 @@ export function buildBlock(data, option) {
             } else if(n.type === 'node') {
                 if(n.name == 'component' || n.name.match(/^[A-Z]/)) {
                     // component
-                    let el = xNode('node:comment', {label: true, value: n.name})
+                    let el = xNode('node:comment', {label: true, value: n.name});
                     tpl.push(el);
                     let b = this.makeComponent(n, el);
                     binds.push(b.bind);
@@ -145,16 +145,16 @@ export function buildBlock(data, option) {
                 }
                 if(n.name == 'slot') {
                     let slotName = n.elArg || 'default';
-                    if(this.config.hideLabel) tpl.push(`<!---->`);
-                    else tpl.push(`<!-- Slot ${slotName} -->`);
-                    let b = this.attachSlot(slotName, getElementName(), n);
+                    let el = xNode('node:comment', {label: true, value: slotName});
+                    tpl.push(el);
+                    let b = this.attachSlot(slotName, el.bindName(), n);
                     binds.push(b.source);
                     return;
                 }
                 if(n.name == 'fragment') {
-                    if(this.config.hideLabel) tpl.push(`<!---->`);
-                    else tpl.push(`<!-- Fragment ${n.name} -->`);
-                    let b = this.attachFragment(n, getElementName());
+                    let el = xNode('node:comment', {label: true, value: `fragment ${n.name}`});
+                    tpl.push(el);
+                    let b = this.attachFragment(n, el.bindName());
                     binds.push(b.source);
                     return;
                 }
@@ -162,12 +162,12 @@ export function buildBlock(data, option) {
                 let el = xNode('node', {name: n.name});
                 tpl.push(el);
 
-                if(n.attributes.some(a => a.name.startsWith('{...'))) {  // TODO: fix
+                if(n.attributes.some(a => a.name.startsWith('{...'))) {
                     n.spreadObject = 'spread' + (this.uniqIndex++);
                     if(this.css) n.classes.add(this.css.id);
                     this.require('apply');
                     binds.push(`
-                        let ${n.spreadObject} = $runtime.$$makeSpreadObject($cd, ${getElementName()}, '${this.css && this.css.id}');
+                        let ${n.spreadObject} = $runtime.$$makeSpreadObject($cd, ${el.bindName()}, '${this.css && this.css.id}');
                     `);
                 }
                 n.attributes.forEach(p => {
@@ -207,15 +207,15 @@ export function buildBlock(data, option) {
                 let exp = r[2];
 
                 if(name == 'html') {
-                    if(this.config.hideLabel) tpl.push(`<!---->`);
-                    else tpl.push(`<!-- html -->`);
-                    binds.push(this.makeHtmlBlock(exp, getElementName()));
+                    let el = xNode('node:comment', {label: true, value: 'html'});
+                    tpl.push(el);
+                    binds.push(this.makeHtmlBlock(exp, el.bindName()));
                     return;
                 } else throw 'Wrong tag';
             } else if(n.type === 'await') {
-                if(this.config.hideLabel) tpl.push(`<!---->`);
-                else tpl.push(`<!-- ${n.value} -->`);
-                let block = this.makeAwaitBlock(n, getElementName());
+                let el = xNode('node:comment', {label: true, value: n.value});
+                tpl.push(el);
+                let block = this.makeAwaitBlock(n, el.bindName());
                 binds.push(block.source);
                 return;
             } else if(n.type === 'comment') {

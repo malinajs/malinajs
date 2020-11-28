@@ -66,6 +66,7 @@ export function makeAwaitBlock(node, elementName) {
     source.push(`
         $runtime.$$awaitBlock($cd, ${elementName}, () => ${exp}, $$apply, ${build_main}, ${build_then}, ${build_catch}, ${tpl_main}, ${tpl_then}, ${tpl_catch});
     `);
+    this.detectDependency(exp);
 
     return {source: `{
         ${source.join('\n')}

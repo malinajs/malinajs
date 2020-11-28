@@ -104,6 +104,8 @@ export function bindProp(prop, node, element) {
         if(needPrevent && !preventInserted) mod += '$event.preventDefault();';
         if(mod) mod += ' ';
 
+        this.detectDependency(exp || handler);
+
         if(exp) {
             let type = detectExpressionType(exp);
             if(type == 'identifier') {
@@ -185,6 +187,7 @@ export function bindProp(prop, node, element) {
         assert(arg.length == 0);
         assert(detectExpressionType(exp) == 'identifier', 'Wrong bind name: ' + prop.content);
         if(attr == 'value' && ['number', 'range'].includes(inputType)) attr = 'valueAsNumber';
+        this.detectDependency(exp);
 
         let spreading = '';
         if(node.spreadObject) spreading = `${node.spreadObject}.except(['${attr}']);`;
@@ -201,6 +204,7 @@ export function bindProp(prop, node, element) {
         this.require('apply');
         let styleName = arg;
         let exp = prop.value ? getExpression() : styleName;
+        this.detectDependency(exp);
         if(exp.indexOf('$element') >= 0) {
             return {bind: `{
                     let $element = ${element.bindName()};
@@ -217,9 +221,11 @@ export function bindProp(prop, node, element) {
             assert(isSimpleName(arg), 'Wrong name: ' + arg);
             this.checkRootName(arg);
             let args = prop.value ? `, () => [${getExpression()}]` : '';
+            this.detectDependency(args);
             return {bind: `$runtime.bindAction($cd, ${element.bindName()}, ${arg}${args});`};
         }
         let exp = getExpression();
+        this.detectDependency(exp);
         return {bind: `$tick(() => { let $element=${element.bindName()}; ${exp}; $$apply(); });`};
     } else if(name == 'class') {
         if(node.__skipClass) return {};
@@ -255,6 +261,7 @@ export function bindProp(prop, node, element) {
                     let className = prop.name.slice(6);
                     assert(className);
                     let exp = prop.value ? unwrapExp(prop.value) : className;
+                    this.detectDependency(exp);
                     return `(${exp}) ? \`${this.Q(className)}\` : ''`;
                 }
             }).join(') + \' \' + (');
@@ -272,10 +279,12 @@ export function bindProp(prop, node, element) {
                     this.require('apply');
                     let className = prop.name.slice(6);
                     assert(className);
+                    let exp = prop.value ? unwrapExp(prop.value) : className;
+                    this.detectDependency(exp);
                     bind.push(xNode('bindClass', {
                         el: element.bindName(),
                         className,
-                        exp: prop.value ? unwrapExp(prop.value) : className
+                        exp
                     }, (ctx, data) => {
                         ctx.writeLine(`$runtime.bindClass($cd, ${data.el}, () => !!(${data.exp}), '${data.className}');`)
                     }));
@@ -287,6 +296,7 @@ export function bindProp(prop, node, element) {
         if(prop.value && prop.value.indexOf('{') >= 0) {
             this.require('apply');
             const parsed = this.parseText(prop.value);
+            this.detectDependency(parsed);
             let exp = parsed.result;
             let hasElement = prop.value.indexOf('$element') >= 0;
 

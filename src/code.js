@@ -1,7 +1,7 @@
 
 import acorn from 'acorn';
 import astring from 'astring';
-import { assert, replace, detectExpressionType, xNode } from './utils.js'
+import { assert, detectExpressionType, xNode } from './utils.js'
 
 
 export function parse() {
@@ -25,8 +25,10 @@ export function parse() {
         }).join('\n');
         this.script.ast = acorn.parse(source, {sourceType: 'module', ecmaVersion: 12});
 
-        if(source.indexOf('$props') >= 0) this.require('$props');
-        if(source.indexOf('$attributes') >= 0) this.require('$attributes');
+        if(source.includes('$props')) this.require('$props');
+        if(source.includes('$attributes')) this.require('$attributes');
+        if(source.includes('$emit')) this.require('$emit');
+        if(source.includes('$onDestroy')) this.require('$onDestroy');
     } else {
         this.script.ast = {
             body: [],
@@ -277,6 +279,7 @@ export function transform() {
                         init: {type: 'Identifier', name: '$props'}
                     }]
                 });
+                this.require('$props');
                 lastPropIndex = resultBody.length;
             });
             return;
@@ -306,22 +309,28 @@ export function transform() {
     }));
 
     if(lastPropIndex != null) {
-        header.push(rawNode('const $props = $option.props;'));
-        resultBody.splice(lastPropIndex, 0,
-            rawNode(`let $$skipAttrs = {${result.props.map(n => n + ':1').join(',')}};`, {_name: '$attributes'}),
-            rawNode('let $attributes = $runtime.recalcAttributes($props, $$skipAttrs);', {_name: '$attributes'}),
-            rawNode(`$runtime.completeProps($component, () => {
-                ({${result.props.join(',')}} = $props);`),
-            rawNode('$attributes = $runtime.recalcAttributes($props, $$skipAttrs);', {_name: '$attributes'}),
-            rawNode(`}, {${result.props.map(n => n + ': () => '+n).join(',')}});`)
-        );
+        header.push(rawNode(() => {
+            if(this.inuse.$props) return 'const $props = $option.props;';
+        }));
+
+        resultBody.splice(lastPropIndex, 0, rawNode(() => {
+            if(!this.inuse.$attributes) return;
+            let code = [];
+            code.push(`let $$skipAttrs = {${result.props.map(n => n + ':1').join(',')}};`);
+            code.push('let $attributes = $runtime.recalcAttributes($props, $$skipAttrs);');
+            code.push(`$runtime.completeProps($component, () => {`);
+            code.push(`  ({${result.props.join(',')}} = $props);`);
+            code.push('  $attributes = $runtime.recalcAttributes($props, $$skipAttrs);');
+            code.push(`}, {${result.props.map(n => n + ': () => '+n).join(',')}});`);
+            return code;
+        }));
     } else {
         header.push(rawNode(() => {
             if(this.inuse.$props) return 'const $props = $option.props;';
-        }, {_name: '$props'}));
+        }));
         header.push(rawNode(() => {
             if(this.inuse.$attributes) return 'let $attributes = $props;';
-        }, {_name: '$attributes'}));
+        }));
     }
 
     if(this.config.autoSubscribe) {
@@ -330,8 +339,16 @@ export function transform() {
         });
     }
 
-    if(!rootFunctions.$emit) header.push(rawNode('const $emit = $runtime.$makeEmitter($option);', {_name: '$emit'}));
-    if(insertOnDestroy) header.push(rawNode('function $onDestroy(fn) {$runtime.cd_onDestroy($component.$cd, fn);};'));
+    if(!rootFunctions.$emit) {
+        header.push(rawNode(() => {
+            if(this.inuse.$emit) return 'const $emit = $runtime.$makeEmitter($option);';
+        }));
+    }
+    if(insertOnDestroy) {
+        header.push(rawNode(() => {
+            if(this.inuse.$onDestroy) return 'function $onDestroy(fn) {$runtime.cd_onDestroy($component.$cd, fn);};';
+        }));
+    }
 
     if(this.scriptNodes[0] && this.scriptNodes[0].attributes.some(a => a.name == 'property')) {
         result.props.forEach(name => {
@@ -377,7 +394,10 @@ const generator = Object.assign({
     },
     Raw: function(node, state) {
         let value = typeof node.value == 'function' ? node.value() : node.value;
-        if(value) state.write(value);
+        if(value) {
+            if(Array.isArray(value)) value.forEach(v => state.write(v));
+            else state.write(value);
+        }
     }
 }, astring.baseGenerator);
 

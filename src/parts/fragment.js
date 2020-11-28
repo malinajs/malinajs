@@ -79,6 +79,7 @@ export function attachFragment(node, elementName) {
                 }
             }
             assert(!handler ^ !exp, prop.content);
+            this.detectDependency(exp || handler);
 
             if(exp) {
                 let type = detectExpressionType(exp);
@@ -111,6 +112,7 @@ export function attachFragment(node, elementName) {
             assert(value);
             if(value.indexOf('{') >= 0) {
                 let exp = unwrapExp(value);
+                this.detectDependency(exp);
                 head.push(`args.${name} = () => (${exp});`);
             } else {
                 head.push(`args.${name} = \`${this.Q(value)}\`;`);

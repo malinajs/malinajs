@@ -109,6 +109,7 @@ export function makeEachBlock(data, option) {
         let getKey = keyFunction ? 'getKey' : '$runtime.noop';
         ctx.writeLine(`$runtime.$$eachBlock($cd, ${option.elName}, ${option.onlyChild?1:0}, () => (${arrayName}), ${getKey}, itemTemplate, bind);`);
     }));
+    this.detectDependency(arrayName);
 
     return {source};
 };

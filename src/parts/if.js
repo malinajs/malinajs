@@ -6,6 +6,7 @@ export function makeifBlock(data, element) {
     let r = data.value.match(/^#if (.*)$/);
     let exp = r[1];
     assert(exp, 'Wrong binding: ' + data.value);
+    this.detectDependency(exp);
 
     const source = xNode('function', {
         name: 'ifBlock' + (this.uniqIndex++),
@@ -20,7 +21,8 @@ export function makeifBlock(data, element) {
 
         source.push(xNode('if:else', ctx => {
             const convert = elseBlock.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
-            ctx.writeLine(`let elsefr = ${convert}(\`${this.Q(elseBlock.tpl)}\`);`);
+            let template = this.xBuild(elseBlock.tpl);
+            ctx.writeLine(`let elsefr = ${convert}(\`${this.Q(template)}\`);`);
             ctx.build(elseBlock.source);
         }));
     } else {
