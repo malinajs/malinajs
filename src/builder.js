@@ -3,31 +3,19 @@ import {assert, svgElements, xNode, last} from './utils.js'
 
 
 export function buildRuntime() {
-    let runtime = xNode('function', {name: '', inline: true});
+    let runtime = xNode('block', {scope: true});
     runtime.push(xNode((ctx) => {
         if(this.inuse.apply) ctx.writeLine('let $cd = $component.$cd;');
     }));
 
-    let bb = this.buildBlock(this.DOM);
-
-    let rootTemplate = bb.tpl;
-    runtime.push(bb.source);
-
-    if(bb.svg) {
-        runtime.push(`const rootTemplate = $runtime.svgToFragment(\`${this.Q(rootTemplate)}\`);`);
-    } else {
-        runtime.push(xNode('makeTemplate', ctx => {
-            let template = this.xBuild(rootTemplate);
-            ctx.writeLine(`const rootTemplate = $$htmlToFragment(\`${this.Q(template)}\`);`);
-        }));
-    }
-    runtime.push(xNode('raw:template', {
-        name: bb.name
-    }, (ctx, n) => {
-        if(this.inuse.apply) ctx.writeLine(`${n.name}($cd, rootTemplate);`);
-        else ctx.writeLine(`${n.name}(null, rootTemplate);`);
-        ctx.writeLine(`$component.$$render(rootTemplate);`);
+    let bb = this.buildBlock(this.DOM, {inline: true});
+    runtime.push(xNode('template', {
+        name: '$parentElement',
+        body: bb.tpl,
+        svg: bb.svg
     }));
+    runtime.push(bb.source);
+    runtime.push(`$component.$$render($parentElement);`);
 
     if(this.script.onMount) {
         runtime.push(`if($option.noMount) $component.onMount = onMount;`);
@@ -49,14 +37,7 @@ export function buildRuntime() {
 
     runtime.push(`return $component;`);
 
-    let result = xNode(ctx => {
-        ctx.writeIdent();
-        ctx.write('return (');
-        ctx.build(runtime);
-        ctx.write(')();\n');
-    });
-
-    this.module.body.push(result);
+    this.module.body.push(runtime);
 
     this.module.head.push(xNode('resolveClass', (ctx) => {
         if(!this.inuse.resolveClass) return;
@@ -82,7 +63,7 @@ export function buildRuntime() {
 }
 
 
-export function buildBlock(data, option) {
+export function buildBlock(data, option={}) {
     let rootTemplate = xNode('node', {inline: true, _ctx: this});
     let binds = xNode('block');
     let result = {};
@@ -152,7 +133,7 @@ export function buildBlock(data, option) {
                     return;
                 }
                 if(n.name == 'fragment') {
-                    let el = xNode('node:comment', {label: true, value: `fragment ${n.name}`});
+                    let el = xNode('node:comment', {label: true, value: `fragment ${n.elArg}`});
                     tpl.push(el);
                     let b = this.attachFragment(n, el.bindName());
                     binds.push(b.source);
@@ -231,7 +212,7 @@ export function buildBlock(data, option) {
         });
     };
     go(data, true, rootTemplate);
-    if(option && option.protectLastTag) {
+    if(option.protectLastTag) {
         let l = last(rootTemplate.children);
         if(l && l.type == 'node:comment' && l.label) {
             rootTemplate.push(xNode('node:comment', {value: ''}));
@@ -241,14 +222,8 @@ export function buildBlock(data, option) {
     result.tpl = rootTemplate;
 
     if(!binds.empty()) {
-        result.name = '$$build' + (this.uniqIndex++);
-
-        let source = xNode('function', {
-            name: result.name,
-            args: ['$cd', '$parentElement'].concat([] || data.args)
-        });
-
-        source.push(xNode('bindNodes', ctx => {
+        const innerBlock = xNode('block');
+        innerBlock.push(xNode('bindNodes', ctx => {
 
             const gen = (parent, parentName) => {
                 for(let i=0; i < parent.children.length; i++) {
@@ -264,9 +239,20 @@ export function buildBlock(data, option) {
             }
             gen(rootTemplate, () => '$parentElement');
         }))
+        innerBlock.push(binds);
 
-        source.push(binds);
-        result.source = source;
+        if(option.inline) {
+            result.source = innerBlock;
+        } else {
+            result.name = '$$build' + (this.uniqIndex++);
+
+            let source = xNode('function', {
+                name: result.name,
+                args: ['$cd', '$parentElement'].concat([] || data.args),
+                body: [innerBlock]
+            });
+            result.source = source;
+        }
     } else {
         result.name = '$runtime.noop';
         result.source = null;

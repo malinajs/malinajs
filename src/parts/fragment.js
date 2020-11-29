@@ -1,5 +1,5 @@
 
-import { assert, isSimpleName, unwrapExp, detectExpressionType } from "../utils";
+import { assert, isSimpleName, unwrapExp, detectExpressionType, xNode } from "../utils";
 
 
 export function makeFragment(node) {
@@ -7,20 +7,31 @@ export function makeFragment(node) {
     assert(rx);
     let name = rx[1];
     let args = rx[2] ? rx[2].trim() : null;
-    let head = [];
+
+    const source = xNode('function', {
+        name: `$fragment_${name}`,
+        args: ['$cd, label, $option']
+    });
+    source.push(`let $$args = $option.args;`);
+
     assert(isSimpleName(name));
     if(args) {
         args = args.split(/\s*,\s*/);
         args.forEach(name => {
             assert(isSimpleName(name));
-            head.push(`
-                let ${name};
-                if($$args.${name} != null) {
-                    if(typeof $$args.${name} == 'function') {
-                        $cd.prefix.push(() => {${name} = $$args.${name}()});
-                    } else ${name} = $$args.${name};
-                }
-            `);
+            source.push(xNode('block', {name}, (ctx, data) => {
+                let name = data.name;
+                ctx.writeLine(`let ${name};`);
+                ctx.writeLine(`if($$args.${name} != null) {`);
+                ctx.indent++;
+                ctx.writeLine(`if(typeof $$args.${name} == 'function') {`);
+                ctx.indent++;
+                ctx.writeLine(`$cd.prefix.push(() => {${name} = $$args.${name}()});`);
+                ctx.indent--;
+                ctx.writeLine(`} else ${name} = $$args.${name};`);
+                ctx.indent--;
+                ctx.writeLine(`}`);
+            }));
         });
     }
 
@@ -31,24 +42,30 @@ export function makeFragment(node) {
         return {source: `function $fragment_${name}() {};`};
     }
 
-    const convert = block.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
+    source.push(xNode('template', {
+        name: '$tpl',
+        body: block.tpl,
+        svg: block.svg
+    }));
 
-    return {source: `
-        function $fragment_${name}($cd, label, $option) {
-            let $$args = $option.args;
-            ${head.join('\n')}
+    source.push(xNode('block', {
+        source: block.source,
+        name: block.name
+    }, (ctx, data) => {
+        if(!data.source) return;
+        data.source.handler(ctx, data.source);
+        ctx.writeLine(`${data.name}($cd, $tpl);`);
+    }));
+    source.push(`label.parentNode.insertBefore($tpl, label.nextSibling);`);
 
-            ${block.source};
-            let $tpl = ${convert}(\`${this.Q(block.tpl)}\`);
-            ${block.name}($cd, $tpl);
-            label.parentNode.insertBefore($tpl, label.nextSibling);
-        };
-    `};
+    return {source};
 }
 
 
 export function attachFragment(node, elementName) {
-    let head = [];
+    const source = xNode('block', {scope: true});
+    source.push(`let args = {};`);
+    source.push(`let events = {};`);
     let name = node.elArg;
     assert(isSimpleName(name));
 
@@ -61,7 +78,7 @@ export function attachFragment(node, elementName) {
             else name = name.substring(3);
 
             if(name == '@') {
-                head.push(`events = $option.events;`)
+                source.push(`events = $option.events;`)
                 return;
             }
 
@@ -74,7 +91,7 @@ export function attachFragment(node, elementName) {
             else {
                 if(args.length) handler = args.pop();
                 else {
-                    head.push(`events.${name} = $option.events.${name};`);
+                    source.push(`events.${name} = $option.events.${name};`);
                     return;
                 }
             }
@@ -100,7 +117,7 @@ export function attachFragment(node, elementName) {
             } else {
                 callback = `($event) => {${this.Q(exp)}}`;
             }
-            head.push(`events.${name} = ${callback};`);
+            source.push(`events.${name} = ${callback};`);
         } else {
             if(name[0] == '{') {
                 assert(!value);
@@ -113,18 +130,14 @@ export function attachFragment(node, elementName) {
             if(value.indexOf('{') >= 0) {
                 let exp = unwrapExp(value);
                 this.detectDependency(exp);
-                head.push(`args.${name} = () => (${exp});`);
+                source.push(`args.${name} = () => (${exp});`);
             } else {
-                head.push(`args.${name} = \`${this.Q(value)}\`;`);
+                source.push(`args.${name} = \`${this.Q(value)}\`;`);
             }
         }
 
     });
 
-    return {source: `{
-        let args = {};
-        let events = {};
-        ${head.join('\n')}
-        $fragment_${name}($cd, ${elementName}, {args, events});
-    }`};
+    source.push(`$fragment_${name}($cd, ${elementName}, {args, events});`);
+    return {source};
 };

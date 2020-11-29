@@ -311,9 +311,16 @@ xNode.init = {
         },
         handler: (ctx, node) => {
             if(!node.inline) ctx.writeIdent();
-            ctx.write('function');
-            if(node.name) ctx.write(' ' + node.name);
-            ctx.write(`(${node.args.join(', ')}) {\n`);
+
+            if(node.arrow) {
+                if(node.name) ctx.write(`let ${node.name} = `);
+            } else {
+                ctx.write('function');
+                if(node.name) ctx.write(' ' + node.name);
+            }
+            ctx.write(`(${node.args.join(', ')}) `);
+            if(node.arrow) ctx.write('=> ');
+            ctx.write(`{\n`);
             ctx.indent++;
             xNode.init.block.handler(ctx, node);
             ctx.indent--;
@@ -348,6 +355,7 @@ xNode.init = {
             if(node.inline) {
                 node.children.forEach(n => ctx.build(n));
             } else {
+                assert(node.name, 'No node name');
                 ctx.write(`<${node.name}`);
 
                 if(node.attributes.length) {
@@ -395,6 +403,16 @@ xNode.init = {
         handler: (ctx, node) => {
             if(ctx._ctx.config.debug && !ctx._ctx.config.hideLabel) ctx.write(`<!-- ${node.value} -->`);
             else ctx.write(`<!---->`);
+        }
+    },
+    template: (ctx, node) => {
+        const convert = node.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
+        let template = ctx._ctx.xBuild(node.body);
+        if(node.inline) {
+            ctx.write(`${convert}(\`${ctx._ctx.Q(template)}\`)`);
+        } else {
+            assert(node.name);
+            ctx.writeLine(`const ${node.name} = ${convert}(\`${ctx._ctx.Q(template)}\`);`);
         }
     }
 };

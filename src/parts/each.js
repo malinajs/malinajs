@@ -17,7 +17,7 @@ export function makeEachBlock(data, option) {
     }
     if(!nodeItems.length) nodeItems = [data.body[0]];
 
-    let itemData = this.buildBlock({body: nodeItems}, {protectLastTag: true});
+    let itemData = this.buildBlock({body: nodeItems}, {protectLastTag: true, inline: true});
 
     // #each items as item, index (key)
     let rx = data.value.match(/^#each\s+(\S+)\s+as\s+(.+)$/);
@@ -63,22 +63,32 @@ export function makeEachBlock(data, option) {
 
     let keyFunction = null;
     if(keyName) {
-        keyFunction = xNode('each:key', ctx => {
-            if(keyName == indexName) ctx.writeLine('function getKey(_, i) {return i;}');
-            else ctx.writeLine(`function getKey(${itemName}) {return ${keyName};}`);
+        this.detectDependency(keyName);
+        keyFunction = xNode('function', {
+            inline: true,
+            arrow: true,
+            args: [itemName, 'i'],
+            body: [xNode('block', {
+                index: indexName,
+                key: keyName
+            }, (ctx, data) => {
+                if(data.key == data.index) ctx.writeLine('return i;');
+                else ctx.writeLine(`return ${data.key};`);
+            })]
         });
     };
 
     let bind;
     if(itemData.source) {
         bind = xNode('function', {
-            name: 'bind',
-            args: ['$ctx', '$template', itemName, indexName],
+            inline: true,
+            arrow: true,
+            args: ['$ctx', '$parentElement', itemName, indexName],
             body: [
+                `let $cd = $ctx.cd;`,
                 bind0,
                 itemData.source,
                 xNode(ctx => {
-                    ctx.writeLine(`${itemData.name}($ctx.cd, $template);`);
                     ctx.writeLine(`$ctx.rebind = function(_${indexName}, _${itemName}) {`);
                     ctx.indent++;
                     ctx.writeLine(`${indexName} = _${indexName};`);
@@ -90,25 +100,39 @@ export function makeEachBlock(data, option) {
         });
     } else {
         bind = xNode('function', {
-            name: 'bind',
+            inline: true,
+            arrow: true,
             args: ['$ctx'],
             body: [`$ctx.rebind = $runtime.noop;`]
         });
     }
 
+    const template = xNode('template', {
+        inline: true,
+        body: itemData.tpl,
+        svg: itemData.svg
+    });
+
     this.require('apply');
-    const source = xNode('block', {scope: true});
-    source.push(bind);
-    source.push(keyFunction);
-    source.push(xNode('each:template', ctx => {
-        const convert = itemData.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
-        let template = this.xBuild(itemData.tpl);
-        ctx.writeLine(`let itemTemplate = ${convert}(\`${this.Q(template)}\`);`);
-    }));
-    source.push(xNode('each', ctx => {
-        let getKey = keyFunction ? 'getKey' : '$runtime.noop';
-        ctx.writeLine(`$runtime.$$eachBlock($cd, ${option.elName}, ${option.onlyChild?1:0}, () => (${arrayName}), ${getKey}, itemTemplate, bind);`);
-    }));
+    const source = xNode('each', {
+        keyFunction,
+        template,
+        bind
+    }, (ctx, data) => {
+        ctx.writeLine(`$runtime.$$eachBlock($cd, ${option.elName}, ${option.onlyChild?1:0}, () => (${arrayName}),`);
+        ctx.indent++;
+        ctx.writeIdent();
+        if(data.keyFunction) ctx.build(data.keyFunction);
+        else ctx.write('$runtime.noop');
+        ctx.write(`,\n`);
+        ctx.writeIdent();
+        ctx.build(data.template);
+        ctx.write(`,\n`);
+        ctx.writeIdent();
+        ctx.build(data.bind);
+        ctx.write(`);\n`);
+        ctx.indent--;
+    });
     this.detectDependency(arrayName);
 
     return {source};
