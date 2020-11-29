@@ -121,14 +121,14 @@ export function makeEachBlock(data, option) {
     }, (ctx, data) => {
         ctx.writeLine(`$runtime.$$eachBlock($cd, ${option.elName}, ${option.onlyChild?1:0}, () => (${arrayName}),`);
         ctx.indent++;
-        ctx.writeIdent();
+        ctx.writeIndent();
         if(data.keyFunction) ctx.build(data.keyFunction);
         else ctx.write('$runtime.noop');
         ctx.write(`,\n`);
-        ctx.writeIdent();
+        ctx.writeIndent();
         ctx.build(data.template);
         ctx.write(`,\n`);
-        ctx.writeIdent();
+        ctx.writeIndent();
         ctx.build(data.bind);
         ctx.write(`);\n`);
         ctx.indent--;

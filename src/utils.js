@@ -212,15 +212,15 @@ export function xWriter(ctx) {
     this.result = [];
     this.indent = 0;
 
-    this.getIdent = function() {
+    this.getIndent = function() {
         let p = '';
         while(p.length < this.indent * 2) p += '  ';
         return p;
     };
-    this.writeIdent = function() {this.write(this.getIdent())};
+    this.writeIndent = function() {this.write(this.getIndent())};
     this.write = function(s) {s && this.result.push(s)};
     this.writeLine = function(s) {
-        this.write(this.getIdent());
+        this.write(this.getIndent());
         this.write(s);
         this.write('\n');
     }
@@ -310,7 +310,7 @@ xNode.init = {
             xNode.init.block.init(node);
         },
         handler: (ctx, node) => {
-            if(!node.inline) ctx.writeIdent();
+            if(!node.inline) ctx.writeIndent();
 
             if(node.arrow) {
                 if(node.name) ctx.write(`let ${node.name} = `);
@@ -324,7 +324,7 @@ xNode.init = {
             ctx.indent++;
             xNode.init.block.handler(ctx, node);
             ctx.indent--;
-            if(node.inline) ctx.write(ctx.getIdent() + '}');
+            if(node.inline) ctx.write(ctx.getIndent() + '}');
             else ctx.writeLine('}');
         }
     },
