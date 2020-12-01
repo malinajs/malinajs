@@ -8,6 +8,7 @@
 * plugins
 * esbuild-plugin (by AlexxNB)
 * $context
+* onError
 
 ## 0.5.x
 
