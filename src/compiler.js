@@ -56,7 +56,8 @@ export async function compile(source, config = {}) {
         inuse: {},
         require: name => {
             ctx.inuse[name] = true;
-            if(name == '$attributes') ctx.inuse.$props = true;
+            if(name == '$attributes') ctx.require('$props');
+            if(name == '$props') ctx.require('apply');
         },
         detectDependency,
 

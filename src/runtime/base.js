@@ -210,6 +210,7 @@ export const makeComponentBase = ($element, $option) => {
 
     return {
         $option,
+        push: noop,
         destroy: noop,
         $$render: (rootTemplate) => {
             if ($option.afterElement) {
@@ -375,7 +376,7 @@ export const makeClassResolver = ($option, classMap, metaClass, mainName) => {
 export const makeTree = (n, lvl) => {
     let p = null;
     while(n--) {
-        let c = Object.create(p);
+        let c = p ? Object.create(p) : {};
         lvl.push(c);
         p = c;
     }

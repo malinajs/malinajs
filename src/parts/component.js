@@ -235,12 +235,18 @@ export function makeComponent(node, element) {
                 this.detectDependency(name);
                 passOption.push = true;
                 let propObject = propLevel ? `$$lvl[${propLevel}]` : 'props';
-                head.push(`
-                    $runtime.fire($watch($cd, () => (${name}), (value) => {
-                        $runtime.spreadObject(${propObject}, value);
-                        $$push();
-                    }, {ro: true, cmp: $runtime.$$deepComparator(0)}));
-                `);
+
+                head.push(xNode('spread-object', {
+                    name,
+                    propObject
+                }, (ctx, n) => {
+                    ctx.writeLine(`$runtime.fire($watch($cd, () => (${n.name}), (value) => {`);
+                    ctx.goIndent(() => {
+                        ctx.writeLine(`$runtime.spreadObject(${n.propObject}, value);`);
+                        ctx.writeLine(`$$push();`);
+                    });
+                    ctx.writeLine(`}, {ro: true, cmp: $runtime.$$deepComparator(0)}));`);
+                }));
                 return;
             };
             assert(detectExpressionType(name) == 'identifier', 'Wrong prop');
@@ -389,13 +395,15 @@ export function makeComponent(node, element) {
         componentName: node.name,
         head,
         body,
-        options
+        options,
+        $cd: '$cd'
     }, (ctx, data) => {
+        const $cd = data.$cd || '$cd';
         ctx.build(data.head);
         if(data.body.empty()) {
-            ctx.writeLine(`$runtime.callComponent($cd, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
+            ctx.writeLine(`$runtime.callComponent(${$cd}, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
         } else {
-            ctx.writeLine(`let $component = $runtime.callComponent($cd, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
+            ctx.writeLine(`let $component = $runtime.callComponent(${$cd}, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
             ctx.writeLine(`if($component) {`);
             ctx.goIndent(() => {
                 ctx.build(data.body);
@@ -409,24 +417,36 @@ export function makeComponent(node, element) {
         return {bind: xNode('block', {scope: true, body: [result]})};
     } else {
         this.detectDependency(dynamicComponent);
-        let componentName = '$$comp' + (this.uniqIndex++);
-        return {bind: `
-        {
-            const ${componentName} = ($cd, $ComponentConstructor) => {
-                ${makeSrc('$ComponentConstructor')}
-            };
-            let childCD, finalLabel = $runtime.getFinalLabel(${element.bindName()});
-            $watch($cd, () => (${dynamicComponent}), ($ComponentConstructor) => {
-                if(childCD) {
-                    childCD.destroy();
-                    $runtime.removeElementsBetween(${element.bindName()}, finalLabel);
-                }
-                childCD = null;
-                if($ComponentConstructor) {
-                    childCD = $cd.new();
-                    ${componentName}(childCD, $ComponentConstructor);
-                }
+
+        result.componentName = '$ComponentConstructor';
+        result.$cd = 'childCD';
+        return {bind: xNode('dyn-component', {
+            el: element.bindName(),
+            exp: dynamicComponent,
+            component: result
+        }, (ctx, n) => {
+            ctx.writeLine('{');
+            ctx.goIndent(() => {
+                ctx.writeLine(`let childCD, finalLabel = $runtime.getFinalLabel(${n.el});`);
+                ctx.writeLine(`$watch($cd, () => (${n.exp}), ($ComponentConstructor) => {`);
+                ctx.goIndent(() => {
+                    ctx.writeLine(`if(childCD) {`);
+                    ctx.goIndent(() => {
+                        ctx.writeLine(`childCD.destroy();`);
+                        ctx.writeLine(`$runtime.removeElementsBetween(${n.el}, finalLabel);`);
+                    });
+                    ctx.writeLine(`}`);
+                    ctx.writeLine(`childCD = null;`);
+                    ctx.writeLine(`if($ComponentConstructor) {`);
+                    ctx.goIndent(() => {
+                        ctx.writeLine(`childCD = $cd.new();`);
+                        ctx.build(n.component);
+                    });
+                    ctx.writeLine(`}`);
+                });
+                ctx.writeLine(`});`);
             });
-        }`};
+            ctx.writeLine('}');
+        })};
     }
 };
