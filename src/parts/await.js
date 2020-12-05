@@ -1,7 +1,6 @@
-import { isSimpleName, assert } from "../utils";
+import { isSimpleName, assert, xNode } from "../utils";
 
-export function makeAwaitBlock(node, elementName) {
-    let source = [];
+export function makeAwaitBlock(node, element) {
     let valueForThen, exp;
     let rx = node.value.match(/^#await\s+(\S+)\s+then\s+(\S+)\s*$/);
     if(rx) {
@@ -16,17 +15,10 @@ export function makeAwaitBlock(node, elementName) {
         exp = rx[1].trim();
     }
 
-    let block_main, block_then, block_catch;
-    let build_main, build_then, build_catch;
-    let tpl_main, tpl_then, tpl_catch;
+    let parts = [null, null, null];
     if(node.parts.main && node.parts.main.length) {
-        block_main = this.buildBlock({body: node.parts.main}, {protectLastTag: true});
-        source.push(block_main.source);
-        build_main = block_main.name;
-        const convert = block_main.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
-        source.push(`const tpl_main = ${convert}(\`${this.Q(block_main.tpl)}\`);`);
-        tpl_main = 'tpl_main';
-    } else tpl_main = 'null';
+        parts[0] = this.buildBlock({body: node.parts.main}, {protectLastTag: true, inlineFunction: true});
+    }
     if(node.parts.then && node.parts.then.length) {
         let args = [];
         if(valueForThen) {
@@ -39,14 +31,8 @@ export function makeAwaitBlock(node, elementName) {
                 args.push(rx[1]);
             }
         }
-
-        block_then = this.buildBlock({body: node.parts.then, args}, {protectLastTag: true});
-        source.push(block_then.source);
-        build_then = block_then.name;
-        const convert = block_then.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
-        source.push(`const tpl_then = ${convert}(\`${this.Q(block_then.tpl)}\`);`);
-        tpl_then = 'tpl_then';
-    } else tpl_then = 'null';
+        parts[1] = this.buildBlock({body: node.parts.then}, {protectLastTag: true, inlineFunction: true, args});
+    }
     if(node.parts.catch && node.parts.catch.length) {
         let args = [];
         let rx = node.parts.catchValue.match(/^[^ ]+\s+(.*)$/);
@@ -54,21 +40,36 @@ export function makeAwaitBlock(node, elementName) {
             assert(isSimpleName(rx[1]));
             args.push(rx[1]);
         }
+        parts[2] = this.buildBlock({body: node.parts.catch}, {protectLastTag: true, inlineFunction: true, args});
+    }
 
-        block_catch = this.buildBlock({body: node.parts.catch, args}, {protectLastTag: true});
-        source.push(block_catch.source);
-        build_catch = block_catch.name;
-        const convert = block_catch.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
-        source.push(`const tpl_catch = ${convert}(\`${this.Q(block_catch.tpl)}\`);`);
-        tpl_catch = 'tpl_catch';
-    } else tpl_catch = 'null';
-
-    source.push(`
-        $runtime.$$awaitBlock($cd, ${elementName}, () => ${exp}, $$apply, ${build_main}, ${build_then}, ${build_catch}, ${tpl_main}, ${tpl_then}, ${tpl_catch});
-    `);
     this.detectDependency(exp);
+    this.require('apply');
 
-    return {source: `{
-        ${source.join('\n')}
-    }`};
+    return xNode('await', {
+        el: element.bindName(),
+        exp,
+        parts
+    }, (ctx, n) => {
+        ctx.writeIndent();
+        ctx.write(`$runtime.$$awaitBlock($cd, ${n.el}, () => ${n.exp}, $$apply,\n`);
+        ctx.goIndent(() => {
+            n.parts.forEach((part, index) => {
+                if(part) {
+                    let {source, tpl, svg} = part;
+                    ctx.writeIndent();
+                    if(source) {
+                        ctx.build(source);
+                        ctx.write(',\n');
+                        ctx.writeIndent();
+                    } else ctx.write(`$runtime.noop, `);
+                    ctx.build(xNode('template', {body: tpl, svg, inline: true}));
+                    ctx.write(index == 2 ? '\n' : ',\n');
+                } else {
+                    ctx.writeLine(`null, null` + (index == 2 ? '' : ','));
+                };
+            });
+        });
+        ctx.writeLine(');');
+    });
 };

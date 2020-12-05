@@ -147,9 +147,13 @@ export function buildBlock(data, option={}) {
                     n.spreadObject = 'spread' + (this.uniqIndex++);
                     if(this.css) n.classes.add(this.css.id);
                     this.require('apply');
-                    binds.push(`
-                        let ${n.spreadObject} = $runtime.$$makeSpreadObject($cd, ${el.bindName()}, '${this.css && this.css.id}');
-                    `);
+                    binds.push(xNode('spread-to-element', {
+                        el: el.bindName(),
+                        name: n.spreadObject
+                    }, (ctx, n) => {
+                        let css = this.css ? `, '${this.css.id}'` : '';
+                        ctx.writeLine(`let ${n.name} = $runtime.$$makeSpreadObject($cd, ${n.el}${css});`);
+                    }));
                 }
                 n.attributes.forEach(p => {
                     let b = this.bindProp(p, n, el);
@@ -196,8 +200,7 @@ export function buildBlock(data, option={}) {
             } else if(n.type === 'await') {
                 let el = xNode('node:comment', {label: true, value: n.value});
                 tpl.push(el);
-                let block = this.makeAwaitBlock(n, el.bindName());
-                binds.push(block.source);
+                binds.push(this.makeAwaitBlock(n, el));
                 return;
             } else if(n.type === 'comment') {
                 tpl.push(n.content);
@@ -243,15 +246,20 @@ export function buildBlock(data, option={}) {
 
         if(option.inline) {
             result.source = innerBlock;
-        } else {
-            result.name = '$$build' + (this.uniqIndex++);
-
-            let source = xNode('function', {
-                name: result.name,
-                args: ['$cd', '$parentElement'].concat([] || data.args),
+        } else if(option.inlineFunction) {
+            result.source = xNode('function', {
+                inline: true,
+                arrow: true,
+                args: ['$cd', '$parentElement'].concat(option.args || []),
                 body: [innerBlock]
             });
-            result.source = source;
+        } else {
+            result.name = '$$build' + (this.uniqIndex++);
+            result.source = xNode('function', {
+                name: result.name,
+                args: ['$cd', '$parentElement'].concat(option.args || []),
+                body: [innerBlock]
+            });
         }
     } else {
         result.name = '$runtime.noop';

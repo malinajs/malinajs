@@ -2,7 +2,7 @@
 import { $$removeElements, firstChild } from '../runtime/base';
 import { $watchReadOnly } from '../runtime/cd';
 
-export function $$awaitBlock($cd, label, fn, $$apply, build_main, build_then, build_catch, tpl_main, tpl_then, tpl_catch) {
+export function $$awaitBlock($cd, label, fn, $$apply, build_main, tpl_main, build_then, tpl_then, build_catch, tpl_catch) {
     let promise, childCD;
     let first, last, status = 0;
 
