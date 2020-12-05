@@ -1,10 +1,9 @@
 
-import { unwrapExp, assert, isSimpleName } from '../utils';
+import { unwrapExp, assert, isSimpleName, xNode } from '../utils';
+
 
 export function attachSlot(slotName, label, node) {
-    let placeholder = '';
-
-    let bind = [];
+    let props = [];
     if(node.attributes && node.attributes.length) {
         node.attributes.forEach(prop => {
             let name = prop.name;
@@ -19,36 +18,77 @@ export function attachSlot(slotName, label, node) {
             if(value[0] == '{') {
                 value = unwrapExp(value);
                 this.detectDependency(value);
-                bind.push(`
-                    if('set_${name}' in s) {
-                        $watch($cd, () => (${value}), s.set_${name}, {ro: true, cmp: $runtime.$$compareDeep});
-                    }
-                `);
+
+                props.push(xNode('prop', {
+                    name,
+                    value
+                }, (ctx, n) => {
+                    ctx.write(`${n.name}: () => (${n.value})`);
+                }));
             } else {
-                bind.push(`
-                    if('set_${name}' in s) s.set_${name}(\`${this.Q(value)}\`);
-                `);
+                props.push(xNode('static-prop', {
+                    name,
+                    value
+                }, (ctx, n) => {
+                    ctx.write(`${n.name}: \`${this.Q(n.value)}\``);
+                }));
             }
         });
     };
 
+    let placeholder;
     if(node.body && node.body.length) {
-        let block = this.buildBlock(node);
-        const convert = block.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
-        placeholder = ` else {
-            ${block.source};
-            let $tpl = ${convert}(\`${this.Q(block.tpl)}\`);
-            ${block.name}($cd, $tpl);
-            ${label}.parentNode.insertBefore($tpl, ${label}.nextSibling);
-        }`;
+        let block = this.buildBlock(node, {inline: true});
+
+        const tpl = xNode('template', {
+            name: '$parentElement',
+            body: block.tpl,
+            svg: block.svg
+        });
+
+        placeholder = xNode('placeholder', {
+            el: label.bindName(),
+            body: block.source,
+            tpl
+        }, (ctx, n) => {
+            ctx.build(n.tpl);
+            ctx.build(n.body);
+            ctx.writeLine(`${n.el}.parentNode.insertBefore($parentElement, ${n.el}.nextSibling);`);
+        });
     }
 
-    return {source: `{
-        let $slot = $option.slots && $option.slots.${slotName};
-        if($slot) {
-            let s = $slot(${label});
-            $runtime.cd_onDestroy($cd, s.destroy);
-            ${bind.join('\n')}
-        } ${placeholder};
-    }`};
+    this.require('apply');
+
+    return xNode('slot', {
+        name: slotName,
+        el: label.bindName(),
+        props,
+        placeholder
+    }, (ctx, n) => {
+        ctx.writeIndent();
+        ctx.write(`$runtime.attachSlot($option, $cd, '${n.name}', ${n.el}`);
+        if(n.props.length) {
+            ctx.write(', {\n');
+            ctx.goIndent(() => {
+                for(let i=0; i < props.length; i++) {
+                    let prop = props[i];
+                    ctx.writeIndent();
+                    ctx.build(prop)
+                    if(i + 1 < props.length) ctx.write(',');
+                    ctx.write('\n');
+                }
+            });
+            ctx.writeIndent();
+            ctx.write('}');
+        }
+        if(n.placeholder) {
+            ctx.write(', () => {\n');
+            ctx.goIndent(() => {
+                ctx.build(n.placeholder);
+            });
+            ctx.writeIndent();
+            ctx.write('}');
+        }
+        ctx.write(');\n');
+    });
 };

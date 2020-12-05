@@ -128,8 +128,7 @@ export function buildBlock(data, option={}) {
                     let slotName = n.elArg || 'default';
                     let el = xNode('node:comment', {label: true, value: slotName});
                     tpl.push(el);
-                    let b = this.attachSlot(slotName, el.bindName(), n);
-                    binds.push(b.source);
+                    binds.push(this.attachSlot(slotName, el, n));
                     return;
                 }
                 if(n.name == 'fragment') {

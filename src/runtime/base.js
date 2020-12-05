@@ -430,3 +430,20 @@ export const makeExternalProperty = ($component, name, getter, setter) => {
         set: v => {setter(v); $component.apply();}
     });
 }
+
+
+export const attachSlot = ($option, $cd, slotName, label, props, placeholder) => {
+    let $slot = $option.slots && $option.slots[slotName];
+    if($slot) {
+        let s = $slot(label);
+        cd_onDestroy($cd, s.destroy);
+        for(let key in props) {
+            let setter = `set_${key}`;
+            if(s[setter]) {
+                let exp = props[key];
+                if(typeof exp == 'function') $watch($cd, exp, s[setter], {ro: true, cmp: $$compareDeep});
+                else s[setter](exp);
+            }
+        }
+    } else placeholder();
+};
