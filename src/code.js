@@ -314,14 +314,19 @@ export function transform() {
         }));
 
         resultBody.splice(lastPropIndex, 0, rawNode(() => {
-            if(!this.inuse.$attributes) return;
             let code = [];
-            code.push(`let $$skipAttrs = {${result.props.map(n => n + ':1').join(',')}};`);
-            code.push('let $attributes = $runtime.recalcAttributes($props, $$skipAttrs);');
-            code.push(`$runtime.completeProps($component, () => {`);
-            code.push(`  ({${result.props.join(',')}} = $props);`);
-            code.push('  $attributes = $runtime.recalcAttributes($props, $$skipAttrs);');
-            code.push(`}, {${result.props.map(n => n + ': () => '+n).join(',')}});`);
+            if(this.inuse.$attributes) {
+                code.push(`let $$skipAttrs = {${result.props.map(n => n + ':1').join(',')}};`);
+                code.push('let $attributes = $runtime.recalcAttributes($props, $$skipAttrs);');
+                code.push(`$runtime.completeProps($component, () => {`);
+                code.push(`  ({${result.props.join(',')}} = $props);`);
+                code.push('  $attributes = $runtime.recalcAttributes($props, $$skipAttrs);');
+                code.push(`}, {${result.props.map(n => n + ': () => '+n).join(',')}});`);
+            } else if(this.inuse.$props) {
+                code.push(`$runtime.completeProps($component, () => {`);
+                code.push(`  ({${result.props.join(',')}} = $props);`);
+                code.push(`}, {${result.props.map(n => n + ': () => '+n).join(',')}});`);
+            }
             return code;
         }));
     } else {

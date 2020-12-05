@@ -1,12 +1,9 @@
 
-import { assert, detectExpressionType, isSimpleName, unwrapExp, genId } from '../utils'
+import { assert, detectExpressionType, isSimpleName, unwrapExp, xNode } from '../utils'
 
 
 export function makeComponent(node, element) {
-    this.require('apply');
     let propList = node.attributes;
-    let binds = [];
-    let head = [];
     let forwardAllEvents = false;
     let options = [];
     let dynamicComponent;
@@ -19,6 +16,58 @@ export function makeComponent(node, element) {
     }
 
     let passOption = {};
+
+
+    this.require('apply');
+    let head = xNode('block');
+    let body = xNode('block');
+
+    head.push(xNode('push', {
+        $cond: () => passOption.push
+    }, ctx => {
+        ctx.writeLine(`let $$push = $runtime.noop;`)
+    }));
+    body.push(xNode('push', {
+        $cond: () => passOption.push
+    }, ctx => {
+        ctx.writeLine(`$$push = $component.push;`)
+    }));
+
+    head.push(xNode('prop', {
+        $cond: () => propLevel || propLevelType
+    }, ctx => {
+        if(propLevel) ctx.writeLine(`let $$lvl = [], props = $runtime.makeTree(${propLevel}, $$lvl);`);
+        else ctx.writeLine('let props = {};');
+    }));
+
+    head.push(xNode('events', {
+        $cond: () => forwardAllEvents || passOption.events
+    }, ctx => {
+        if(forwardAllEvents) {
+            ctx.writeLine('let events = Object.assign({}, $option.events);');
+        } else if(passOption.events) {
+            ctx.writeLine('let events = {};');
+        }
+    }));
+
+    head.push(xNode('slots', {
+        $cond: () => passOption.slots
+    }, ctx => {
+        ctx.writeLine('let slots = {};');
+    }));
+
+    head.push(xNode('class', {
+        $cond: () => passOption.class
+    }, ctx => {
+        ctx.writeLine(`let $class = {}`);
+    }));
+
+    let _boundEvents = {};
+    const boundEvent = (name) => {
+        if(!_boundEvents[name]) _boundEvents[name] = forwardAllEvents ? 1 : 0;
+        _boundEvents[name]++;
+    }
+
 
     if(node.body && node.body.length) {
         let slots = {};
@@ -40,45 +89,71 @@ export function makeComponent(node, element) {
 
         Object.values(slots).forEach(slot => {
             assert(isSimpleName(slot.name));
-            let args = '', setters = '';
+            let props, setters;
             let rx = slot.value && slot.value.match(/^#slot\S*\s+(.*)$/);
             if(rx) {
-                let props = rx[1].trim().split(/\s*,\s*/);
-                props.forEach(n => {
+                let args = rx[1].trim().split(/\s*,\s*/);
+                args.forEach(n => {
                     assert(isSimpleName(n), 'Wrong prop for slot');
                 });
-                args = `let ${props.join(', ')};`;
-                setters = ',' + props.map(name => {
-                    return `set_${name}: (_${name}) => {${name} = _${name}; $$apply();}`;
-                }).join(',\n');
+                props = xNode('slot:props', {
+                    props: args
+                }, (ctx, data) => {
+                    ctx.writeLine(`let ${data.props.join(', ')};`);
+                });
+                setters = xNode('slot:setters', {
+                    props: args
+                }, (ctx, data) => {
+                    for(let name of data.props) {
+                        ctx.writeLine(`, set_${name}: (_${name}) => {${name} = _${name}; $$apply();}`);
+                    }
+                });
             }
 
             passOption.slots = true;
-            let block = this.buildBlock(slot);
-            const convert = block.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
-            head.push(`
-                slots.${slot.name} = function($label) {
-                    let $childCD = $cd.new();
-                    let $tpl = ${convert}(\`${this.Q(block.tpl)}\`);
+            let block = this.buildBlock(slot, {inline: true});
 
-                    ${args}
+            const template = xNode('template', {
+                name: '$parentElement',
+                body: block.tpl,
+                svg: block.svg
+            });
 
-                    ${block.source};
-                    ${block.name}($childCD, $tpl);
-                    $label.parentNode.insertBefore($tpl, $label.nextSibling);
+            head.push(xNode('slot', {
+                name: slot.name,
+                template,
+                bind: block.source,
 
-                    return {
-                        destroy: () => {
-                            $childCD.destroy();
-                        }
-                        ${setters}
+                props,
+                setters
+            }, (ctx, data) => {
+                ctx.writeLine(`slots.${data.name} = function($label) {`);
+                ctx.goIndent(() => {
+                    ctx.writeLine(`let $childCD = $cd.new();`);
+                    ctx.build(data.template);
+                    ctx.build(data.props);
+                    if(data.bind) {
+                        ctx.writeLine(`{`);
+                        ctx.goIndent(() => {
+                            ctx.writeLine(`let $cd = $childCD;`);
+                            ctx.build(data.bind);
+                        });
+                        ctx.writeLine(`}`);
                     }
-                }
-            `);
+                    
+                    ctx.writeLine(`$label.parentNode.insertBefore($parentElement, $label.nextSibling);`);
+                    ctx.writeLine(`return {`);
+                    ctx.goIndent(() => {
+                        ctx.writeLine(`destroy: () => {$childCD.destroy();}`);
+                        ctx.build(data.setters);
+                    });
+                    ctx.writeLine(`};`);
+                });
+                ctx.writeLine(`}`);
+            }));
         });
     }
 
-    let boundEvents = {};
     propList = propList.filter(prop => {
         let name = prop.name;
         let value = prop.value;
@@ -99,20 +174,33 @@ export function makeComponent(node, element) {
             propLevelType = 'binding';
             passOption.props = true;
             passOption.push = true;
-            head.push(`
-                const ${watchName} = $watch($cd, () => (${outer}), _${inner} => {
-                    props.${inner} = _${inner};
-                    ${watchName}.pair && ${watchName}.pair(${watchName}.value);
-                    $$push();
-                }, {ro: true, cmp: $runtime.$$compareDeep});
-                $runtime.fire(${watchName});
-            `);
-            binds.push(`
-                $runtime.bindPropToComponent($component, '${inner}', ${watchName}, _${outer} => {
-                    ${outer} = _${outer};
-                    $$apply();
+
+            head.push(xNode('bindProp2', {
+                watchName,
+                outer,
+                inner
+            }, (ctx, data) => {
+                ctx.writeLine(`const ${data.watchName} = $watch($cd, () => (${data.outer}), _${data.inner} => {`);
+                ctx.goIndent(() => {
+                    ctx.writeLine(`props.${data.inner} = _${data.inner};`);
+                    ctx.writeLine(`${data.watchName}.pair && ${data.watchName}.pair(${data.watchName}.value);`);
+                    ctx.writeLine(`$$push();`);
                 });
-            `);
+                ctx.writeLine(`}, {ro: true, cmp: $runtime.$$compareDeep});`);
+                ctx.writeLine(`$runtime.fire(${data.watchName});`);
+            }));
+            body.push(xNode('bindProp2', {
+                watchName,
+                outer,
+                inner
+            }, (ctx, data) => {
+                ctx.writeLine(`$runtime.bindPropToComponent($component, '${data.inner}', ${data.watchName}, _${data.outer} => {`);
+                ctx.goIndent(() => {
+                    ctx.writeLine(`${data.outer} = _${data.outer};`);
+                    ctx.writeLine(`$$apply();`);
+                });
+                ctx.writeLine(`});`);
+            }));
             return false;
         } else if(name == 'this') {
             dynamicComponent = unwrapExp(value);
@@ -129,7 +217,11 @@ export function makeComponent(node, element) {
             let name = name.substring(1);
             assert(isSimpleName(name), name);
             this.checkRootName(name);
-            binds.push(`${name} = $component;`);
+            body.push(xNode('ref', {
+                name
+            }, (ctx, data) => {
+                ctx.writeLine(`${data.name} = $component;`);
+            }));
             return;
         } else if(name[0] == '{') {
             value = name;
@@ -164,9 +256,13 @@ export function makeComponent(node, element) {
                 if(!arg.length) {
                     // forwarding
                     passOption.events = true;
-                    if(forwardAllEvents || boundEvents[event]) head.push(`$runtime.$$addEventForComponent(events, '${event}', $option.events.${event});`);
-                    else head.push(`events.${event} = $option.events.${event};`);
-                    boundEvents[event] = true;
+                    boundEvent(event);
+                    head.push(xNode('forwardEvent', {
+                        event
+                    }, (ctx, data) => {
+                        if(_boundEvents[data.event] > 1) ctx.writeLine(`$runtime.$$addEventForComponent(events, '${data.event}', $option.events.${data.event});`);
+                        else ctx.writeLine(`events.${data.event} = $option.events.${data.event};`);
+                    }))
                     return;
                 }
                 handler = arg.pop();
@@ -195,9 +291,14 @@ export function makeComponent(node, element) {
             }
 
             passOption.events = true;
-            if(forwardAllEvents || boundEvents[event]) head.push(`$runtime.$$addEventForComponent(events, '${event}', ${callback});`);
-            else head.push(`events.${event} = ${callback};`);
-            boundEvents[event] = true;
+            boundEvent(event);
+            head.push(xNode('passEvent', {
+                event,
+                callback
+            }, (ctx, data) => {
+                if(_boundEvents[data.event] > 1) ctx.writeLine(`$runtime.$$addEventForComponent(events, '${data.event}', ${data.callback});`);
+                else ctx.writeLine(`events.${data.event} = ${data.callback};`);
+            }));
             return;
         } else if(name == 'class' || name.startsWith('class:')) {
             let metaClass, args = name.split(':');
@@ -214,15 +315,22 @@ export function makeComponent(node, element) {
             this.detectDependency(parsed);
             let exp = parsed.result;
             let funcName = `$$pf${this.uniqIndex++}`;
-            head.push(`
-                const ${funcName} = () => $$resolveClass(${exp});
-                $class['${metaClass}'] = ${funcName}();
 
-                $watch($cd, ${funcName}, (result) => {
-                    $class['${metaClass}'] = result;
-                    $$push();
-                }, {ro: true, value: $class['${metaClass}']});
-            `);
+            head.push(xNode('passClass', {
+                funcName,
+                exp,
+                metaClass
+            }, (ctx, data) => {
+                ctx.writeLine(`const ${data.funcName} = () => $$resolveClass(${data.exp});`);
+                ctx.writeLine(`$class['${data.metaClass}'] = ${data.funcName}();`);
+                ctx.writeLine(`$watch($cd, ${data.funcName}, (result) => {`);
+                ctx.goIndent(() => {
+                    ctx.writeLine(`$class['${data.metaClass}'] = result;`);
+                    ctx.writeLine(`$$push();`);
+                });
+                ctx.writeLine(`}, {ro: true, value: $class['${data.metaClass}']});`);
+            }));
+
             passOption.class = true;
             passOption.push = true;
             this.require('resolveClass');
@@ -240,12 +348,18 @@ export function makeComponent(node, element) {
 
             passOption.props = true;
             passOption.push = true;
-            head.push(`
-                $runtime.fire($watch($cd, () => (${exp}), _${name} => {
-                    ${propObject}.${name} = _${name};
-                    $$push();
-                }, {ro: true, cmp: $runtime.$$compareDeep}));
-            `);
+            head.push(xNode('bindProp', {
+                exp,
+                name,
+                propObject
+            }, (ctx, data) => {
+                ctx.writeLine(`$runtime.fire($watch($cd, () => (${data.exp}), _${data.name} => {`);
+                ctx.goIndent(() => {
+                    ctx.writeLine(`${data.propObject}.${data.name} = _${data.name};`);
+                    ctx.writeLine(`$$push();`);
+                });
+                ctx.writeLine(`}, {ro: true, cmp: $runtime.$$compareDeep}));`);
+            }));
         } else {
             if(value) value = '`' + this.Q(value) + '`';
             else value = 'true';
@@ -254,71 +368,45 @@ export function makeComponent(node, element) {
             propLevelType = 'attr';
 
             let propObject = propLevel ? `$$lvl[${propLevel}]` : 'props';
-            head.push(`
-                ${propObject}.${name} = ${value};
-            `);
+            head.push(xNode('staticProp', {
+                name,
+                value,
+                propObject
+            }, (ctx, data) => {
+                ctx.writeLine(`${data.propObject}.${data.name} = ${data.value};`);
+            }));
         }
     });
 
-    let rootHead = [];
-    if(passOption.push) {
-        rootHead.push(`let $$push = $runtime.noop;`);
-        binds.push(`$$push = $component.push;`);
-    }
 
-    if(passOption.class) {
-        rootHead.push(`let $class = {}`);
-        options.push('$class');
-    }
+    if(propLevel || propLevelType) options.push('props');
+    if(forwardAllEvents || passOption.events) options.push('events');
+    if(passOption.slots) options.push('slots');
+    if(passOption.class) options.push('$class');
 
-    if(passOption.slots) {
-        rootHead.push('let slots = {};');
-        options.push('slots');
-    }
-
-    if(propLevel || propLevelType) {
-        if(propLevel) rootHead.push(`let $$lvl = [], props = $runtime.makeTree(${propLevel}, $$lvl);`);
-        else rootHead.push('let props = {};');
-        options.push('props');
-    }
-
-    if(forwardAllEvents) {
-        rootHead.push('let events = Object.assign({}, $option.events);');
-        options.push('events');
-    } else if(passOption.events) {
-        rootHead.push('let events = {};');
-        options.push('events');
-    }
-
-    const makeSrc = (componentName, brackets) => {
-        let scope = false;
-        let result = '';
-        if(rootHead.length || head.length) {
-            scope = true;
-            result = `
-                ${rootHead.join('\n')};
-                ${head.join('\n')};
-            `;
-        }
-        if(binds.length) {
-            scope = true;
-            result += `
-                let $component = $runtime.callComponent($cd, ${componentName}, ${element.bindName()}, {${options.join(', ')}});
-                if($component) {
-                    ${binds.join('\n')};
-                }
-            `;
+    let result = xNode('component', {
+        el: element.bindName(),
+        componentName: node.name,
+        head,
+        body,
+        options
+    }, (ctx, data) => {
+        ctx.build(data.head);
+        if(data.body.empty()) {
+            ctx.writeLine(`$runtime.callComponent($cd, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
         } else {
-            result += `
-                $runtime.callComponent($cd, ${componentName}, ${element.bindName()}, {${options.join(', ')}});
-            `;
+            ctx.writeLine(`let $component = $runtime.callComponent($cd, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
+            ctx.writeLine(`if($component) {`);
+            ctx.goIndent(() => {
+                ctx.build(data.body);
+            });
+            ctx.writeLine(`}`);
         }
-        if(brackets && scope) return '{' + result + '}';
-        return result;
-    }
+    });
 
     if(!dynamicComponent) {
-        return {bind: `${makeSrc(node.name, true)}`};
+        if(head.empty() && body.empty()) return {bind: result};
+        return {bind: xNode('block', {scope: true, body: [result]})};
     } else {
         this.detectDependency(dynamicComponent);
         let componentName = '$$comp' + (this.uniqIndex++);

@@ -218,6 +218,11 @@ export function xWriter(ctx) {
         return p;
     };
     this.writeIndent = function() {this.write(this.getIndent())};
+    this.goIndent = function(fn) {
+        this.indent++;
+        fn();
+        this.indent--;
+    };
     this.write = function(s) {s && this.result.push(s)};
     this.writeLine = function(s) {
         this.write(this.getIndent());
@@ -226,7 +231,9 @@ export function xWriter(ctx) {
     }
     this.toString = function() {return this.result.join('');}
     this.build = function(node) {
-        if(node != null) node.handler(this, node);
+        if(node == null) return;
+        if(node.$cond && !node.$cond(node)) return;
+        node.handler(this, node);
     }
 }
 
@@ -281,11 +288,13 @@ xNode.init = {
         init: (node) => {
             if(!node.body) node.body = [];
             node.push = function(child) {
-                assert(arguments.length == 1);
+                assert(arguments.length == 1, 'Wrong xNode');
                 if(typeof child == 'string') child = xNode('raw', {value: child});
                 this.body.push(child)
             };
-            node.empty = function() {return !this.body.length;};
+            node.empty = function() {
+                return !this.body.some(n => !n.$cond || n.$cond(n));
+            };
         },
         handler: (ctx, node) => {
             if(node.scope) {
@@ -294,6 +303,7 @@ xNode.init = {
             }
             node.body.forEach(n => {
                 if(n == null) return;
+                if(n.$cond && !n.$cond(n)) return;
                 if(typeof n == 'string') {
                     if(n) ctx.writeLine(n);
                 } else n.handler(ctx, n);

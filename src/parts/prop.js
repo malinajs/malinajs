@@ -59,11 +59,15 @@ export function bindProp(prop, node, element) {
     } else if(name == 'on') {
         if(arg == '@') {
             assert(!prop.value);
-            return {bind: `
-                for(let event in $option.events) {
-                    $runtime.addEvent($cd, ${element.bindName()}, event, $option.events[event]);
-                }
-            `};
+            const bind = xNode('forwardAllEvents', {
+                el: element.bindName()
+            }, (ctx, data) => {
+                ctx.writeLine(`for(let event in $option.events)`);
+                ctx.goIndent(() => {
+                    ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, event, $option.events[event]);`);
+                });
+            });
+            return {bind};
         }
         let mod = '', opts = arg.split(/[\|:]/);
         let event = opts.shift();
@@ -73,12 +77,13 @@ export function bindProp(prop, node, element) {
         } else {
             if(!opts.length) {
                 // forwarding
-                return {bind: `
-                    $runtime.addEvent($cd, ${element.bindName()}, "${event}", ($event) => {
-                        const fn = $option.events.${event};
-                        if(fn) fn($event);
-                    });\n`
-                };
+                return {bind: xNode('forwardEvent', {
+                    event,
+                    el: element.bindName()
+                }, (ctx, data) => {
+                    ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, "${data.event}", ($event) => {`
+                        + `$option.events.${data.event} && $option.events.${data.event}($event)});`);
+                })};
             }
             handler = opts.pop();
         };
@@ -255,7 +260,7 @@ export function bindProp(prop, node, element) {
         if(compound) {
             this.require('apply');
             let defaultHash = '';
-            if(node.classes.has(this.css.id)) defaultHash = `,'${this.css.id}'`;
+            if(node.classes.has(this.css.id)) defaultHash = this.css.id;
             node.classes.clear();
             this.require('resolveClass');
             let exp = props.map(prop => {
@@ -269,9 +274,15 @@ export function bindProp(prop, node, element) {
                     return `(${exp}) ? \`${this.Q(className)}\` : ''`;
                 }
             }).join(') + \' \' + (');
-            return {bind: `
-                $watchReadOnly($cd, () => $$resolveClass((${exp})${defaultHash}), value => $runtime.setClassToElement(${element.bindName()}, value));
-            `};
+            const bind = xNode('compound-class', {
+                el: element.bindName(),
+                exp,
+                defaultHash
+            }, (ctx, data) => {
+                let base = data.defaultHash ? `,'${data.defaultHash}'` : '';
+                ctx.writeLine(`$watchReadOnly($cd, () => $$resolveClass((${data.exp})${base}), value => $runtime.setClassToElement(${data.el}, value));`);
+            });
+            return {bind};
         } else {
             let bind = xNode('block');
             props.forEach(prop => {
