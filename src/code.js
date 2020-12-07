@@ -29,6 +29,7 @@ export function parse() {
         if(source.includes('$attributes')) this.require('$attributes');
         if(source.includes('$emit')) this.require('$emit');
         if(source.includes('$onDestroy')) this.require('$onDestroy');
+        if(source.includes('$context')) this.require('$context');
     } else {
         this.script.ast = {
             body: [],
@@ -337,6 +338,10 @@ export function transform() {
             if(this.inuse.$attributes) return 'let $attributes = $props;';
         }));
     }
+
+    header.push(rawNode(() => {
+        if(this.inuse.$context) return 'const $context = $component.context;';
+    }));
 
     if(this.config.autoSubscribe) {
         result.importedNames.forEach(name => {

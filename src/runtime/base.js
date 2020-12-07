@@ -212,6 +212,7 @@ export const makeComponentBase = ($element, $option) => {
         $option,
         push: noop,
         destroy: noop,
+        context: $option.$$ ? Object.assign({}, $option.$$.context) : {},
         $$render: (rootTemplate) => {
             if ($option.afterElement) {
                 $element.parentNode.insertBefore(rootTemplate, $element.nextSibling);
@@ -254,7 +255,11 @@ export const makeComponent = ($element, $option) => {
 export const callComponent = (cd, component, el, option) => {
     option.afterElement = true;
     option.noMount = true;
-    let $component = component(el, option);
+    try {
+        var $component = component(el, option);
+    } catch (e) {
+        __app_onerror(e);
+    }
     if($component) {
         if($component.destroy) cd_onDestroy(cd, $component.destroy);
         if($component.onMount) $tick($component.onMount);
@@ -432,10 +437,10 @@ export const makeExternalProperty = ($component, name, getter, setter) => {
 }
 
 
-export const attachSlot = ($option, $cd, slotName, label, props, placeholder) => {
-    let $slot = $option.slots && $option.slots[slotName];
+export const attachSlot = ($component, $cd, slotName, label, props, placeholder) => {
+    let $slot = $component.$option.slots && $component.$option.slots[slotName];
     if($slot) {
-        let s = $slot(label);
+        let s = $slot(label, $component);
         cd_onDestroy($cd, s.destroy);
         for(let key in props) {
             let setter = `set_${key}`;
@@ -445,5 +450,5 @@ export const attachSlot = ($option, $cd, slotName, label, props, placeholder) =>
                 else s[setter](exp);
             }
         }
-    } else placeholder();
+    } else placeholder && placeholder();
 };

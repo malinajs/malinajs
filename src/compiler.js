@@ -170,7 +170,7 @@ async function hook(ctx, name) {
 
 function detectDependency(data) {
     const check = name => {
-        for(let k of ['$props', '$attributes', '$emit']) {
+        for(let k of ['$props', '$attributes', '$emit', '$context']) {
             if(name.includes(k)) this.require(k);
         }
     }

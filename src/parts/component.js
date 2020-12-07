@@ -5,7 +5,7 @@ import { assert, detectExpressionType, isSimpleName, unwrapExp, xNode } from '..
 export function makeComponent(node, element) {
     let propList = node.attributes;
     let forwardAllEvents = false;
-    let options = [];
+    let options = ['$$: $component'];
     let dynamicComponent;
 
     let propLevel = 0, propLevelType;
@@ -30,7 +30,7 @@ export function makeComponent(node, element) {
     body.push(xNode('push', {
         $cond: () => passOption.push
     }, ctx => {
-        ctx.writeLine(`$$push = $component.push;`)
+        ctx.writeLine(`$$push = $child.push;`)
     }));
 
     head.push(xNode('prop', {
@@ -127,7 +127,7 @@ export function makeComponent(node, element) {
                 props,
                 setters
             }, (ctx, data) => {
-                ctx.writeLine(`slots.${data.name} = function($label) {`);
+                ctx.writeLine(`slots.${data.name} = function($label, $component) {`);
                 ctx.goIndent(() => {
                     ctx.writeLine(`let $childCD = $cd.new();`);
                     ctx.build(data.template);
@@ -194,7 +194,7 @@ export function makeComponent(node, element) {
                 outer,
                 inner
             }, (ctx, data) => {
-                ctx.writeLine(`$runtime.bindPropToComponent($component, '${data.inner}', ${data.watchName}, _${data.outer} => {`);
+                ctx.writeLine(`$runtime.bindPropToComponent($child, '${data.inner}', ${data.watchName}, _${data.outer} => {`);
                 ctx.goIndent(() => {
                     ctx.writeLine(`${data.outer} = _${data.outer};`);
                     ctx.writeLine(`$$apply();`);
@@ -220,7 +220,7 @@ export function makeComponent(node, element) {
             body.push(xNode('ref', {
                 name
             }, (ctx, data) => {
-                ctx.writeLine(`${data.name} = $component;`);
+                ctx.writeLine(`${data.name} = $child;`);
             }));
             return;
         } else if(name[0] == '{') {
@@ -403,8 +403,8 @@ export function makeComponent(node, element) {
         if(data.body.empty()) {
             ctx.writeLine(`$runtime.callComponent(${$cd}, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
         } else {
-            ctx.writeLine(`let $component = $runtime.callComponent(${$cd}, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
-            ctx.writeLine(`if($component) {`);
+            ctx.writeLine(`let $child = $runtime.callComponent(${$cd}, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
+            ctx.writeLine(`if($child) {`);
             ctx.goIndent(() => {
                 ctx.build(data.body);
             });

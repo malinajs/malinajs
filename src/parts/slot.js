@@ -66,7 +66,7 @@ export function attachSlot(slotName, label, node) {
         placeholder
     }, (ctx, n) => {
         ctx.writeIndent();
-        ctx.write(`$runtime.attachSlot($option, $cd, '${n.name}', ${n.el}`);
+        ctx.write(`$runtime.attachSlot($component, $cd, '${n.name}', ${n.el}`);
         if(n.props.length) {
             ctx.write(', {\n');
             ctx.goIndent(() => {
