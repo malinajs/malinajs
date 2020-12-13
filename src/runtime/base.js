@@ -452,3 +452,16 @@ export const attachSlot = ($component, $cd, slotName, label, props, placeholder)
         }
     } else placeholder && placeholder();
 };
+
+
+export const makeOnMount = ($component) => {
+    let list = [];
+    let $onMount = fn => list.push(fn);
+    $onMount.r = () => {
+        list.forEach(fn => {
+            let r = fn();
+            if(typeof r == 'function') cd_onDestroy($component.$cd, r);
+        });
+    }
+    return $onMount;
+};

@@ -17,17 +17,16 @@ export function buildRuntime() {
     runtime.push(bb.source);
     runtime.push(`$component.$$render($parentElement);`);
 
-    runtime.push(xNode('on-mount', ctx => {
+    runtime.push(xNode('onMount', ctx => {
         if(!this.inuse.$onMount && !this.script.onMount) return;
 
         if(this.script.onMount && !this.inuse.$onMount) {
             ctx.writeLine(`if($option.noMount) $component.onMount = onMount;`);
             ctx.writeLine(`else $tick(onMount);`);
         } else if(this.inuse.$onMount) {
-            if(this.script.onMount) ctx.writeLine(`$$onMountList.push(onMount);`);
-            ctx.writeLine(`let $$mount = () => $$onMountList.forEach(fn => fn());`);
-            ctx.writeLine(`if($option.noMount) $component.onMount = $$mount;`);
-            ctx.writeLine(`else $tick($$mount);`);
+            if(this.script.onMount) ctx.writeLine(`$onMount(onMount);`);
+            ctx.writeLine(`if($option.noMount) $component.onMount = $onMount.r;`);
+            ctx.writeLine(`else $tick($onMount.r);`);
         }
     }));
 

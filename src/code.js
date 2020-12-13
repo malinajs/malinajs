@@ -347,11 +347,7 @@ export function transform() {
     }));
 
     header.push(rawNode(() => {
-        if(!this.inuse.$onMount) return;
-        return [
-            'let $$onMountList = [];',
-            'let $onMount = fn => $$onMountList.push(fn);'
-        ];
+        if(this.inuse.$onMount) return 'let $onMount = $runtime.makeOnMount($component);';
     }));
 
     if(this.config.autoSubscribe) {
