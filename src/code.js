@@ -29,6 +29,7 @@ export function parse() {
         if(source.includes('$attributes')) this.require('$attributes');
         if(source.includes('$emit')) this.require('$emit');
         if(source.includes('$onDestroy')) this.require('$onDestroy');
+        if(source.includes('$onMount')) this.require('$onMount');
         if(source.includes('$context')) this.require('$context');
     } else {
         this.script.ast = {
@@ -115,11 +116,13 @@ export function transform() {
                 node.body.body.splice(i, 1);
                 return 'stop';
             }
+            if(node._parent.type == 'CallExpression' && node._parent.callee.name == '$onMount') return;
             if(!isInLoop(node)) {
                 node.body.body.unshift(applyBlock());
             }
         } else if(node.type == 'ArrowFunctionExpression') {
             if(insertOnDestroy && node._parent.type == 'CallExpression' && node._parent.callee.name == '$onDestroy') return 'stop';
+            if(node._parent.type == 'CallExpression' && node._parent.callee.name == '$onMount') return;
             if(node.body.type != 'BlockStatement' && !isInLoop(node)) {
                 node.body = {
                     type: 'BlockStatement',
@@ -343,6 +346,14 @@ export function transform() {
         if(this.inuse.$context) return 'const $context = $component.context;';
     }));
 
+    header.push(rawNode(() => {
+        if(!this.inuse.$onMount) return;
+        return [
+            'let $$onMountList = [];',
+            'let $onMount = fn => $$onMountList.push(fn);'
+        ];
+    }));
+
     if(this.config.autoSubscribe) {
         result.importedNames.forEach(name => {
             header.push(rawNode(`$runtime.autoSubscribe($component, ${name});`));
@@ -405,8 +416,12 @@ const generator = Object.assign({
     Raw: function(node, state) {
         let value = typeof node.value == 'function' ? node.value() : node.value;
         if(value) {
-            if(Array.isArray(value)) value.forEach(v => state.write(v));
-            else state.write(value);
+            if(Array.isArray(value)) {
+                value.forEach((v, i) => {
+                    if(i) state.write(state.lineEnd + state.indent);
+                    state.write(v);
+                })
+            } else state.write(value);
         }
     }
 }, astring.baseGenerator);

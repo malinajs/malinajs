@@ -1,5 +1,5 @@
 
-import {assert, svgElements, xNode, last} from './utils.js'
+import {svgElements, xNode, last} from './utils.js'
 
 
 export function buildRuntime() {
@@ -17,10 +17,20 @@ export function buildRuntime() {
     runtime.push(bb.source);
     runtime.push(`$component.$$render($parentElement);`);
 
-    if(this.script.onMount) {
-        runtime.push(`if($option.noMount) $component.onMount = onMount;`);
-        runtime.push(`else $tick(onMount);`);
-    }
+    runtime.push(xNode('on-mount', ctx => {
+        if(!this.inuse.$onMount && !this.script.onMount) return;
+
+        if(this.script.onMount && !this.inuse.$onMount) {
+            ctx.writeLine(`if($option.noMount) $component.onMount = onMount;`);
+            ctx.writeLine(`else $tick(onMount);`);
+        } else if(this.inuse.$onMount) {
+            if(this.script.onMount) ctx.writeLine(`$$onMountList.push(onMount);`);
+            ctx.writeLine(`let $$mount = () => $$onMountList.forEach(fn => fn());`);
+            ctx.writeLine(`if($option.noMount) $component.onMount = $$mount;`);
+            ctx.writeLine(`else $tick($$mount);`);
+        }
+    }));
+
     if(this.script.onDestroy) runtime.push(`$runtime.cd_onDestroy($cd, onDestroy);`);
     if(this.script.watchers.length) {
         this.script.watchers.forEach(n => runtime.push(n));

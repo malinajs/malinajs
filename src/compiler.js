@@ -58,6 +58,7 @@ export async function compile(source, config = {}) {
             ctx.inuse[name] = true;
             if(name == '$attributes') ctx.require('$props');
             if(name == '$props') ctx.require('apply');
+            if(name == '$onDestroy') ctx.require('apply');
         },
         detectDependency,
 
