@@ -299,9 +299,19 @@ export function bindProp(prop, node, element) {
                     bind.push(xNode('bindClass', {
                         el: element.bindName(),
                         className,
-                        exp
-                    }, (ctx, data) => {
-                        ctx.writeLine(`$runtime.bindClass($cd, ${data.el}, () => !!(${data.exp}), '${data.className}');`)
+                        exp,
+                        $element: exp.includes('$element')
+                    }, (ctx, n) => {
+                        if(n.$element) {
+                            ctx.writeLine(`{`);
+                            ctx.indent++;
+                            ctx.writeLine(`let $element = ${n.el};`)
+                        }
+                        ctx.writeLine(`$runtime.bindClass($cd, ${n.el}, () => !!(${n.exp}), '${n.className}');`)
+                        if(n.$element) {
+                            ctx.indent--;
+                            ctx.writeLine(`}`);
+                        }
                     }));
                 }
             });
