@@ -23,6 +23,10 @@ function malinaRollup(option = {}) {
                 throw e;
             }
             return {code: result};
+        },
+        async resolveId(name, importer) {
+            if(name == '@malinajs') return await this.resolve('malinajs/runtime.js', importer, {skipSelf: true});
+            return null;
         }
     };
 }
