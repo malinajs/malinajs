@@ -10,6 +10,7 @@
 * $context
 * onError
 * $onMount
+* $onDestroy
 
 ## 0.5.x
 

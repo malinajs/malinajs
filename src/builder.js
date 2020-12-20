@@ -16,20 +16,8 @@ export function buildRuntime() {
     }));
     runtime.push(bb.source);
 
-    runtime.push(xNode('onMount', ctx => {
-        if(!this.inuse.$onMount && !this.script.onMount) return;
-
-        if(this.script.onMount && !this.inuse.$onMount) {
-            ctx.writeLine(`if($option.noMount) $component.onMount = onMount;`);
-            ctx.writeLine(`else $tick(onMount);`);
-        } else if(this.inuse.$onMount) {
-            if(this.script.onMount) ctx.writeLine(`$onMount(onMount);`);
-            ctx.writeLine(`if($option.noMount) $component.onMount = $onMount.r;`);
-            ctx.writeLine(`else $tick($onMount.r);`);
-        }
-    }));
-
-    if(this.script.onDestroy) runtime.push(`$runtime.cd_onDestroy($cd, onDestroy);`);
+    if(this.script.onMount) runtime.push(`$runtime.$onMount(onMount);`);
+    if(this.script.onDestroy) runtime.push(`$runtime.$onDestroy(onDestroy);`);
     if(this.script.watchers.length) {
         this.script.watchers.forEach(n => runtime.push(n));
     }

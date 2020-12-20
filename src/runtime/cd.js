@@ -1,5 +1,5 @@
 
-import { __app_onerror } from './utils';
+import { __app_onerror, safeCall } from './utils';
 
 export function $watch(cd, fn, callback, w) {
     if(!w) w = {};
@@ -54,13 +54,7 @@ $ChangeDetector.prototype.destroy = function(option) {
     if(option !== false && this.parent) $$removeItem(this.parent.children, this);
     this.watchers.length = 0;
     this.prefix.length = 0;
-    this.destroyList.forEach(fn => {
-        try {
-            fn();
-        } catch (e) {
-            __app_onerror(e);
-        }
-    });
+    this.destroyList.forEach(safeCall);
     this.destroyList.length = 0;
     this.children.forEach(cd => {
         cd.destroy(false);

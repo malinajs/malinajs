@@ -1,7 +1,7 @@
 
 import { $watch, $watchReadOnly, $$deepComparator, cloneDeep, $$cloneDeep, $ChangeDetector, $digest,
     $$compareDeep, cd_onDestroy, addEvent } from './cd';
-import { __app_onerror } from './utils';
+import { __app_onerror, safeCall } from './utils';
 
 let templatecache = {};
 let templatecacheSvg = {};
@@ -94,13 +94,7 @@ export function $tick(fn, uniq) {
         _tick_planned = {};
         let list = _tick_list;
         _tick_list = [];
-        list.forEach(fn => {
-            try {
-                fn();
-            } catch (e) {
-                __app_onerror(e);
-            }
-        });
+        list.forEach(safeCall);
     }, 0);
 };
 
@@ -203,6 +197,11 @@ export function $$groupCall(emit) {
     return fn;
 };
 
+export let current_component, $context;
+
+export const $onDestroy = fn => current_component._d.push(fn);
+export const $onMount = fn => current_component._m.push(fn);
+
 
 export const makeComponentBase = (init) => {
     return ($element, $option={}) => {
@@ -212,11 +211,21 @@ export const makeComponentBase = (init) => {
         const $component = {
             $option,
             push: noop,
-            destroy: noop,
-            context: $option.$$ ? Object.assign({}, $option.$$.context) : {}
+            destroy: () => $component._d.forEach(safeCall),
+            context: $option.$$ ? Object.assign({}, $option.$$.context) : {},
+            _d: [],
+            _m: []
         };
 
-        let r = init($component, $option);
+        let r, prev = current_component;
+        try {
+            current_component = $component;
+            $context = $component.context;
+            r = init($component, $option);
+        } finally {
+            current_component = prev;
+            $context = prev && prev.context;
+        }
 
         if ($option.afterElement) {
             $element.parentNode.insertBefore(r, $element.nextSibling);
@@ -224,6 +233,13 @@ export const makeComponentBase = (init) => {
             $element.innerHTML = '';
             $element.appendChild(r);
         }
+
+        $tick(() => {
+            $component._m.forEach(fn => {
+                let d = safeCall(fn);
+                if(typeof d == 'function') $component._d.push(d);
+            })
+        });
 
         return $component;
     };
@@ -234,6 +250,7 @@ export const makeComponent = (init) => {
     return ($element, $option={}) => {
         return makeComponentBase(($component, $option) => {
             let $cd = new $ChangeDetector();
+            $onDestroy(() => $cd.destroy());
 
             let id = `a${$$uniqIndex++}`;
             let process;
@@ -253,7 +270,6 @@ export const makeComponent = (init) => {
             $component.$cd = $cd;
             $component.apply = apply;
             $component.push = apply;
-            $component.destroy = () => $cd.destroy();
 
             return apply(init($component, $option, apply));
         })($element, $option)
@@ -263,16 +279,8 @@ export const makeComponent = (init) => {
 
 export const callComponent = (cd, component, el, option) => {
     option.afterElement = true;
-    option.noMount = true;
-    try {
-        var $component = component(el, option);
-    } catch (e) {
-        __app_onerror(e);
-    }
-    if($component) {
-        if($component.destroy) cd_onDestroy(cd, $component.destroy);
-        if($component.onMount) $tick($component.onMount);
-    }
+    let $component = safeCall(() => component(el, option));
+    if($component && $component.destroy) cd_onDestroy(cd, $component.destroy);
     return $component;
 };
 
@@ -460,17 +468,4 @@ export const attachSlot = ($component, $cd, slotName, label, props, placeholder)
             }
         }
     } else placeholder && placeholder();
-};
-
-
-export const makeOnMount = ($component) => {
-    let list = [];
-    let $onMount = fn => list.push(fn);
-    $onMount.r = () => {
-        list.forEach(fn => {
-            let r = fn();
-            if(typeof r == 'function') cd_onDestroy($component.$cd, r);
-        });
-    }
-    return $onMount;
 };

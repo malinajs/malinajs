@@ -60,7 +60,6 @@ export function transform() {
 
     result.onMount = rootFunctions.onMount;
     result.onDestroy = rootFunctions.onDestroy;
-    let insertOnDestroy = !(rootFunctions.$onDestroy || rootVariables.$onDestroy);
 
     const funcTypes = {
         FunctionDeclaration: 1,
@@ -109,7 +108,7 @@ export function transform() {
 
     function transformNode(node) {
         if(funcTypes[node.type] && node.body.body && node.body.body.length) {
-            if(insertOnDestroy && node._parent.type == 'CallExpression' && node._parent.callee.name == '$onDestroy') return 'stop';
+            if(node._parent.type == 'CallExpression' && node._parent.callee.name == '$onDestroy') return 'stop';
             for(let i=0; i<node.body.body.length; i++) {
                 let n = node.body.body[i];
                 if(!isNoCheck(n)) continue;
@@ -121,7 +120,7 @@ export function transform() {
                 node.body.body.unshift(applyBlock());
             }
         } else if(node.type == 'ArrowFunctionExpression') {
-            if(insertOnDestroy && node._parent.type == 'CallExpression' && node._parent.callee.name == '$onDestroy') return 'stop';
+            if(node._parent.type == 'CallExpression' && node._parent.callee.name == '$onDestroy') return 'stop';
             if(node._parent.type == 'CallExpression' && node._parent.callee.name == '$onMount') return;
             if(node.body.type != 'BlockStatement' && !isInLoop(node)) {
                 node.body = {
@@ -335,8 +334,13 @@ export function transform() {
         if(this.inuse.$context) return 'const $context = $component.context;';
     }));
 
+
+    imports.push(rawNode(() => {
+        if(this.inuse.$onMount) return `import {$onMount} from 'malinajs/runtime.js';`;
+    }));
+
     header.push(rawNode(() => {
-        if(this.inuse.$onMount) return 'let $onMount = $runtime.makeOnMount($component);';
+        if(this.inuse.$onDestroy) return `const $onDestroy = fn => $component._d.push(fn);`;
     }));
 
     if(this.config.autoSubscribe) {
@@ -348,11 +352,6 @@ export function transform() {
     if(!rootFunctions.$emit) {
         header.push(rawNode(() => {
             if(this.inuse.$emit) return 'const $emit = $runtime.$makeEmitter($option);';
-        }));
-    }
-    if(insertOnDestroy) {
-        header.push(rawNode(() => {
-            if(this.inuse.$onDestroy) return 'function $onDestroy(fn) {$runtime.cd_onDestroy($component.$cd, fn);};';
         }));
     }
 
