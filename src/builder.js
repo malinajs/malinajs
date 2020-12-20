@@ -15,7 +15,6 @@ export function buildRuntime() {
         svg: bb.svg
     }));
     runtime.push(bb.source);
-    runtime.push(`$component.$$render($parentElement);`);
 
     runtime.push(xNode('onMount', ctx => {
         if(!this.inuse.$onMount && !this.script.onMount) return;
@@ -40,11 +39,7 @@ export function buildRuntime() {
         ctx.writeLine(`$runtime.addStyles('${this.css.id}', \`${this.Q(this.css.getContent())}\`);`);
     }));
 
-    runtime.push(xNode('raw:apply', ctx => {
-        if(this.inuse.apply) ctx.writeLine('$$apply();');
-    }));
-
-    runtime.push(`return $component;`);
+    runtime.push(`return $parentElement;`);
 
     this.module.body.push(runtime);
 

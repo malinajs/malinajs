@@ -301,17 +301,6 @@ export function transform() {
     });
 
     let header = [];
-    header.push(rawNode(() => {
-        if(this.inuse.apply) {
-            return 'const $component = $runtime.makeComponent($element, $option);';
-        } else {
-            return 'const $component = $runtime.makeComponentBase($element, $option);';
-        }
-    }));
-    header.push(rawNode(() => {
-        if(this.inuse.apply) return 'const $$apply = $component.apply;';
-    }));
-
     if(lastPropIndex != null) {
         header.push(rawNode(() => {
             if(this.inuse.$props) return 'const $props = $option.props;';
@@ -412,12 +401,26 @@ const generator = Object.assign({
     Raw: function(node, state) {
         let value = typeof node.value == 'function' ? node.value() : node.value;
         if(value) {
-            if(Array.isArray(value)) {
-                value.forEach((v, i) => {
-                    if(i) state.write(state.lineEnd + state.indent);
-                    state.write(v);
-                })
-            } else state.write(value);
+            var indent = state.indent.repeat(state.indentLevel);
+            if(!Array.isArray(value)) value = [value];
+            value.forEach(v => {
+                state.write(indent + v + state.lineEnd);
+            })
+        }
+    },
+    CustomBlock: function(node, state) {
+        var indent = state.indent.repeat(state.indentLevel);
+        var lineEnd = state.lineEnd;
+
+        var statements = node.body;
+        var length = statements.length;
+
+        for (var i = 0; i < length; i++) {
+            var statement = statements[i];
+
+            if(statement.type != 'Raw') state.write(indent);
+            this[statement.type](statement, state);
+            if(statement.type != 'Raw') state.write(lineEnd);
         }
     }
 }, astring.baseGenerator);
@@ -426,8 +429,7 @@ const generator = Object.assign({
 xNode.init.ast = (ctx, node) => {
     if(!node.body.length) return;
     let code = astring.generate({
-        type: 'Program',
-        sourceType: 'module',
+        type: 'CustomBlock',
         body: node.body
     }, {generator, startingIndentLevel: ctx.indent});
     ctx.write(code);

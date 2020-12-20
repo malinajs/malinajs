@@ -204,51 +204,60 @@ export function $$groupCall(emit) {
 };
 
 
-export const makeComponentBase = ($element, $option) => {
-    if(!$option.events) $option.events = {};
-    if(!$option.props) $option.props = {};
+export const makeComponentBase = (init) => {
+    return ($element, $option={}) => {
+        if(!$option.events) $option.events = {};
+        if(!$option.props) $option.props = {};
 
-    return {
-        $option,
-        push: noop,
-        destroy: noop,
-        context: $option.$$ ? Object.assign({}, $option.$$.context) : {},
-        $$render: (rootTemplate) => {
-            if ($option.afterElement) {
-                $element.parentNode.insertBefore(rootTemplate, $element.nextSibling);
-            } else {
-                $element.innerHTML = '';
-                $element.appendChild(rootTemplate);
-            }
+        const $component = {
+            $option,
+            push: noop,
+            destroy: noop,
+            context: $option.$$ ? Object.assign({}, $option.$$.context) : {}
+        };
+
+        let r = init($component, $option);
+
+        if ($option.afterElement) {
+            $element.parentNode.insertBefore(r, $element.nextSibling);
+        } else {
+            $element.innerHTML = '';
+            $element.appendChild(r);
         }
+
+        return $component;
     };
-};
+}
 
 
-export const makeComponent = ($element, $option) => {
-    let $component = makeComponentBase($element, $option);
-    let $cd = new $ChangeDetector();
+export const makeComponent = (init) => {
+    return ($element, $option={}) => {
+        return makeComponentBase(($component, $option) => {
+            let $cd = new $ChangeDetector();
 
-    let id = `a${$$uniqIndex++}`;
-    let process;
-    let apply = r => {
-        if(process) return r;
-        $tick(() => {
-            try {
-                process = true;
-                $digest($cd);
-            } finally {
-                process = false;
-            }
-        }, id);
-        return r;
+            let id = `a${$$uniqIndex++}`;
+            let process;
+            let apply = r => {
+                if (process) return r;
+                $tick(() => {
+                    try {
+                        process = true;
+                        $digest($cd);
+                    } finally {
+                        process = false;
+                    }
+                }, id);
+                return r;
+            };
+
+            $component.$cd = $cd;
+            $component.apply = apply;
+            $component.push = apply;
+            $component.destroy = () => $cd.destroy();
+
+            return apply(init($component, $option, apply));
+        })($element, $option)
     };
-
-    $component.$cd = $cd;
-    $component.apply = apply;
-    $component.push = apply;
-    $component.destroy = () => $cd.destroy();
-    return $component;
 };
 
 

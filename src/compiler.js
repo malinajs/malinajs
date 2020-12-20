@@ -144,14 +144,25 @@ export async function compile(source, config = {}) {
     if(config.injectRuntime) result.push(config.injectRuntime);
     result.push(ctx.module.top);
 
-    result.push(xNode('exportDefault', ctx => {
+    result.push(xNode('block', {
+        name: config.name,
+        component: xNode('function', {
+            args: ['$component', '$option'],
+            inline: true,
+            arrow: true,
+            body: [ctx.module.head, ctx.module.code, ctx.module.body]
+        })
+    }, (ctx, n) => {
+        ctx.writeIndent();
         if(config.exportDefault) ctx.write('export default ');
-    }));
-    result.push(xNode('function', {
-        name: ctx.config.name,
-        args: ['$element', '$option = {}'],
-        inline: true,
-        body: [ctx.module.head, ctx.module.code, ctx.module.body]
+        else ctx.write(`const ${n.name} = `);
+
+        if(ctx._ctx.inuse.apply) {
+            ctx.write('$runtime.makeComponent(');
+            n.component.args.push('$$apply');
+        } else ctx.write('$runtime.makeComponentBase(');
+        ctx.build(n.component);
+        ctx.write(');\n');
     }));
 
     ctx.result = ctx.xBuild(result);
