@@ -238,12 +238,8 @@ export function bindProp(prop, node, element) {
         return {bind: `$tick(() => { let $element=${element.bindName()}; ${exp}; $$apply(); });`};
     } else if(name == 'class') {
         if(node.__skipClass) return {};
-        if(!this.css) {
-            element.attributes.push({name: prop.name, value: prop.value});
-            return;
-        }
-
         node.__skipClass = true;
+
         let props = node.attributes.filter(a => a.name == 'class' || a.name.startsWith('class:'));
 
         let compound = props.some(prop => {
@@ -254,7 +250,13 @@ export function bindProp(prop, node, element) {
             } else {
                 classes = [prop.name.slice(6)];
             }
-            return classes.some(name => this.css.isExternalClass(name));
+            return classes.some(name => {
+                if(this.css.isExternalClass(name)) return true;
+                if(name[0] == '$') {
+                    this.css.markAsExternal(name.substring(1));
+                    return true;
+                }
+            });
         });
 
         if(compound) {

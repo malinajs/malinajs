@@ -6,13 +6,13 @@ import nwsapi from './ext/nwsapi';
 
 export function processCSS() {
     let styleNodes = this.styleNodes;
-    if(!styleNodes.length) return;
     const genId = () => this.config.cssGenId ? this.config.cssGenId() : utilsGenId();
 
     let self = this.css = {id: genId(), externalMainName: null};
     let astList = [];
     let selectors = {};
     let removeBlocks = [];
+    let active = false;
 
     const selector2str = (sel) => {
         if(!sel.children) sel = {type: 'Selector', children: sel};
@@ -40,6 +40,7 @@ export function processCSS() {
     styleNodes.forEach(transform);
 
     function transform(styleNode) {
+        active = true;
         let external = false;
         let globalBlock = false;
         styleNode.attributes.forEach(a => {
@@ -182,13 +183,22 @@ export function processCSS() {
         return sobj && sobj.external;
     }
 
+    self.markAsExternal = (name) => {
+        let sobj = selectors['.' + name];
+        if(!sobj) selectors['.' + name] = sobj = {isSimple: true, cleanSelector: '.' + name};
+        if(!sobj.external) sobj.external = true;
+        active = true;
+    }
+
+    self.active = () => active;
+
     self.getClassMap = () => {
         let classMap = {};
         let metaClass = {};
         Object.values(selectors).forEach(sel => {
             if(!sel.isSimple) return;
 
-            let className = sel.source[0].children[0].name;
+            let className = sel.source ? sel.source[0].children[0].name : sel.cleanSelector.substring(1);
             if(sel.external) {
                 metaClass[className] = sel.external;
             }

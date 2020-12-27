@@ -4,6 +4,7 @@
 * style's attribute "global"
 * compound classes (handle mix of class and class directives)
 * new passing class
+* mark a class as external "$className"
 * Deprecated: passing class from 0.5
 * plugins
 * esbuild-plugin (by AlexxNB)

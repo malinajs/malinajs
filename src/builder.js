@@ -23,8 +23,9 @@ export function buildRuntime() {
     }
 
     runtime.push(xNode('addStyle', ctx => {
-        if(!this.css) return;
-        ctx.writeLine(`$runtime.addStyles('${this.css.id}', \`${this.Q(this.css.getContent())}\`);`);
+        if(!this.css.active()) return;
+        let style = this.css.getContent();
+        if(style) ctx.writeLine(`$runtime.addStyles('${this.css.id}', \`${this.Q(style)}\`);`);
     }));
 
     runtime.push(`return $parentElement;`);
@@ -33,7 +34,7 @@ export function buildRuntime() {
 
     this.module.head.push(xNode('resolveClass', (ctx) => {
         if(!this.inuse.resolveClass) return;
-        if(this.css) {
+        if(this.css.active()) {
             let {classMap, metaClass, main} = this.css.getClassMap();
             if(main) main = `'${main}'`;
             else main = 'null';
@@ -136,13 +137,13 @@ export function buildBlock(data, option={}) {
 
                 if(n.attributes.some(a => a.name.startsWith('{...'))) {
                     n.spreadObject = 'spread' + (this.uniqIndex++);
-                    if(this.css) n.classes.add(this.css.id);
+                    if(this.css.active()) n.classes.add(this.css.id);
                     this.require('apply');
                     binds.push(xNode('spread-to-element', {
                         el: el.bindName(),
                         name: n.spreadObject
                     }, (ctx, n) => {
-                        let css = this.css ? `, '${this.css.id}'` : '';
+                        let css = this.css.active() ? `, '${this.css.id}'` : '';
                         ctx.writeLine(`let ${n.name} = $runtime.$$makeSpreadObject($cd, ${n.el}${css});`);
                     }));
                 }

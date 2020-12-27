@@ -17,14 +17,14 @@ import { attachSlot } from './parts/slot.js'
 import { makeFragment, attachFragment } from './parts/fragment.js'
 
 
-export const version = '0.6.9';
+export const version = '0.6.10';
 
 
 export async function compile(source, config = {}) {
     config = Object.assign({
         name: 'widget',
         warning: (w) => console.warn('!', w.message),
-        exportDefault: true,  // TODO: fix
+        exportDefault: true,
         inlineTemplate: false,
         hideLabel: false,
         compact: true,
@@ -124,7 +124,7 @@ export async function compile(source, config = {}) {
 
     await hook(ctx, 'css:before');
     ctx.processCSS();
-    if(ctx.css) ctx.css.process(ctx.DOM);
+    if(ctx.css.active()) ctx.css.process(ctx.DOM);
     await hook(ctx, 'css');
 
     await hook(ctx, 'runtime:before');
