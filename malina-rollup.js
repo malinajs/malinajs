@@ -25,7 +25,7 @@ function malinaRollup(option = {}) {
             return {code: result};
         },
         async resolveId(name, importer) {
-            if(name == '@malinajs') return await this.resolve('malinajs/runtime.js', importer, {skipSelf: true});
+            if(name == 'malinajs') return await this.resolve('malinajs/runtime.js', importer, {skipSelf: true});
             return null;
         }
     };

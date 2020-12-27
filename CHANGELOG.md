@@ -12,6 +12,7 @@
 * onError
 * $onMount
 * $onDestroy
+* alias for import: malinajs -> malinajs/runtime.js
 
 ## 0.5.x
 
