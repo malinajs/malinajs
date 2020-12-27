@@ -257,21 +257,24 @@ export function makeComponent(node, element) {
             let exp, handler, isFunc, event = arg.shift();
             assert(event);
 
+            if(event[0] == '@') {  // forwarding
+                event = event.substring(1);
+                assert(!value);
+                passOption.events = true;
+                boundEvent(event);
+                head.push(xNode('forwardEvent', {
+                    event
+                }, (ctx, data) => {
+                    if(_boundEvents[data.event] > 1) ctx.writeLine(`$runtime.$$addEventForComponent(events, '${data.event}', $option.events.${data.event});`);
+                    else ctx.writeLine(`events.${data.event} = $option.events.${data.event};`);
+                }))
+                return;
+            }
+
             if(value) exp = unwrapExp(value);
             else {
-                if(!arg.length) {
-                    // forwarding
-                    passOption.events = true;
-                    boundEvent(event);
-                    head.push(xNode('forwardEvent', {
-                        event
-                    }, (ctx, data) => {
-                        if(_boundEvents[data.event] > 1) ctx.writeLine(`$runtime.$$addEventForComponent(events, '${data.event}', $option.events.${data.event});`);
-                        else ctx.writeLine(`events.${data.event} = $option.events.${data.event};`);
-                    }))
-                    return;
-                }
-                handler = arg.pop();
+                if(arg.length) handler = arg.pop();
+                else handler = event;
             }
             assert(arg.length == 0);
             assert(!handler ^ !exp);

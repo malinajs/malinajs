@@ -72,20 +72,24 @@ export function bindProp(prop, node, element) {
         let mod = '', opts = arg.split(/[\|:]/);
         let event = opts.shift();
         let exp, handler, funcName;
+
+        if(event[0] == '@') {  // forwarding
+            event = event.substring(1);
+            assert(!prop.value);
+            return {bind: xNode('forwardEvent', {
+                event,
+                el: element.bindName()
+            }, (ctx, data) => {
+                ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, "${data.event}", ($event) => {`
+                    + `$option.events.${data.event} && $option.events.${data.event}($event)});`);
+            })};
+        }
+
         if(prop.value) {
             exp = getExpression();
         } else {
-            if(!opts.length) {
-                // forwarding
-                return {bind: xNode('forwardEvent', {
-                    event,
-                    el: element.bindName()
-                }, (ctx, data) => {
-                    ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, "${data.event}", ($event) => {`
-                        + `$option.events.${data.event} && $option.events.${data.event}($event)});`);
-                })};
-            }
-            handler = opts.pop();
+            if(opts.length) handler = opts.pop();
+            else handler = event;
         };
         assert(event, prop.content);
         assert(!handler ^ !exp, prop.content);

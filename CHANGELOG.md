@@ -13,6 +13,7 @@
 * $onMount
 * $onDestroy
 * alias for import: malinajs -> malinajs/runtime.js
+* alias @click -> @click={click}, @@click is forwarding
 
 ## 0.5.x
 
