@@ -35,6 +35,7 @@
     "compile.js",
     "runtime.js",
     "malina-rollup.js",
-    "malina-esbuild.js"
+    "malina-esbuild.js",
+    "plugins/sass.js"
   ]
 }

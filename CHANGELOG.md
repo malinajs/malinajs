@@ -14,6 +14,8 @@
 * $onDestroy
 * alias for import: malinajs -> malinajs/runtime.js
 * alias @click -> @click={click}, @@click is forwarding
+* local config "malina.config.js"
+* plugin sass/scss
 
 ## 0.5.x
 
