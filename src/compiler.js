@@ -17,10 +17,12 @@ import { attachSlot } from './parts/slot.js'
 import { makeFragment, attachFragment } from './parts/fragment.js'
 
 
-export const version = '0.6.10';
+export const version = '0.6.11';
 
 
 export async function compile(source, config = {}) {
+    if(config.localConfig !== false) config = loadConfig(config.path, config);
+
     config = Object.assign({
         name: 'widget',
         warning: (w) => console.warn('!', w.message),
@@ -196,4 +198,30 @@ function detectDependency(data) {
             if(p.type == 'exp') check(p.value);
         }
     }
+}
+
+
+function loadConfig(filename, option) {
+    const fs = require('fs');
+    let result = Object.assign({}, option);
+    if(result.plugins) result.plugins = result.plugins.slice();
+
+    let localConfig;
+    let parts = filename.split(/[\/\\]/);
+    for(let i=parts.length-1;i>1;i--) {
+        let local = parts.slice(0, i).join('/') + '/malina.config.js';
+        if(fs.existsSync(local)) {
+            localConfig = local;
+            break;
+        }
+    }
+
+    if(localConfig) {
+        const confFn = require(localConfig);
+        result = confFn(result, filename);
+    }
+    if(!result.path) result.path = filename;
+    if(!result.name) result.name = filename.match(/([^/\\]+)\.\w+$/)[1];
+
+    return result;
 }
