@@ -18,7 +18,6 @@ export function parse() {
         let attributes = [];
         let begin = true;
         let name = '';
-        let bind = 0;
         let eq, attr_start;
         let elArg = null;
 
@@ -61,15 +60,9 @@ export function parse() {
                 continue;
             }
             if(a == '{') {
-                bind++;
-                continue;
-            }
-            if(bind) {
-                if(a == '}') {
-                    bind--;
-                    if(bind > 0) continue;
-                    flush(1);
-                }
+                index--;
+                readBinding();
+                flush(1);
                 continue;
             }
             if(a == '}') error('Wrong attr');
@@ -151,11 +144,12 @@ export function parse() {
     const readBinding = () => {
         let start = index;
         assert(readNext() === '{', 'Bind error');
-        let p, q;
+        let a = null, p, q;
         let bkt = 1;
 
         while(true) {
-            let a = readNext();
+            p = a;
+            a = readNext();
 
             if(q) {
                 if(a != q) continue;
@@ -163,8 +157,17 @@ export function parse() {
                 q = null;
                 continue
             }
-            if(a == '"' || a == '\'' || a == '`') {
+            if(a == '"' || a == "'" || a == '`') {
                 q = a;
+                continue;
+            }
+            if(a == '*' && p == '/') {
+                // comment block
+                while(true) {
+                    p = a;
+                    a = readNext();
+                    if(a == '/' && p == '*') break;
+                }
                 continue;
             }
 

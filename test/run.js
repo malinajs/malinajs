@@ -13,7 +13,8 @@ async function main() {
         'css3',
         'css4',
         'pass-css',
-        'css-global'
+        'css-global',
+        'parser1'
     ];
 
     for(let i=0; i<tests.length; i++) {
