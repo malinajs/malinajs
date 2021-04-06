@@ -16,6 +16,7 @@
 * alias @click -> @click={click}, @@click is forwarding
 * local config "malina.config.js"
 * plugin sass/scss
+* key "auto" for each-block
 
 ## 0.5.x
 
