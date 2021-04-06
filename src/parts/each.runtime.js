@@ -27,7 +27,7 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, itemTemplat
         if(mapping.size) {
             let ctx, count = 0;
             for(let i=0;i<array.length;i++) {
-                ctx = mapping.get(getKey(array[i], i));
+                ctx = mapping.get(getKey(array[i], i, array));
                 if(ctx) {
                     ctx.a = true;
                     count++;
@@ -60,14 +60,14 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, itemTemplat
             if(next_ctx) {
                 ctx = next_ctx;
                 next_ctx = null;
-            } else ctx = mapping.get(getKey(item, i));
+            } else ctx = mapping.get(getKey(item, i, array));
             if(ctx) {
                 nextEl = i == 0 && onlyChild ? parentNode[firstChild] : prevNode.nextSibling;
                 if(nextEl != ctx.first) {
                     let insert = true;
 
                     if(tplLength == 1 && (i + 1 < array.length) && prevNode.nextSibling) {
-                        next_ctx = mapping.get(getKey(array[i + 1], i + 1));
+                        next_ctx = mapping.get(getKey(array[i + 1], i + 1, array));
                         if(prevNode.nextSibling.nextSibling === next_ctx.first) {
                             parentNode.replaceChild(ctx.first, prevNode.nextSibling);
                             insert = false;
@@ -96,7 +96,7 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, itemTemplat
                 parentNode.insertBefore(tpl, prevNode && prevNode.nextSibling);
             }
             prevNode = ctx.last;
-            newMapping.set(getKey(item, i), ctx);
+            newMapping.set(getKey(item, i, array), ctx);
         };
         lastNode = prevNode;
         mapping.clear();

@@ -58,10 +58,13 @@ export function makeEachBlock(data, option) {
     assert(isSimpleName(itemName), `Wrong name '${itemName}'`);
     assert(isSimpleName(indexName), `Wrong name '${indexName}'`);
 
-    if(keyName == itemName) keyName = null;
+    let keyFunction = null;
+    if(keyName == itemName) {
+        keyName = null;
+        keyFunction = 'noop';
+    }
     if(keyName) assert(detectExpressionType(keyName) == 'identifier', `Wrong key '${keyName}'`);
 
-    let keyFunction = null;
     if(keyName) {
         this.detectDependency(keyName);
         keyFunction = xNode('function', {
@@ -122,8 +125,9 @@ export function makeEachBlock(data, option) {
         ctx.writeLine(`$runtime.$$eachBlock($cd, ${option.elName}, ${option.onlyChild?1:0}, () => (${arrayName}),`);
         ctx.indent++;
         ctx.writeIndent();
-        if(data.keyFunction) ctx.build(data.keyFunction);
-        else ctx.write('$runtime.noop');
+        if(data.keyFunction === 'noop') ctx.write('$runtime.noop');
+        else if(data.keyFunction) ctx.build(data.keyFunction);
+        else ctx.write('$runtime.eachDefaultKey');
         ctx.write(`,\n`);
         ctx.writeIndent();
         ctx.build(data.template);

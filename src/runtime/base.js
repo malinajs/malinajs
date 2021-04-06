@@ -474,3 +474,6 @@ export const attachSlot = ($component, $cd, slotName, label, props, placeholder)
         }
     } else placeholder && placeholder();
 };
+
+
+export const eachDefaultKey = (item, index, array) => typeof array[0] === 'object' ? item : index;
