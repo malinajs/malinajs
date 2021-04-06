@@ -20,7 +20,7 @@ export function makeEachBlock(data, option) {
     let itemData = this.buildBlock({body: nodeItems}, {protectLastTag: true, inline: true});
 
     // #each items as item, index (key)
-    let rx = data.value.match(/^#each\s+(\S+)\s+as\s+(.+)$/);
+    let rx = data.value.match(/^#each\s+(.+)\s+as\s+(.+)$/);
     assert(rx, `Wrong #each expression '${data.value}'`);
     let arrayName = rx[1];
     let right = rx[2];
