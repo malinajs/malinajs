@@ -477,3 +477,9 @@ export const attachSlot = ($component, $cd, slotName, label, props, placeholder)
 
 
 export const eachDefaultKey = (item, index, array) => typeof array[0] === 'object' ? item : index;
+
+
+export const attachNamespace = ($component, $cd, name, el) => {
+    let fn = $component.$option.namespace && $component.$option.namespace[name];
+    if(fn) cd_onDestroy($cd, fn(el));
+}

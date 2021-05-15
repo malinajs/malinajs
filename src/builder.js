@@ -133,6 +133,7 @@ export function buildBlock(data, option={}) {
                 }
 
                 let el = xNode('node', {name: n.name});
+                if(option.oneElement) el._boundName = option.oneElement;
                 tpl.push(el);
 
                 if(n.attributes.some(a => a.name.startsWith('{...'))) {
@@ -152,6 +153,24 @@ export function buildBlock(data, option={}) {
                     if(b && b.bind) binds.push(b.bind);
                 });
                 n.classes.forEach(n => el.class.add(n));
+
+                if(option.bindAttributes && (el.attributes.length || el.class.size)) {
+                    el.bindName();
+                    binds.push(xNode('bindAttributes', {el}, (ctx, n) => {
+                        let elName = n.el.bindName();
+                        n.el.attributes.forEach(a => {
+                            ctx.writeLine(`${elName}.setAttribute('${a.name}', \`${this.Q(a.value)}\`);`);
+                        });
+                    }));
+                    binds.push(xNode('bindClasses', {el}, (ctx, n) => {
+                        let el = n.el;
+                        let elName = el.bindName();
+                        if(el.class.size) {
+                            let className = Array.from(el.class.values()).join(' ');
+                            ctx.writeLine(`${elName}.className += ' ${className}';`);
+                        }
+                    }));
+                }
 
                 el.voidTag = n.voidTag;
                 if(!n.closedTag) {
@@ -218,22 +237,24 @@ export function buildBlock(data, option={}) {
 
     if(!binds.empty()) {
         const innerBlock = xNode('block');
-        innerBlock.push(xNode('bindNodes', ctx => {
-
-            const gen = (parent, parentName) => {
-                for(let i=0; i < parent.children.length; i++) {
-                    let node = parent.children[i];
-                    let diff = i == 0 ? '[$runtime.firstChild]' : `[$runtime.childNodes][${i}]`;
-
-                    if(node._boundName) ctx.writeLine(`let ${node._boundName} = ${parentName() + diff};`);
-                    if(node.children) gen(node, () => {
-                        if(node._boundName) return node._boundName;
-                        return parentName() + diff;
-                    })
+        if(!option.oneElement) {
+            innerBlock.push(xNode('bindNodes', ctx => {
+    
+                const gen = (parent, parentName) => {
+                    for(let i=0; i < parent.children.length; i++) {
+                        let node = parent.children[i];
+                        let diff = i == 0 ? '[$runtime.firstChild]' : `[$runtime.childNodes][${i}]`;
+    
+                        if(node._boundName) ctx.writeLine(`let ${node._boundName} = ${parentName() + diff};`);
+                        if(node.children) gen(node, () => {
+                            if(node._boundName) return node._boundName;
+                            return parentName() + diff;
+                        })
+                    }
                 }
-            }
-            gen(rootTemplate, () => '$parentElement');
-        }))
+                gen(rootTemplate, () => '$parentElement');
+            }))
+        }
         innerBlock.push(binds);
 
         if(option.inline) {
