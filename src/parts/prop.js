@@ -325,11 +325,11 @@ export function bindProp(prop, node, element) {
         }
     } else if(name[0] == '^') {
         this.require('apply');
-        return {bind: xNode('bindNamespace', {
+        return {bind: xNode('bindAnchor', {
             name: name.slice(1) || 'default',
             el: element.bindName()
         }, (ctx, n) => {
-            ctx.writeLine(`$runtime.attachNamespace($component, $cd, '${n.name}', ${n.el});`)
+            ctx.writeLine(`$runtime.attachAnchor($component, $cd, '${n.name}', ${n.el});`)
         })};
     } else {
         if(prop.value && prop.value.indexOf('{') >= 0) {

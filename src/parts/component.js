@@ -62,10 +62,10 @@ export function makeComponent(node, element) {
         ctx.writeLine(`let $class = {}`);
     }));
 
-    head.push(xNode('namespace', {
-        $cond: () => passOption.namespace
+    head.push(xNode('anchor', {
+        $cond: () => passOption.anchor
     }, ctx => {
-        ctx.writeLine('let namespace = {};');
+        ctx.writeLine('let anchor = {};');
     }));
 
     let _boundEvents = {};
@@ -76,14 +76,14 @@ export function makeComponent(node, element) {
 
     if(node.body && node.body.length) {
         let slots = {};
-        let namespaces = [];
+        let anchors = [];
         let defaultSlot = {
             name: 'default',
             type: 'slot'
         }
         defaultSlot.body = node.body.filter(n => {
             if(n.type == 'node' && n.name[0] == '^') {
-                namespaces.push(n);
+                anchors.push(n);
                 return false;
             }
             if(n.type != 'slot') return true;
@@ -163,15 +163,15 @@ export function makeComponent(node, element) {
             }));
         });
 
-        namespaces.forEach(n => {
-            passOption.namespace = true;
+        anchors.forEach(n => {
+            passOption.anchor = true;
             let block = this.buildBlock({body: [n]}, {inline: true, oneElement: 'el', bindAttributes: true});
             let name = n.name.slice(1);
-            head.push(xNode('namespace', {
+            head.push(xNode('anchor', {
                 name: name || 'default',
                 source: block.source
             }, (ctx, data) => {
-                ctx.writeLine(`namespace.${data.name} = function(el) {`);
+                ctx.writeLine(`anchor.${data.name} = function(el) {`);
                 ctx.goIndent(() => {
                     ctx.writeLine(`let $childCD = $cd.new();`);
                     ctx.writeLine(`{`);
@@ -425,7 +425,7 @@ export function makeComponent(node, element) {
     if(forwardAllEvents || passOption.events) options.push('events');
     if(passOption.slots) options.push('slots');
     if(passOption.class) options.push('$class');
-    if(passOption.namespace) options.push('namespace');
+    if(passOption.anchor) options.push('anchor');
 
     let result = xNode('component', {
         el: element.bindName(),

@@ -17,7 +17,7 @@
 * local config "malina.config.js"
 * plugin sass/scss
 * key "auto" for each-block
-* namespaces for components
+* anchors for components
 
 ## 0.5.x
 
