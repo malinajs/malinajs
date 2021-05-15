@@ -1,20 +1,10 @@
 
-import { assert, isSimpleName, detectExpressionType, xNode } from '../utils.js'
+import { assert, isSimpleName, detectExpressionType, xNode, trimEmptyNodes } from '../utils.js'
 
 
 export function makeEachBlock(data, option) {
 
-    let nodeItems = data.body;
-    while(nodeItems.length) {
-        let n = nodeItems[0];
-        if(n.type == 'text' && !n.value.trim()) nodeItems.shift();
-        else break;
-    }
-    while(nodeItems.length) {
-        let n = nodeItems[nodeItems.length - 1];
-        if(n.type == 'text' && !n.value.trim()) nodeItems.pop();
-        else break;
-    }
+    let nodeItems = trimEmptyNodes(data.body);
     if(!nodeItems.length) nodeItems = [data.body[0]];
 
     let itemData = this.buildBlock({body: nodeItems}, {protectLastTag: true, inline: true});

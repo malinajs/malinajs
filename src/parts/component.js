@@ -1,5 +1,5 @@
 
-import { assert, detectExpressionType, isSimpleName, unwrapExp, xNode } from '../utils'
+import { assert, detectExpressionType, isSimpleName, unwrapExp, xNode, trimEmptyNodes } from '../utils'
 
 
 export function makeComponent(node, element) {
@@ -81,7 +81,7 @@ export function makeComponent(node, element) {
             name: 'default',
             type: 'slot'
         }
-        defaultSlot.body = node.body.filter(n => {
+        defaultSlot.body = trimEmptyNodes(node.body.filter(n => {
             if(n.type == 'node' && n.name[0] == '^') {
                 anchors.push(n);
                 return false;
@@ -92,10 +92,9 @@ export function makeComponent(node, element) {
             else n.name = 'default';
             assert(!slots[n], 'double slot');
             slots[n.name] = n;
-        });
+        }));
 
-        if(!slots.default) slots.default = defaultSlot;
-        // TODO: (else) check if defaultSlot is empty
+        if(!slots.default && defaultSlot.body.length) slots.default = defaultSlot;
 
         Object.values(slots).forEach(slot => {
             assert(isSimpleName(slot.name));
@@ -166,9 +165,10 @@ export function makeComponent(node, element) {
         anchors.forEach(n => {
             passOption.anchor = true;
             let block = this.buildBlock({body: [n]}, {inline: true, oneElement: 'el', bindAttributes: true});
-            let name = n.name.slice(1);
+            let name = n.name.slice(1) || 'default';
+            assert(isSimpleName(name));
             head.push(xNode('anchor', {
-                name: name || 'default',
+                name,
                 source: block.source
             }, (ctx, data) => {
                 ctx.writeLine(`anchor.${data.name} = function(el) {`);

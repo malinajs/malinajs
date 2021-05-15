@@ -94,6 +94,23 @@ export function checkRootName(name) {
     this.config.warning({message:'No name: ' + name});
 };
 
+
+export function trimEmptyNodes(srcNodes) {
+    let nodes = srcNodes.slice();
+    while(nodes.length) {
+        let n = nodes[0];
+        if(n.type == 'text' && !n.value.trim()) nodes.shift();
+        else break;
+    }
+    while(nodes.length) {
+        let n = last(nodes);
+        if(n.type == 'text' && !n.value.trim()) nodes.pop();
+        else break;
+    }
+    return nodes;
+}
+
+
 export function compactDOM() {
     let data = this.DOM;
     const details = {
