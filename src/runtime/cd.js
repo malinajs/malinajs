@@ -28,7 +28,7 @@ export function addEvent(cd, el, event, callback) {
 };
 
 export function cd_onDestroy(cd, fn) {
-    cd.destroyList.push(fn);
+    if(fn) cd.destroyList.push(fn);
 };
 
 export function $$removeItem(array, item) {

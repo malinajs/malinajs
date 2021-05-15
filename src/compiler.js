@@ -56,11 +56,14 @@ export async function compile(source, config = {}) {
         checkRootName: utils.checkRootName,
 
         inuse: {},
-        require: name => {
-            ctx.inuse[name] = true;
-            if(name == '$attributes') ctx.require('$props');
-            if(name == '$props') ctx.require('apply');
-            if(name == '$onDestroy') ctx.require('apply');
+        require: function() {
+            for(let name of arguments) {
+                if(ctx.inuse[name] == null) ctx.inuse[name] = 0;
+                ctx.inuse[name]++;
+                if(name == '$attributes') ctx.require('$props');
+                if(name == '$props') ctx.require('apply', '$cd');
+                if(name == '$onDestroy') ctx.require('apply', '$cd');
+            }
         },
         detectDependency,
 
@@ -159,7 +162,7 @@ export async function compile(source, config = {}) {
         if(config.exportDefault) ctx.write('export default ');
         else ctx.write(`const ${n.name} = `);
 
-        if(ctx._ctx.inuse.apply) {
+        if(ctx._ctx.inuse.apply || ctx._ctx.inuse.$cd) {
             ctx.write('$runtime.makeComponent(');
             n.component.args.push('$$apply');
         } else ctx.write('$runtime.makeComponentBase(');

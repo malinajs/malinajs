@@ -68,7 +68,7 @@ export function transform() {
     }
 
     const applyBlock = () => {
-        this.require('apply');
+        this.require('apply', '$cd');
         return {
             _apply: true,
             type: 'ExpressionStatement',
@@ -83,7 +83,7 @@ export function transform() {
     }
 
     const returnApplyBlock = (a) => {
-        this.require('apply');
+        this.require('apply', '$cd');
         return {
             _apply: true,
             callee: {

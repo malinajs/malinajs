@@ -7,7 +7,7 @@ export function makeifBlock(data, element) {
     let exp = r[1];
     assert(exp, 'Wrong binding: ' + data.value);
     this.detectDependency(exp);
-    this.require('apply');
+    this.require('apply', '$cd');
 
     let mainBlock, elseBlock, mainTpl, elseTpl;
 

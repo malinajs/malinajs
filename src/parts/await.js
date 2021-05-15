@@ -44,7 +44,7 @@ export function makeAwaitBlock(node, element) {
     }
 
     this.detectDependency(exp);
-    this.require('apply');
+    this.require('apply', '$cd');
 
     return xNode('await', {
         el: element.bindName(),

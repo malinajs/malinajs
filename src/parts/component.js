@@ -17,8 +17,7 @@ export function makeComponent(node, element) {
 
     let passOption = {};
 
-
-    this.require('apply');
+    this.require('apply', '$cd');
     let head = xNode('block');
     let body = xNode('block');
 
@@ -134,26 +133,33 @@ export function makeComponent(node, element) {
                 bind: block.source,
 
                 props,
-                setters
+                setters,
+                $cd: block.inuse.$cd,
+                optional_$cd: block.inuse.optional_$cd
             }, (ctx, data) => {
+                let $cd = data.$cd || data.optional_$cd && this.inuse.$cd;
                 ctx.writeLine(`slots.${data.name} = function($label, $component) {`);
                 ctx.goIndent(() => {
-                    ctx.writeLine(`let $childCD = $cd.new();`);
+                    if($cd) ctx.writeLine(`let $childCD = $cd.new();`);
                     ctx.build(data.template);
                     ctx.build(data.props);
                     if(data.bind) {
-                        ctx.writeLine(`{`);
-                        ctx.goIndent(() => {
-                            ctx.writeLine(`let $cd = $childCD;`);
+                        if($cd) {
+                            ctx.writeLine(`{`);
+                            ctx.goIndent(() => {
+                                ctx.writeLine(`let $cd = $childCD;`);
+                                ctx.build(data.bind);
+                            });
+                            ctx.writeLine(`}`);
+                        } else {
                             ctx.build(data.bind);
-                        });
-                        ctx.writeLine(`}`);
+                        }
                     }
-                    
+
                     ctx.writeLine(`$label.parentNode.insertBefore($parentElement, $label.nextSibling);`);
                     ctx.writeLine(`return {`);
                     ctx.goIndent(() => {
-                        ctx.writeLine(`destroy: () => {$childCD.destroy();}`);
+                        if($cd) ctx.writeLine(`destroy: () => {$childCD.destroy();}`);
                         ctx.build(data.setters);
                     });
                     ctx.writeLine(`};`);
@@ -169,19 +175,24 @@ export function makeComponent(node, element) {
             assert(isSimpleName(name));
             head.push(xNode('anchor', {
                 name,
-                source: block.source
-            }, (ctx, data) => {
-                ctx.writeLine(`anchor.${data.name} = function(el) {`);
-                ctx.goIndent(() => {
-                    ctx.writeLine(`let $childCD = $cd.new();`);
-                    ctx.writeLine(`{`);
+                source: block.source,
+                $cd: block.inuse.$cd
+            }, (ctx, n) => {
+                ctx.writeLine(`anchor.${n.name} = (el) => {`);
+                if(n.$cd) {
                     ctx.goIndent(() => {
-                        ctx.writeLine(`let $cd = $childCD;`);
-                        ctx.build(data.source);
+                        ctx.writeLine(`let $childCD = $cd.new();`);
+                        ctx.writeLine(`{`);
+                        ctx.goIndent(() => {
+                            ctx.writeLine(`let $cd = $childCD;`);
+                            ctx.build(n.source);
+                        });
+                        ctx.writeLine(`}`);
+                        ctx.writeLine(`return () => {$childCD.destroy();}`);
                     });
-                    ctx.writeLine(`}`);
-                    ctx.writeLine(`return () => {$childCD.destroy();}`);
-                });
+                } else {
+                    ctx.build(n.source);
+                }
                 ctx.writeLine(`}`);
             }));
         });

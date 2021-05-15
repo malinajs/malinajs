@@ -5,7 +5,7 @@ import {svgElements, xNode, last} from './utils.js'
 export function buildRuntime() {
     let runtime = xNode('block', {scope: true});
     runtime.push(xNode((ctx) => {
-        if(this.inuse.apply) ctx.writeLine('let $cd = $component.$cd;');
+        if(this.inuse.$cd) ctx.writeLine('let $cd = $component.$cd;');
     }));
 
     let bb = this.buildBlock(this.DOM, {inline: true});
@@ -60,6 +60,7 @@ export function buildBlock(data, option={}) {
     let rootTemplate = xNode('node', {inline: true, _ctx: this});
     let binds = xNode('block');
     let result = {};
+    let inuse = Object.assign({}, this.inuse);
 
     const go = (data, isRoot, tpl) => {
         let body = data.body.filter(n => {
@@ -93,11 +94,12 @@ export function buildBlock(data, option={}) {
                     let t = tpl.push(' ');
                     const pe = this.parseText(n.value);
                     this.detectDependency(pe);
+                    this.require('optional_$cd');
                     binds.push(xNode('bindText', {
                         el: t.bindName(),
                         exp: pe.result
                     }, (ctx, n) => {
-                        if(this.inuse.apply) ctx.writeLine(`$runtime.bindText($cd, ${n.el}, () => ${n.exp});`);
+                        if(this.inuse.$cd) ctx.writeLine(`$runtime.bindText($cd, ${n.el}, () => ${n.exp});`);
                         else ctx.writeLine(`${n.el}.textContent = ${n.exp};`);
                     }));
 
@@ -139,7 +141,7 @@ export function buildBlock(data, option={}) {
                 if(n.attributes.some(a => a.name.startsWith('{...'))) {
                     n.spreadObject = 'spread' + (this.uniqIndex++);
                     if(this.css.active()) n.classes.add(this.css.id);
-                    this.require('apply');
+                    this.require('apply', '$cd');
                     binds.push(xNode('spread-to-element', {
                         el: el.bindName(),
                         name: n.spreadObject
@@ -277,6 +279,10 @@ export function buildBlock(data, option={}) {
     } else {
         result.name = '$runtime.noop';
         result.source = null;
+    }
+    result.inuse = {};
+    for(let k in this.inuse) {
+        result.inuse[k] = this.inuse[k] - (inuse[k] || 0);
     }
     return result;
 };

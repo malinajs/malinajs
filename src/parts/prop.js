@@ -126,7 +126,7 @@ export function bindProp(prop, node, element) {
         }
 
         if(funcName) {
-            this.require('apply');
+            this.require('apply', '$cd');
             let bind = xNode('bindEvent', {
                 event,
                 mod,
@@ -149,7 +149,7 @@ export function bindProp(prop, node, element) {
             });
             return {bind};
         } else {
-            this.require('apply');
+            this.require('apply', '$cd');
             const bind = xNode('bindEvent', {
                 el: element.bindName(),
                 event,
@@ -171,7 +171,7 @@ export function bindProp(prop, node, element) {
             return {bind};
         }
     } else if(name == 'bind') {
-        this.require('apply');
+        this.require('apply', '$cd');
         let exp;
         arg = arg.split(/[\:\|]/);
         let attr = arg.shift();
@@ -210,7 +210,7 @@ export function bindProp(prop, node, element) {
             ctx.writeLine(`$runtime.bindInput($cd, ${n.el}, '${attr}', () => ${exp}, ${argName} => {${exp} = ${argName}; $$apply();});`);
         })};
     } else if(name == 'style' && arg) {
-        this.require('apply');
+        this.require('apply', '$cd');
         let styleName = arg;
         let exp = prop.value ? getExpression() : styleName;
         this.detectDependency(exp);
@@ -229,7 +229,7 @@ export function bindProp(prop, node, element) {
             })]
         })};
     } else if(name == 'use') {
-        this.require('apply');
+        this.require('apply', '$cd');
         if(arg) {
             assert(isSimpleName(arg), 'Wrong name: ' + arg);
             this.checkRootName(arg);
@@ -264,7 +264,7 @@ export function bindProp(prop, node, element) {
         });
 
         if(compound) {
-            this.require('apply');
+            this.require('apply', '$cd');
             let defaultHash = '';
             if(node.classes.has(this.css.id)) defaultHash = this.css.id;
             node.classes.clear();
@@ -297,7 +297,7 @@ export function bindProp(prop, node, element) {
                         node.classes.add(name);
                     });
                 } else {
-                    this.require('apply');
+                    this.require('apply', '$cd');
                     let className = prop.name.slice(6);
                     assert(className);
                     let exp = prop.value ? unwrapExp(prop.value) : className;
@@ -324,7 +324,7 @@ export function bindProp(prop, node, element) {
             return {bind};
         }
     } else if(name[0] == '^') {
-        this.require('apply');
+        this.require('$cd');
         return {bind: xNode('bindAnchor', {
             name: name.slice(1) || 'default',
             el: element.bindName()
@@ -333,7 +333,7 @@ export function bindProp(prop, node, element) {
         })};
     } else {
         if(prop.value && prop.value.indexOf('{') >= 0) {
-            this.require('apply');
+            this.require('apply', '$cd');
             const parsed = this.parseText(prop.value);
             this.detectDependency(parsed);
             let exp = parsed.result;

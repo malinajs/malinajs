@@ -11,7 +11,8 @@
     "build_app_es5": "NODE_PATH=.. babel ./example/public/app.js -o ./example/public/app.es5.js --presets babel-preset-es2015 && uglifyjs ./example/public/app.es5.js -o ./example/public/app.es5.min.js -m -c",
     "web": "http-server ./example/public",
     "test": "NODE_PATH=.. node ./node_modules/.bin/mocha ./test/run.js",
-    "test-debug": "NODE_PATH=.. node --inspect-brk ./node_modules/.bin/mocha ./test/run.js"
+    "test-debug": "NODE_PATH=.. node --inspect-brk ./node_modules/.bin/mocha ./test/run.js",
+    "brotli": "brotli --input /app/malinajs/example/public/app.min.js --output /app/malinajs/example/public/app.min.js.br; brotli --input /app/malinajs/example/public/app.min2.js --output /app/malinajs/example/public/app.min2.js.br"
   },
   "dependencies": {
     "acorn": "^7.3.1",
