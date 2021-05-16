@@ -41,7 +41,7 @@ npm run dev
 
 #### Run dev environment via docker:
 ```
-docker run --rm -it --user ${UID} -p 7000:7000 -p 35729:35729 -v `pwd`:/app/src lega911/malina
+docker run --rm -it --user ${UID} -p 7000:7000 -v `pwd`:/app/src lega911/malina
 # open http://localhost:7000/
 ```
 
