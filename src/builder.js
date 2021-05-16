@@ -150,9 +150,13 @@ export function buildBlock(data, option={}) {
                         ctx.writeLine(`let ${n.name} = $runtime.$$makeSpreadObject($cd, ${n.el}${css});`);
                     }));
                 }
+                let bindTail = [];
                 n.attributes.forEach(p => {
                     let b = this.bindProp(p, n, el);
-                    if(b && b.bind) binds.push(b.bind);
+                    if(b) {
+                        if(b.bind) binds.push(b.bind);
+                        if(b.bindTail) bindTail.push(b.bindTail);
+                    }
                 });
                 n.classes.forEach(n => el.class.add(n));
 
@@ -173,6 +177,7 @@ export function buildBlock(data, option={}) {
                         }
                     }));
                 }
+                bindTail.forEach(b => binds.push(b));
 
                 el.voidTag = n.voidTag;
                 if(!n.closedTag) {

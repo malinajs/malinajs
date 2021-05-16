@@ -325,7 +325,7 @@ export function bindProp(prop, node, element) {
         }
     } else if(name[0] == '^') {
         this.require('$cd');
-        return {bind: xNode('bindAnchor', {
+        return {bindTail: xNode('bindAnchor', {
             name: name.slice(1) || 'default',
             el: element.bindName()
         }, (ctx, n) => {
