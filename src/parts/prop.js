@@ -1,5 +1,5 @@
 
-import { assert, detectExpressionType, isSimpleName, unwrapExp, xNode } from '../utils.js'
+import { assert, detectExpressionType, isSimpleName, unwrapExp, xNode, last, toCamelCase } from '../utils.js'
 
 
 export function bindProp(prop, node, element) {
@@ -45,7 +45,9 @@ export function bindProp(prop, node, element) {
         } else name = prop.name;
     }
 
-    function getExpression() {
+    const isExpression = s => s[0] == '{' && last(s) == '}';
+
+    const getExpression = () => {
         let exp = prop.value.match(/^\{(.*)\}$/)[1];
         assert(exp, prop.content);
         return exp;
@@ -210,11 +212,32 @@ export function bindProp(prop, node, element) {
             ctx.writeLine(`$runtime.bindInput($cd, ${n.el}, '${attr}', () => ${exp}, ${argName} => {${exp} = ${argName}; $$apply();});`);
         })};
     } else if(name == 'style' && arg) {
-        this.require('apply', '$cd');
-        let styleName = arg;
-        let exp = prop.value ? getExpression() : styleName;
-        this.detectDependency(exp);
+        let styleName = toCamelCase(arg);
+        let exp;
+        if(prop.value) {
+            if(isExpression(prop.value)) {
+                exp = getExpression();
+                this.detectDependency(exp);
+            } else {
+                if(prop.value.includes('{')) {
+                    const parsed = this.parseText(prop.value);
+                    this.detectDependency(parsed);
+                    exp = parsed.result;
+                } else {
+                    return {bind: xNode('staticStyle', {
+                        el: element.bindName(),
+                        name: styleName,
+                        value: prop.value
+                    }, (ctx, n) => {
+                        ctx.writeLine(`${n.el}.style.${n.name} = \`${this.Q(n.value)}\`;`);
+                    })};
+                }
+            }
+        } else {
+            exp = styleName;
+        }
 
+        this.require('$cd');
         let hasElement = exp.includes('$element');
         return {bind: xNode('block', {
             scope: hasElement,

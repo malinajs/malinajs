@@ -18,6 +18,7 @@
 * plugin sass/scss
 * key "auto" for each-block
 * anchors for components
+* style templates, e.g. style:color={color}, style:border-color="red", style:border="1px solid {color}"
 
 ## 0.5.x
 
