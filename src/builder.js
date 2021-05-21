@@ -25,7 +25,14 @@ export function buildRuntime() {
     runtime.push(xNode('addStyle', ctx => {
         if(!this.css.active()) return;
         let style = this.css.getContent();
-        if(style) ctx.writeLine(`$runtime.addStyles('${this.css.id}', \`${this.Q(style)}\`);`);
+        if(!style) return;
+        let config = ctx._ctx.config;
+        if(config.css) {
+            if(typeof config.css == 'function') config.css(style, config.path, ctx._ctx, ctx);
+            else ctx.writeLine(`$runtime.addStyles('${this.css.id}', \`${this.Q(style)}\`);`);
+        } else {
+            ctx._ctx.css.result = style;
+        }
     }));
 
     runtime.push(`return $parentElement;`);

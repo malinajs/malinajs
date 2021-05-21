@@ -17,11 +17,11 @@ import { attachSlot } from './parts/slot.js'
 import { makeFragment, attachFragment } from './parts/fragment.js'
 
 
-export const version = '0.6.14';
+export const version = '0.6.15';
 
 
 export async function compile(source, config = {}) {
-    if(config.localConfig !== false) config = loadConfig(config.path, config);
+    if(config.localConfig !== false && config.path) config = loadConfig(config.path, config);
 
     config = Object.assign({
         name: 'widget',
@@ -33,7 +33,8 @@ export async function compile(source, config = {}) {
         autoSubscribe: true,
         cssGenId: null,
         plugins: [],
-        debug: true
+        debug: true,
+        css: true
     }, config);
 
     const ctx = {
@@ -173,6 +174,7 @@ export async function compile(source, config = {}) {
     ctx.result = ctx.xBuild(result);
 
     await hook(ctx, 'build');
+    if(config._get_ctx) return ctx;
     return ctx.result;
 };
 

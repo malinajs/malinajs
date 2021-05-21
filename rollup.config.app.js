@@ -1,6 +1,6 @@
 
 import malinaRollup from 'malinajs/malina-rollup'
-
+import css from 'rollup-plugin-css-only';
 
 function customResolve() {
     return {
@@ -12,6 +12,8 @@ function customResolve() {
     }
 };
 
+let cssInJS = true;
+
 export default {
     input: 'example/main.js',
     output: {
@@ -20,8 +22,10 @@ export default {
     },
     plugins: [
         malinaRollup({
-            inlineTemplate: true
+            inlineTemplate: true,
+            css: cssInJS
         }),
-        customResolve()
+        customResolve(),
+        !cssInJS && css({ output: 'bundle.css' })
     ]
 }
