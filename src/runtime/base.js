@@ -285,8 +285,8 @@ export const callComponent = (cd, component, el, option) => {
 };
 
 export const autoSubscribe = (component, obj) => {
-    if(obj && 'value' in obj && obj.subscribe) {
-        let unsub = obj.subscribe(component.$apply);
+    if(obj.subscribe) {
+        let unsub = obj.subscribe(component.apply);
         if(typeof unsub == 'function') cd_onDestroy(component.$cd, unsub);
     }
 }
