@@ -17,7 +17,7 @@ import { attachSlot } from './parts/slot.js'
 import { makeFragment, attachFragment } from './parts/fragment.js'
 
 
-export const version = '0.6.15';
+export const version = '0.6.16';
 
 
 export async function compile(source, config = {}) {
@@ -174,8 +174,7 @@ export async function compile(source, config = {}) {
     ctx.result = ctx.xBuild(result);
 
     await hook(ctx, 'build');
-    if(config._get_ctx) return ctx;
-    return ctx.result;
+    return ctx;
 };
 
 

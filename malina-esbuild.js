@@ -79,7 +79,6 @@ function malinaPlugin(options={}){
 
                     let ctx = await malina.compile(source,{
                         name: args.path.match(/([^/\\]+)\.\w+$/)[1],
-                        _get_ctx: true,
                         ...options
                     });
 

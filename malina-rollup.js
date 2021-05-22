@@ -19,7 +19,6 @@ function malinaRollup(option = {}) {
                 name: id.match(/([^/\\]+)\.\w+$/)[1]
             }, option);
             try {
-                opts._get_ctx = true;
                 let ctx = await malina.compile(code, opts);
                 result = ctx.result;
                 if(ctx.css.result) {

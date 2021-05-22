@@ -30,6 +30,6 @@ option.name = option.n || 'widget';
 
 if(!inputFile) throw 'No input file';
 const src = fs.readFileSync(inputFile, {encoding:'utf8', flag:'r'}); 
-compile(src, option).then(result => {
-    fs.writeFileSync(outputFile, result, {encoding:'utf8', flag:'w'}); 
+compile(src, option).then(ctx => {
+    fs.writeFileSync(outputFile, ctx.result, {encoding:'utf8', flag:'w'}); 
 }).catch(error => console.error(error));
