@@ -22,19 +22,26 @@ const malinaConfig = fs.existsSync(malinaConfigPath) ? require(malinaConfigPath)
 if(!module.parent){
 
     if(process.env.WATCH){
-       
-        esbuild({minify: false});
-
-        derver({
-            dir: 'public',
-            watch: ['public','src'],
-            onwatch:(lr,item)=>{
-                if(item === 'src'){
-                    lr.prevent();
-                    esbuild({minify: false}, e => lr.error(e.toString(),'Build error'));
-                }
-            },
-            ...derverConfig
+        esbuild({
+            minify: false,
+            incremental: true
+        }).then( bundle =>{
+            derver({
+                dir: 'public',
+                watch: ['public','src'],
+                onwatch: async (lr,item)=>{
+                    if(item === 'src'){
+                        lr.prevent();
+                        try{
+                            await bundle.rebuild();
+                        }catch(err){
+                            console.log(err.message);
+                            lr.error(err.toString(),'Build error');
+                        }
+                    }
+                },
+                ...derverConfig
+            })
         })
     }else{
         esbuild();
@@ -51,7 +58,10 @@ module.exports = {
 
 function malinaPlugin(options={}){
 
+    const cssModules = new Map();
+
     options = {
+        css: false,
         ...malinaConfig,
         ...options
     }
@@ -67,19 +77,37 @@ function malinaPlugin(options={}){
 
                     let source = await fsp.readFile(args.path, 'utf8');
 
-                    let result = await malina.compile(source,{
+                    let ctx = await malina.compile(source,{
                         name: args.path.match(/([^/\\]+)\.\w+$/)[1],
+                        _get_ctx: true,
                         ...options
                     });
+
+                    let code = ctx.result;
                     
-                    return { contents: result }
+                    if(!options.css && ctx.css.result){
+                        const cssPath = args.path.replace(/\.\w+$/, ".malina.css").replace(/\\/g, "/");
+                        cssModules.set(cssPath,ctx.css.result);
+                        code += `\nimport "${cssPath}";`
+                    }
+                    
+                    return { contents: code }
                 }
             );
+
+            build.onResolve({ filter: /\.malina\.css$/ }, ({ path }) => {
+                return { path, namespace: 'malinacss' }
+            })
+
+            build.onLoad({ filter: /\.malina\.css$/, namespace: 'malinacss' }, ({ path }) => {
+                const css = cssModules.get(path);
+                return css ? { contents: css, loader: "css" } : null;
+            })
         }
     }
 }
 
-async function esbuild(options={},onerror){
+async function esbuild(options={}){
 
     options = {
         entryPoints: ['src/main.js'],
@@ -91,9 +119,5 @@ async function esbuild(options={},onerror){
         ...options
     };
 
-    try{
-        await build(options)
-    }catch(e){
-        onerror ? onerror(e) :  process.exit(1);
-    }
+    return build(options);
 }
