@@ -1,5 +1,5 @@
 
-import { assert, detectExpressionType, isSimpleName, unwrapExp, xNode, trimEmptyNodes } from '../utils'
+import { assert, detectExpressionType, isSimpleName, unwrapExp, xNode, trimEmptyNodes, toCamelCase, isNumber } from '../utils'
 
 
 export function makeComponent(node, element) {
@@ -389,32 +389,10 @@ export function makeComponent(node, element) {
             this.require('resolveClass');
             return;
         }
-        assert(isSimpleName(name), `Wrong property: '${name}'`);
-        if(value && value.indexOf('{') >= 0) {
-            const pe = this.parseText(value);
-            this.detectDependency(pe);
-            let exp = pe.result;
 
-            if(propLevelType == 'spreading') propLevel++;
-            propLevelType = 'prop';
-            let propObject = propLevel ? `$$lvl[${propLevel}]` : 'props';
-
-            passOption.props = true;
-            passOption.push = true;
-            head.push(xNode('bindProp', {
-                exp,
-                name,
-                propObject
-            }, (ctx, data) => {
-                ctx.writeLine(`$runtime.fire($watch($cd, () => (${data.exp}), _${data.name} => {`);
-                ctx.goIndent(() => {
-                    ctx.writeLine(`${data.propObject}.${data.name} = _${data.name};`);
-                    ctx.writeLine(`$$push();`);
-                });
-                ctx.writeLine(`}, {ro: true, cmp: $runtime.$$compareDeep}));`);
-            }));
-        } else {
-            if(value) value = '`' + this.Q(value) + '`';
+        const staticProp = (name, value) => {
+            if(typeof value == 'number') value = '' + value;
+            else if(value) value = '`' + this.Q(value) + '`';
             else value = 'true';
 
             if(propLevelType == 'spreading') propLevel++;
@@ -428,6 +406,39 @@ export function makeComponent(node, element) {
             }, (ctx, data) => {
                 ctx.writeLine(`${data.propObject}.${data.name} = ${data.value};`);
             }));
+        }
+
+        assert(name.match(/^([\w\$_][\w\d\$_\.\-]*)$/), `Wrong property: '${name}'`);
+        name = toCamelCase(name);
+        if(value && value.indexOf('{') >= 0) {
+            const pe = this.parseText(value);
+            this.detectDependency(pe);
+            if(pe.parts.length == 1 && isNumber(pe.parts[0].value)) {
+                staticProp(name, Number(pe.parts[0].value));
+            } else {
+                let exp = pe.result;
+
+                if(propLevelType == 'spreading') propLevel++;
+                propLevelType = 'prop';
+                let propObject = propLevel ? `$$lvl[${propLevel}]` : 'props';
+
+                passOption.props = true;
+                passOption.push = true;
+                head.push(xNode('bindProp', {
+                    exp,
+                    name,
+                    propObject
+                }, (ctx, data) => {
+                    ctx.writeLine(`$runtime.fire($watch($cd, () => (${data.exp}), _${data.name} => {`);
+                    ctx.goIndent(() => {
+                        ctx.writeLine(`${data.propObject}.${data.name} = _${data.name};`);
+                        ctx.writeLine(`$$push();`);
+                    });
+                    ctx.writeLine(`}, {ro: true, cmp: $runtime.$$compareDeep}));`);
+                }));
+            }
+        } else {
+            staticProp(name, value);
         }
     });
 

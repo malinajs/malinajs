@@ -43,9 +43,16 @@ export function unwrapExp(e) {
 
 export function isSimpleName(name) {
     if(!name) return false;
-    if(!name.match(/^([\w\$_][\w\d\$_\.]*)$/)) return false;
+    if(!name.match(/^([a-zA-Z\$_][\w\d\$_\.]*)$/)) return false;
     if(name[name.length - 1] == '.') return false;
     return true;
+}
+
+export const isNumber = (value) => {
+    if(typeof value == 'number') return true;
+    if(!value) return false;
+    if(typeof value != 'string') return false;
+    return !isNaN(value);
 }
 
 export function detectExpressionType(name) {

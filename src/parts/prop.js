@@ -269,19 +269,25 @@ export function bindProp(prop, node, element) {
 
         let props = node.attributes.filter(a => a.name == 'class' || a.name.startsWith('class:'));
 
-        let compound = props.some(prop => {
-            let classes;
+        let compound = false;
+        props.forEach(prop => {
+            let classes = [];
             if(prop.name == 'class') {
-                if(prop.value.indexOf('{') >= 0) return true;
-                classes = prop.value.trim().split(/\s+/);
+                if(!prop.value) return;
+                let parsed = this.parseText(prop.value);
+                for(let p of parsed.parts) {
+                    if(p.type == 'text') {
+                        classes = classes.concat(p.value.trim().split(/\s+/));
+                    } else if(p.type == 'exp') compound = true;
+                }
             } else {
                 classes = [prop.name.slice(6)];
             }
             return classes.some(name => {
-                if(this.css.isExternalClass(name)) return true;
-                if(name[0] == '$') {
+                if(this.css.isExternalClass(name)) compound=true;
+                else if(name[0] == '$') {
                     this.css.markAsExternal(name.substring(1));
-                    return true;
+                    compound = true;
                 }
             });
         });
@@ -316,7 +322,7 @@ export function bindProp(prop, node, element) {
             let bind = xNode('block');
             props.forEach(prop => {
                 if(prop.name == 'class') {
-                    prop.value.trim().split(/\s+/).forEach(name => {
+                    prop.value && prop.value.trim().split(/\s+/).forEach(name => {
                         node.classes.add(name);
                     });
                 } else {
