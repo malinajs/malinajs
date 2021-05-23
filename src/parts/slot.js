@@ -53,7 +53,7 @@ export function attachSlot(slotName, label, node) {
         }, (ctx, n) => {
             ctx.build(n.tpl);
             ctx.build(n.body);
-            ctx.writeLine(`${n.el}.parentNode.insertBefore($parentElement, ${n.el}.nextSibling);`);
+            ctx.writeLine(`$runtime.insertBefore(${n.el}, $parentElement, ${n.el}.nextSibling);`);
         });
     }
 

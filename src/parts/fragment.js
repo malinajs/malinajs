@@ -56,7 +56,7 @@ export function makeFragment(node) {
         data.source.handler(ctx, data.source);
         ctx.writeLine(`${data.name}($cd, $tpl);`);
     }));
-    source.push(`label.parentNode.insertBefore($tpl, label.nextSibling);`);
+    source.push(`$runtime.insertBefore(label, $tpl, label.nextSibling);`);
 
     return {source};
 }

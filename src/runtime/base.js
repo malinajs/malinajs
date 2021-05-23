@@ -13,6 +13,10 @@ export const firstChild = 'firstChild';
 
 export let noop = a => a;
 
+export const insertBefore = (el, node, before) => {
+    el.parentNode.insertBefore(node, before);
+}
+
 export function $$htmlToFragment(html) {
     if(templatecache[html]) return templatecache[html].cloneNode(true);
 
@@ -228,7 +232,7 @@ export const makeComponentBase = (init) => {
         }
 
         if ($option.afterElement) {
-            $element.parentNode.insertBefore(r, $element.nextSibling);
+            insertBefore($element, r, $element.nextSibling);
         } else {
             $element.innerHTML = '';
             $element.appendChild(r);

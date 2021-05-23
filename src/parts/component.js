@@ -156,7 +156,7 @@ export function makeComponent(node, element) {
                         }
                     }
 
-                    ctx.writeLine(`$label.parentNode.insertBefore($parentElement, $label.nextSibling);`);
+                    ctx.writeLine(`$runtime.insertBefore($label, $parentElement, $label.nextSibling);`);
                     ctx.writeLine(`return {`);
                     ctx.goIndent(() => {
                         if($cd) ctx.writeLine(`destroy: () => {$childCD.destroy();}`);

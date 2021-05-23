@@ -1,5 +1,5 @@
 
-import { $$removeElements, firstChild } from '../runtime/base';
+import { $$removeElements, firstChild, insertBefore } from '../runtime/base';
 import { $watch } from '../runtime/cd';
 
 export function $$ifBlock($cd, $parentElement, fn, tpl, build, tplElse, buildElse) {
@@ -12,7 +12,7 @@ export function $$ifBlock($cd, $parentElement, fn, tpl, build, tplElse, buildEls
         builder(childCD, tpl);
         first = tpl[firstChild];
         last = tpl.lastChild;
-        $parentElement.parentNode.insertBefore(tpl, $parentElement.nextSibling);
+        insertBefore($parentElement, tpl, $parentElement.nextSibling);
     };
 
     function destroy() {
