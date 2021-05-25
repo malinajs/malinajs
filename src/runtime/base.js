@@ -104,7 +104,7 @@ export function $tick(fn, uniq) {
         _tick_planned = {};
         let list = _tick_list;
         _tick_list = [];
-        list.forEach(safeCall);
+        list.map(safeCall);
     }, 0);
 };
 
@@ -213,35 +213,37 @@ export const $onDestroy = fn => current_component._d.push(fn);
 export const $onMount = fn => current_component._m.push(fn);
 
 
+export const $bindComponent = (init, $element, $option) => {
+    if(!$option.events) $option.events = {};
+    let r = init($option);
+    if ($option.afterElement) {
+        insertBefore($element, r, $element.nextSibling);
+    } else {
+        $element.innerHTML = '';
+        $element.appendChild(r);
+    }
+}
+
+
 export const makeComponentBase = (init) => {
     return ($element, $option={}) => {
         if(!$option.events) $option.events = {};
-        if(!$option.props) $option.props = {};
 
-        const $component = {
+        let prev = current_component;
+        $context = {...$option.$$?.context};
+        let $component = current_component = {
             $option,
-            push: noop,
             destroy: () => $component._d.map(safeCall),
-            context: $option.$$ ? Object.assign({}, $option.$$.context) : {},
+            context: $context,
             _d: [],
             _m: []
         };
 
-        let r, prev = current_component;
         try {
-            current_component = $component;
-            $context = $component.context;
-            r = init($component, $option);
+            $bindComponent(init, $element, $option);
         } finally {
             current_component = prev;
-            $context = prev && prev.context;
-        }
-
-        if ($option.afterElement) {
-            insertBefore($element, r, $element.nextSibling);
-        } else {
-            $element.innerHTML = '';
-            $element.appendChild(r);
+            $context = null;
         }
 
         $component._d.push(...$component._m.map(safeCall));
@@ -252,7 +254,8 @@ export const makeComponentBase = (init) => {
 
 export const makeComponent = (init) => {
     return ($element, $option={}) => {
-        return makeComponentBase(($component, $option) => {
+        if(!$option.props) $option.props = {};
+        return makeComponentBase(() => {
             let $cd = new $ChangeDetector();
             $onDestroy(() => $cd.destroy());
 
@@ -271,12 +274,12 @@ export const makeComponent = (init) => {
                 return r;
             };
 
-            $component.$cd = $cd;
-            $component.apply = apply;
-            $component.push = apply;
+            current_component.$cd = $cd;
+            current_component.apply = apply;
+            current_component.push = apply;
 
-            return apply(init($component, $option, apply));
-        })($element, $option)
+            return apply(init($option, apply));
+        })($element, $option);
     };
 };
 

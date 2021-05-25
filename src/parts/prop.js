@@ -78,12 +78,18 @@ export function bindProp(prop, node, element) {
         if(event[0] == '@') {  // forwarding
             event = event.substring(1);
             assert(!prop.value);
+            this.require('$component');
             return {bind: xNode('forwardEvent', {
                 event,
                 el: element.bindName()
             }, (ctx, data) => {
-                ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, "${data.event}", ($event) => {`
-                    + `$option.events.${data.event} && $option.events.${data.event}($event)});`);
+                if(ctx._ctx.inuse.$cd) {
+                    ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, "${data.event}", ($event) => {`
+                        + `$option.events.${data.event} && $option.events.${data.event}($event)});`);
+                } else {
+                    ctx.writeLine(`$runtime.addEvent($component, ${data.el}, "${data.event}", ($event) => {`
+                        + `$option.events.${data.event} && $option.events.${data.event}($event)});`);
+                }
             })};
         }
 

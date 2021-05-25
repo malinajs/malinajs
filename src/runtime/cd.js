@@ -20,15 +20,15 @@ export const watchInit = (cd, fn, callback) => {
     return w.value;
 };
 
-export function addEvent(cd, el, event, callback) {
+export function addEvent(cd_component, el, event, callback) {
     el.addEventListener(event, callback);
-    cd_onDestroy(cd, () => {
+    cd_onDestroy(cd_component, () => {
         el.removeEventListener(event, callback);
     });
 };
 
-export function cd_onDestroy(cd, fn) {
-    if(fn) cd.destroyList.push(fn);
+export function cd_onDestroy(cd_component, fn) {
+    if(fn) cd_component._d.push(fn);
 };
 
 export function $$removeItem(array, item) {
@@ -40,7 +40,7 @@ export function $ChangeDetector(parent) {
     this.parent = parent;
     this.children = [];
     this.watchers = [];
-    this.destroyList = [];
+    this._d = [];
     this.prefix = [];
 };
 
@@ -54,11 +54,9 @@ $ChangeDetector.prototype.destroy = function(option) {
     if(option !== false && this.parent) $$removeItem(this.parent.children, this);
     this.watchers.length = 0;
     this.prefix.length = 0;
-    this.destroyList.forEach(safeCall);
-    this.destroyList.length = 0;
-    this.children.forEach(cd => {
-        cd.destroy(false);
-    });
+    this._d.map(safeCall);
+    this._d.length = 0;
+    this.children.map(cd => cd.destroy(false));
     this.children.length = 0;
 };
 

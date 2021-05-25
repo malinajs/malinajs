@@ -31,6 +31,7 @@ export function parse() {
         if(source.includes('$onDestroy')) this.require('$onDestroy');
         if(source.includes('$onMount')) this.require('$onMount');
         if(source.includes('$context')) this.require('$context');
+        if(source.includes('$component')) this.require('$component');
     } else {
         this.script.ast = {
             body: [],
@@ -298,6 +299,10 @@ export function transform() {
     });
 
     let header = [];
+    header.push(rawNode(() => {
+        if(this.inuse.$component) return 'const $component = $runtime.current_component;';
+    }));
+
     if(lastPropIndex != null) {
         header.push(rawNode(() => {
             if(this.inuse.$props) return 'const $props = $option.props;';
@@ -329,7 +334,7 @@ export function transform() {
     }
 
     header.push(rawNode(() => {
-        if(this.inuse.$context) return 'const $context = $component.context;';
+        if(this.inuse.$context) return 'const $context = $runtime.$context;';
     }));
 
 
