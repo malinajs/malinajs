@@ -115,13 +115,11 @@ export function transform() {
                 node.body.body.splice(i, 1);
                 return 'stop';
             }
-            if(node._parent.type == 'CallExpression' && node._parent.callee.name == '$onMount') return;
             if(!isInLoop(node)) {
                 node.body.body.unshift(applyBlock());
             }
         } else if(node.type == 'ArrowFunctionExpression') {
             if(node._parent.type == 'CallExpression' && node._parent.callee.name == '$onDestroy') return 'stop';
-            if(node._parent.type == 'CallExpression' && node._parent.callee.name == '$onMount') return;
             if(node.body.type != 'BlockStatement' && !isInLoop(node)) {
                 node.body = {
                     type: 'BlockStatement',

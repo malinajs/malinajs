@@ -440,8 +440,11 @@ xNode.init = {
         }
     },
     template: (ctx, node) => {
-        const convert = node.svg ? '$runtime.svgToFragment' : '$$htmlToFragment';
         let template = ctx._ctx.xBuild(node.body);
+        let convert;
+        if(node.svg) convert = '$runtime.svgToFragment';
+        else if(!template.match(/[<>]/)) convert = '$runtime.createTextNode';
+        else convert = '$$htmlToFragment';
         if(node.inline) {
             ctx.write(`${convert}(\`${ctx._ctx.Q(template)}\`)`);
         } else {

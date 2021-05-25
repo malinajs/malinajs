@@ -9,7 +9,7 @@ export const configure = (option) => {
 
 export const safeCall = fn => {
     try {
-        return fn();
+        return typeof fn == 'function' && fn();
     } catch (e) {
         __app_onerror(e);
     }

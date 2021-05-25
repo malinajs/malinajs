@@ -17,7 +17,13 @@ export const insertBefore = (el, node, before) => {
     el.parentNode.insertBefore(node, before);
 }
 
-export function $$htmlToFragment(html) {
+export const createTextNode = (text) => {
+    let f = document.createDocumentFragment();
+    f.append(text);
+    return f;
+}
+
+export const $$htmlToFragment = (html) => {
     if(templatecache[html]) return templatecache[html].cloneNode(true);
 
     let t = document.createElement('template');
@@ -27,7 +33,7 @@ export function $$htmlToFragment(html) {
     return result;
 };
 
-export function $$htmlToFragmentClean(html) {
+export const $$htmlToFragmentClean = (html) => {
     if(templatecache[html]) return templatecache[html].cloneNode(true);
 
     let t = document.createElement('template');
@@ -215,7 +221,7 @@ export const makeComponentBase = (init) => {
         const $component = {
             $option,
             push: noop,
-            destroy: () => $component._d.forEach(safeCall),
+            destroy: () => $component._d.map(safeCall),
             context: $option.$$ ? Object.assign({}, $option.$$.context) : {},
             _d: [],
             _m: []
@@ -238,13 +244,7 @@ export const makeComponentBase = (init) => {
             $element.appendChild(r);
         }
 
-        $tick(() => {
-            $component._m.forEach(fn => {
-                let d = safeCall(fn);
-                if(typeof d == 'function') $component._d.push(d);
-            })
-        });
-
+        $component._d.push(...$component._m.map(safeCall));
         return $component;
     };
 }

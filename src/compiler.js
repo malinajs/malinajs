@@ -63,7 +63,6 @@ export async function compile(source, config = {}) {
                 ctx.inuse[name]++;
                 if(name == '$attributes') ctx.require('$props');
                 if(name == '$props') ctx.require('apply', '$cd');
-                if(name == '$onDestroy') ctx.require('apply', '$cd');
             }
         },
         detectDependency,
