@@ -359,7 +359,7 @@ export function bindProp(prop, node, element) {
             return {bind};
         }
     } else if(name[0] == '^') {
-        this.require('$cd');
+        this.require('$cd', '$component');
         return {bindTail: xNode('bindAnchor', {
             name: name.slice(1) || 'default',
             el: element.bindName()

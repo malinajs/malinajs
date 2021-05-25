@@ -233,6 +233,7 @@ export const genId = () => {
 
 export function xWriter(ctx) {
     this._ctx = ctx;
+    this.inuse = ctx.inuse;
     this.result = [];
     this.indent = 0;
 

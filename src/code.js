@@ -348,6 +348,8 @@ export function transform() {
 
     if(this.config.autoSubscribe) {
         result.importedNames.forEach(name => {
+            if(name[0].toUpperCase() == name[0]) return;
+            this.require('$cd');
             header.push(rawNode(`$runtime.autoSubscribe($component, ${name});`));
         });
     }
@@ -360,6 +362,7 @@ export function transform() {
 
     if(this.scriptNodes[0] && this.scriptNodes[0].attributes.some(a => a.name == 'property')) {
         result.props.forEach(name => {
+            this.require('$cd');
             resultBody.push(rawNode(`$runtime.makeExternalProperty($component, '${name}', () => ${name}, _${name} => ${name} = _${name});`));
         });
     }

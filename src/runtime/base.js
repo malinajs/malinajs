@@ -284,10 +284,10 @@ export const makeComponent = (init) => {
 };
 
 
-export const callComponent = (cd, component, el, option) => {
+export const callComponent = (cd_component, component, el, option) => {
     option.afterElement = true;
     let $component = safeCall(() => component(el, option));
-    if($component && $component.destroy) cd_onDestroy(cd, $component.destroy);
+    if($component && $component.destroy) cd_onDestroy(cd_component, $component.destroy);
     return $component;
 };
 

@@ -5,6 +5,10 @@ import { assert, detectExpressionType, isSimpleName, unwrapExp, xNode, trimEmpty
 export function makeComponent(node, element) {
     let propList = node.attributes;
     let forwardAllEvents = false;
+
+    this.require('$component');
+    this.require('apply', '$cd');
+
     let options = ['$$: $component'];
     let dynamicComponent;
 
@@ -17,7 +21,6 @@ export function makeComponent(node, element) {
 
     let passOption = {};
 
-    this.require('apply', '$cd');
     let head = xNode('block');
     let body = xNode('block');
 

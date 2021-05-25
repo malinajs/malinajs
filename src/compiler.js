@@ -64,6 +64,8 @@ export async function compile(source, config = {}) {
                 if(name == '$attributes') ctx.require('$props');
                 if(name == '$props') ctx.require('apply', '$cd');
                 if(name == '$cd') ctx.require('$component');
+                if(name == '$onDestroy') ctx.require('$component');
+                if(name == '$onMount') ctx.require('$component');
             }
         },
         detectDependency,
@@ -163,13 +165,12 @@ export async function compile(source, config = {}) {
         if(config.exportDefault) ctx.write('export default ');
         else ctx.write(`const ${n.name} = `);
 
-        const inuse = ctx._ctx.inuse;
-        if(inuse.apply || inuse.$cd) {
+        if(ctx.inuse.apply || ctx.inuse.$cd) {
             ctx.write('$runtime.makeComponent(');
             n.component.args.push('$$apply');
             ctx.build(n.component);
             ctx.write(');\n');
-        } else if(inuse.$component || inuse.$context) {
+        } else if(ctx.inuse.$component || ctx.inuse.$context) {
             ctx.write('$runtime.makeComponentBase(');
             ctx.build(n.component);
             ctx.write(');\n');

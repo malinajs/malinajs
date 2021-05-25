@@ -57,7 +57,7 @@ export function attachSlot(slotName, label, node) {
         });
     }
 
-    this.require('apply', '$cd');
+    this.require('apply', '$cd', '$component');
 
     return xNode('slot', {
         name: slotName,
