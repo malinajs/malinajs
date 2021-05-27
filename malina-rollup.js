@@ -5,13 +5,13 @@ module.exports = malinaRollup;
 
 function malinaRollup(options = {}) {
     if(options.displayVersion !== false) console.log('! Malina.js', malina.version);
-    if(!options.extension) options.extension = ['html', 'ma', 'xht'];
+    if(!options.extensions) options.extensions = ['html', 'ma', 'xht'];
     let content_cache = {};
 
     return {
         name: 'malina',
         async transform(code, id) {
-            if(!options.extension.some(ext => id.endsWith('.' + ext))) return null;
+            if(!options.extensions.some(ext => id.endsWith('.' + ext))) return null;
             let result;
 
             let opts = Object.assign({
