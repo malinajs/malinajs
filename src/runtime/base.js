@@ -230,7 +230,7 @@ export const makeComponentBase = (init) => {
         if(!$option.events) $option.events = {};
 
         let prev = current_component;
-        $context = {...$option.$$?.context};
+        $context = $option.context || {};
         let $component = current_component = {
             $option,
             destroy: () => $component._d.map(safeCall),
@@ -284,10 +284,11 @@ export const makeComponent = (init) => {
 };
 
 
-export const callComponent = (cd_component, component, el, option) => {
+export const callComponent = (cd, context, component, el, option) => {
     option.afterElement = true;
+    option.context = {...context};
     let $component = safeCall(() => component(el, option));
-    if($component && $component.destroy) cd_onDestroy(cd_component, $component.destroy);
+    if($component && $component.destroy) cd_onDestroy(cd, $component.destroy);
     return $component;
 };
 
@@ -466,10 +467,10 @@ export const makeExternalProperty = ($component, name, getter, setter) => {
 }
 
 
-export const attachSlot = ($component, $cd, slotName, label, props, placeholder) => {
-    let $slot = $component.$option.slots && $component.$option.slots[slotName];
+export const attachSlot = ($option, $context, $cd, slotName, label, props, placeholder) => {
+    let $slot = $option.slots && $option.slots[slotName];
     if($slot) {
-        let s = $slot(label, $component);
+        let s = $slot(label, $context);
         cd_onDestroy($cd, s.destroy);
         for(let key in props) {
             let setter = `set_${key}`;

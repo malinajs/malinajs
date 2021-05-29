@@ -7,7 +7,7 @@ export function makeComponent(node, element) {
     let forwardAllEvents = false;
 
     this.require('$component');
-    this.require('apply', '$cd');
+    this.require('apply', '$cd', '$context');
 
     let options = ['$$: $component'];
     let dynamicComponent;
@@ -121,7 +121,22 @@ export function makeComponent(node, element) {
                 });
             }
 
+            if(!slot.body.length) return;
             passOption.slots = true;
+
+            let contentNodes = trimEmptyNodes(slot.body);
+            if(contentNodes.length == 1 && contentNodes[0].type == 'node' && contentNodes[0].name == 'slot') {
+                let childSlot = contentNodes[0];
+                if(!childSlot.body || !childSlot.body.length) {
+                    head.push(xNode('empty-slot', {
+                        name: slot.name
+                    }, (ctx, n) => {
+                        ctx.writeLine(`slots.${n.name} = $option.slots?.${n.name};`)
+                    }));
+                    return;
+                }
+            }
+            
             let block = this.buildBlock(slot, {inline: true});
 
             const template = xNode('template', {
@@ -141,7 +156,7 @@ export function makeComponent(node, element) {
                 optional_$cd: block.inuse.optional_$cd
             }, (ctx, data) => {
                 let $cd = data.$cd || data.optional_$cd && this.inuse.$cd;
-                ctx.writeLine(`slots.${data.name} = function($label, $component) {`);
+                ctx.writeLine(`slots.${data.name} = function($label, $context) {`);
                 ctx.goIndent(() => {
                     if($cd) ctx.writeLine(`let $childCD = $cd.new();`);
                     ctx.build(data.template);
@@ -463,9 +478,9 @@ export function makeComponent(node, element) {
         const $cd = data.$cd || '$cd';
         ctx.build(data.head);
         if(data.body.empty()) {
-            ctx.writeLine(`$runtime.callComponent(${$cd}, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
+            ctx.writeLine(`$runtime.callComponent(${$cd}, $context, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
         } else {
-            ctx.writeLine(`let $child = $runtime.callComponent(${$cd}, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
+            ctx.writeLine(`let $child = $runtime.callComponent(${$cd}, $context, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
             ctx.writeLine(`if($child) {`);
             ctx.goIndent(() => {
                 ctx.build(data.body);
