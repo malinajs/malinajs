@@ -225,10 +225,8 @@ export const $bindComponent = (init, $element, $option) => {
 }
 
 
-export const makeComponentBase = (init) => {
+export const makeComponentBase = (init, owncd) => {
     return ($element, $option={}) => {
-        if(!$option.events) $option.events = {};
-
         let prev = current_component;
         $context = {...$option.$$?.context};
         let $component = current_component = {
@@ -238,9 +236,24 @@ export const makeComponentBase = (init) => {
             _d: [],
             _m: []
         };
+        if(owncd) {
+            $component.$cd = {
+                _d: $component._d,
+                watchers: [],
+                new: () => $component.$cd
+            }
+        }
 
         try {
             $bindComponent(init, $element, $option);
+            if(owncd) {
+                let watchers = $component.$cd.watchers;
+                while(watchers.length) {
+                    let wl = watchers.slice();
+                    watchers.length = 0;
+                    wl.forEach(w => w.cb(w.fn()));
+                }
+            }
         } finally {
             current_component = prev;
             $context = null;
@@ -284,10 +297,11 @@ export const makeComponent = (init) => {
 };
 
 
-export const callComponent = (cd_component, component, el, option) => {
+export const callComponent = (parentComponent, cd, component, el, option) => {
+    option.$$ = parentComponent;
     option.afterElement = true;
     let $component = safeCall(() => component(el, option));
-    if($component && $component.destroy) cd_onDestroy(cd_component, $component.destroy);
+    if($component && $component.destroy) cd_onDestroy(cd, $component.destroy);
     return $component;
 };
 
@@ -466,11 +480,19 @@ export const makeExternalProperty = ($component, name, getter, setter) => {
 }
 
 
-export const attachSlot = ($component, $cd, slotName, label, props, placeholder) => {
+export const attachSlotBase = ($component, $cd, slotName, label, placeholder) => {
     let $slot = $component.$option.slots && $component.$option.slots[slotName];
     if($slot) {
         let s = $slot(label, $component);
         cd_onDestroy($cd, s.destroy);
+        return s;
+    } else placeholder && placeholder();
+};
+
+
+export const attachSlot = ($component, $cd, slotName, label, props, placeholder) => {
+    let slot = attachSlotBase($component, $cd, slotName, label, placeholder);
+    if(slot) {
         for(let key in props) {
             let setter = `set_${key}`;
             if(s[setter]) {
@@ -479,7 +501,7 @@ export const attachSlot = ($component, $cd, slotName, label, props, placeholder)
                 else s[setter](exp);
             }
         }
-    } else placeholder && placeholder();
+    }
 };
 
 

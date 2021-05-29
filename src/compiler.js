@@ -165,15 +165,15 @@ export async function compile(source, config = {}) {
         if(config.exportDefault) ctx.write('export default ');
         else ctx.write(`const ${n.name} = `);
 
-        if(ctx.inuse.apply || ctx.inuse.$cd) {
+        if(ctx.inuse.apply) {
             ctx.write('$runtime.makeComponent(');
             n.component.args.push('$$apply');
             ctx.build(n.component);
             ctx.write(');\n');
-        } else if(ctx.inuse.$component || ctx.inuse.$context) {
+        } else if(ctx.inuse.$cd || ctx.inuse.$component || ctx.inuse.$context) {
             ctx.write('$runtime.makeComponentBase(');
             ctx.build(n.component);
-            ctx.write(');\n');
+            ctx.write(', 1);\n');
         } else {
             ctx.write('($element, $option={}) => {\n');
             ctx.goIndent(() => {

@@ -6,10 +6,9 @@ export function makeComponent(node, element) {
     let propList = node.attributes;
     let forwardAllEvents = false;
 
-    this.require('$component');
-    this.require('apply', '$cd');
+    this.require('$component', '$cd');
 
-    let options = ['$$: $component'];
+    let options = [];
     let dynamicComponent;
 
     let propLevel = 0, propLevelType;
@@ -25,12 +24,12 @@ export function makeComponent(node, element) {
     let body = xNode('block');
 
     head.push(xNode('push', {
-        $cond: () => passOption.push
+        $cond: (ctx) => passOption.push && ctx.inuse.apply
     }, ctx => {
         ctx.writeLine(`let $$push = $runtime.noop;`)
     }));
     body.push(xNode('push', {
-        $cond: () => passOption.push
+        $cond: (ctx) => passOption.push && ctx.inuse.apply
     }, ctx => {
         ctx.writeLine(`$$push = $child.push;`)
     }));
@@ -137,17 +136,15 @@ export function makeComponent(node, element) {
 
                 props,
                 setters,
-                $cd: block.inuse.$cd,
-                optional_$cd: block.inuse.optional_$cd
+                $cd: block.inuse.$cd
             }, (ctx, data) => {
-                let $cd = data.$cd || data.optional_$cd && this.inuse.$cd;
                 ctx.writeLine(`slots.${data.name} = function($label, $component) {`);
                 ctx.goIndent(() => {
-                    if($cd) ctx.writeLine(`let $childCD = $cd.new();`);
+                    if(data.$cd) ctx.writeLine(`let $childCD = $cd.new();`);
                     ctx.build(data.template);
                     ctx.build(data.props);
                     if(data.bind) {
-                        if($cd) {
+                        if(data.$cd) {
                             ctx.writeLine(`{`);
                             ctx.goIndent(() => {
                                 ctx.writeLine(`let $cd = $childCD;`);
@@ -162,7 +159,7 @@ export function makeComponent(node, element) {
                     ctx.writeLine(`$runtime.insertBefore($label, $parentElement, $label.nextSibling);`);
                     ctx.writeLine(`return {`);
                     ctx.goIndent(() => {
-                        if($cd) ctx.writeLine(`destroy: () => {$childCD.destroy();}`);
+                        if(data.$cd) ctx.writeLine(`destroy: () => {$childCD.destroy();}`);
                         ctx.build(data.setters);
                     });
                     ctx.writeLine(`};`);
@@ -379,12 +376,14 @@ export function makeComponent(node, element) {
             }, (ctx, data) => {
                 ctx.writeLine(`const ${data.funcName} = () => $$resolveClass(${data.exp});`);
                 ctx.writeLine(`$class['${data.metaClass}'] = ${data.funcName}();`);
-                ctx.writeLine(`$watch($cd, ${data.funcName}, (result) => {`);
-                ctx.goIndent(() => {
-                    ctx.writeLine(`$class['${data.metaClass}'] = result;`);
-                    ctx.writeLine(`$$push();`);
-                });
-                ctx.writeLine(`}, {ro: true, value: $class['${data.metaClass}']});`);
+                if(ctx.inuse.apply) {
+                    ctx.writeLine(`$watch($cd, ${data.funcName}, (result) => {`);
+                    ctx.goIndent(() => {
+                        ctx.writeLine(`$class['${data.metaClass}'] = result;`);
+                        ctx.writeLine(`$$push();`);
+                    });
+                    ctx.writeLine(`}, {ro: true, value: $class['${data.metaClass}']});`);
+                }
             }));
 
             passOption.class = true;
@@ -432,12 +431,16 @@ export function makeComponent(node, element) {
                     name,
                     propObject
                 }, (ctx, data) => {
-                    ctx.writeLine(`$runtime.fire($watch($cd, () => (${data.exp}), _${data.name} => {`);
-                    ctx.goIndent(() => {
-                        ctx.writeLine(`${data.propObject}.${data.name} = _${data.name};`);
-                        ctx.writeLine(`$$push();`);
-                    });
-                    ctx.writeLine(`}, {ro: true, cmp: $runtime.$$compareDeep}));`);
+                    if(ctx.inuse.apply) {
+                        ctx.writeLine(`$runtime.fire($watch($cd, () => (${data.exp}), _${data.name} => {`);
+                        ctx.goIndent(() => {
+                            ctx.writeLine(`${data.propObject}.${data.name} = _${data.name};`);
+                            ctx.writeLine(`$$push();`);
+                        });
+                        ctx.writeLine(`}, {ro: true, cmp: $runtime.$$compareDeep}));`);
+                    } else {
+                        ctx.writeLine(`${data.propObject}.${data.name} = ${data.exp};`);
+                    }
                 }));
             }
         } else {
@@ -462,10 +465,10 @@ export function makeComponent(node, element) {
     }, (ctx, data) => {
         const $cd = data.$cd || '$cd';
         ctx.build(data.head);
-        if(data.body.empty()) {
-            ctx.writeLine(`$runtime.callComponent(${$cd}, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
+        if(data.body.empty(ctx)) {
+            ctx.writeLine(`$runtime.callComponent($component, ${$cd}, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
         } else {
-            ctx.writeLine(`let $child = $runtime.callComponent(${$cd}, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
+            ctx.writeLine(`let $child = $runtime.callComponent($component, ${$cd}, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
             ctx.writeLine(`if($child) {`);
             ctx.goIndent(() => {
                 ctx.build(data.body);
@@ -475,8 +478,19 @@ export function makeComponent(node, element) {
     });
 
     if(!dynamicComponent) {
-        if(head.empty() && body.empty()) return {bind: result};
-        return {bind: xNode('block', {scope: true, body: [result]})};
+        return {bind: xNode('component-scope', {
+            result
+        }, (ctx, n) => {
+            let r = n.result;
+            if(r.head.empty(ctx) && r.body.empty(ctx)) ctx.build(r);
+            else {
+                ctx.writeLine('{');
+                ctx.goIndent(() => {
+                    ctx.build(r);
+                })
+                ctx.writeLine('}');
+            }
+        })};
     } else {
         this.detectDependency(dynamicComponent);
 

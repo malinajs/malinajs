@@ -317,8 +317,8 @@ xNode.init = {
                 if(typeof child == 'string') child = xNode('raw', {value: child});
                 this.body.push(child)
             };
-            node.empty = function() {
-                return !this.body.some(n => !n.$cond || n.$cond(n));
+            node.empty = function(ctx) {
+                return !this.body.some(n => !n.$cond || n.$cond(ctx, n));
             };
         },
         handler: (ctx, node) => {
@@ -328,7 +328,7 @@ xNode.init = {
             }
             node.body.forEach(n => {
                 if(n == null) return;
-                if(n.$cond && !n.$cond(n)) return;
+                if(n.$cond && !n.$cond(ctx, n)) return;
                 if(typeof n == 'string') {
                     if(n) ctx.writeLine(n);
                 } else n.handler(ctx, n);

@@ -101,12 +101,11 @@ export function buildBlock(data, option={}) {
                     let t = tpl.push(' ');
                     const pe = this.parseText(n.value);
                     this.detectDependency(pe);
-                    this.require('optional_$cd');
                     binds.push(xNode('bindText', {
                         el: t.bindName(),
                         exp: pe.result
                     }, (ctx, n) => {
-                        if(this.inuse.$cd) ctx.writeLine(`$runtime.bindText($cd, ${n.el}, () => ${n.exp});`);
+                        if(this.inuse.apply) ctx.writeLine(`$runtime.bindText($cd, ${n.el}, () => ${n.exp});`);
                         else ctx.writeLine(`${n.el}.textContent = ${n.exp};`);
                     }));
 
