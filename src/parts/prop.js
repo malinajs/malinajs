@@ -243,7 +243,6 @@ export function bindProp(prop, node, element) {
             exp = styleName;
         }
 
-        this.require('$cd');
         let hasElement = exp.includes('$element');
         return {bind: xNode('block', {
             scope: hasElement,
@@ -252,9 +251,13 @@ export function bindProp(prop, node, element) {
                 styleName,
                 exp,
                 hasElement
-            }, (ctx, data) => {
-                if(data.hasElement) ctx.writeLine(`let $element=${data.el};`);
-                ctx.writeLine(`$runtime.bindStyle($cd, ${data.el}, '${data.styleName}', () => (${data.exp}));`);
+            }, (ctx, n) => {
+                if(n.hasElement) ctx.writeLine(`let $element=${n.el};`);
+                if(ctx.inuse.apply) {
+                    ctx.writeLine(`$runtime.bindStyle($cd, ${n.el}, '${n.styleName}', () => (${n.exp}));`);
+                } else {
+                    ctx.writeLine(`${n.el}.style.${n.styleName} = ${n.exp};`);
+                }
             })]
         })};
     } else if(name == 'use') {
