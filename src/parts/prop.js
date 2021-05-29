@@ -322,7 +322,6 @@ export function bindProp(prop, node, element) {
         });
 
         if(compound) {
-            this.require('apply', '$cd');
             let defaultHash = '';
             if(node.classes.has(this.css.id)) defaultHash = this.css.id;
             node.classes.clear();
@@ -342,9 +341,13 @@ export function bindProp(prop, node, element) {
                 el: element.bindName(),
                 exp,
                 defaultHash
-            }, (ctx, data) => {
-                let base = data.defaultHash ? `,'${data.defaultHash}'` : '';
-                ctx.writeLine(`$watchReadOnly($cd, () => $$resolveClass((${data.exp})${base}), value => $runtime.setClassToElement(${data.el}, value));`);
+            }, (ctx, n) => {
+                let base = n.defaultHash ? `,'${n.defaultHash}'` : '';
+                if(ctx.inuse.apply) {
+                    ctx.writeLine(`$watchReadOnly($cd, () => $$resolveClass((${n.exp})${base}), value => $runtime.setClassToElement(${n.el}, value));`);
+                } else {
+                    ctx.writeLine(`$runtime.setClassToElement(${n.el}, $$resolveClass((${n.exp})${base}));`);
+                }
             });
             return {bind};
         } else {
@@ -355,7 +358,6 @@ export function bindProp(prop, node, element) {
                         node.classes.add(name);
                     });
                 } else {
-                    this.require('apply', '$cd');
                     let className = prop.name.slice(6);
                     assert(className);
                     let exp = prop.value ? unwrapExp(prop.value) : className;
@@ -371,7 +373,11 @@ export function bindProp(prop, node, element) {
                             ctx.indent++;
                             ctx.writeLine(`let $element = ${n.el};`)
                         }
-                        ctx.writeLine(`$runtime.bindClass($cd, ${n.el}, () => !!(${n.exp}), '${n.className}');`)
+                        if(ctx.inuse.apply) {
+                            ctx.writeLine(`$runtime.bindClass($cd, ${n.el}, () => !!(${n.exp}), '${n.className}');`)
+                        } else {
+                            ctx.writeLine(`(${n.exp}) && $runtime.addClass(${n.el}, '${n.className}');`)
+                        }
                         if(n.$element) {
                             ctx.indent--;
                             ctx.writeLine(`}`);

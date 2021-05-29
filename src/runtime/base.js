@@ -322,9 +322,12 @@ export const addStyles = (id, content) => {
 };
 
 
+export const addClass = (el, className) => el.classList.add(className);
+
+
 export const bindClass = (cd, element, fn, className) => {
     $watchReadOnly(cd, fn, value => {
-        if(value) element.classList.add(className);
+        if(value) addClass(element, className);
         else element.classList.remove(className);
     });
 }

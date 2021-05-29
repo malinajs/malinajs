@@ -39,6 +39,8 @@ export function buildRuntime() {
 
     this.module.body.push(runtime);
 
+    if(this.css.active() && this.css.containsExternal()) this.require('apply', '$cd');
+
     this.module.head.push(xNode('resolveClass', (ctx) => {
         if(!this.inuse.resolveClass) return;
         if(this.css.active()) {

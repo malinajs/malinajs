@@ -192,6 +192,13 @@ export function processCSS() {
 
     self.active = () => active;
 
+    self.containsExternal = () => {
+        return Object.values(selectors).some(sel => {
+            if(!sel.isSimple) return;
+            return sel.external;
+        });
+    }
+
     self.getClassMap = () => {
         let classMap = {};
         let metaClass = {};
