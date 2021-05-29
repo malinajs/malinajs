@@ -126,12 +126,13 @@ export function makeComponent(node, element) {
 
             let contentNodes = trimEmptyNodes(slot.body);
             if(contentNodes.length == 1 && contentNodes[0].type == 'node' && contentNodes[0].name == 'slot') {
-                let childSlot = contentNodes[0];
-                if(!childSlot.body || !childSlot.body.length) {
+                let parentSlot = contentNodes[0];
+                if(!parentSlot.body || !parentSlot.body.length) {
                     head.push(xNode('empty-slot', {
-                        name: slot.name
+                        childName: slot.name,
+                        parentName: parentSlot.elArg || 'default'
                     }, (ctx, n) => {
-                        ctx.writeLine(`slots.${n.name} = $option.slots?.${n.name};`)
+                        ctx.writeLine(`slots.${n.childName} = $option.slots?.${n.parentName};`)
                     }));
                     return;
                 }
