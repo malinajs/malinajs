@@ -57,7 +57,7 @@ export function attachSlot(slotName, label, node) {
         });
     }
 
-    this.require('$cd', '$component');
+    this.require('$cd', '$context');
 
     return xNode('slot', {
         name: slotName,
@@ -67,8 +67,7 @@ export function attachSlot(slotName, label, node) {
     }, (ctx, n) => {
         ctx.writeIndent();
         if(n.props.length) {
-            ctx.write(`$runtime.attachSlot($component, $cd, '${n.name}', ${n.el}`);
-            ctx.write(', {\n');
+            ctx.write(`$runtime.attachSlot($option, $context, $cd, '${n.name}', ${n.el}, {\n`);
             ctx.goIndent(() => {
                 for(let i=0; i < props.length; i++) {
                     let prop = props[i];
@@ -81,7 +80,7 @@ export function attachSlot(slotName, label, node) {
             ctx.writeIndent();
             ctx.write('}');
         } else {
-            ctx.write(`$runtime.attachSlotBase($component, $cd, '${n.name}', ${n.el}`);
+            ctx.write(`$runtime.attachSlotBase($option, $context, $cd, '${n.name}', ${n.el}`);
         }
         if(n.placeholder) {
             ctx.write(', () => {\n');

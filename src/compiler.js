@@ -17,7 +17,7 @@ import { attachSlot } from './parts/slot.js'
 import { makeFragment, attachFragment } from './parts/fragment.js'
 
 
-export const version = '0.6.17';
+export const version = '0.6.19';
 
 
 export async function compile(source, config = {}) {
