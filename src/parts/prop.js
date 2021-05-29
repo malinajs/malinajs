@@ -60,6 +60,7 @@ export function bindProp(prop, node, element) {
         return {bind: `${target}=${element.bindName()};`};
     } else if(name == 'on') {
         if(arg == '@') {
+            this.require('$cd');
             assert(!prop.value);
             const bind = xNode('forwardAllEvents', {
                 el: element.bindName()
@@ -78,18 +79,12 @@ export function bindProp(prop, node, element) {
         if(event[0] == '@') {  // forwarding
             event = event.substring(1);
             assert(!prop.value);
-            this.require('$component');
+            this.require('$cd');
             return {bind: xNode('forwardEvent', {
                 event,
                 el: element.bindName()
-            }, (ctx, data) => {
-                if(ctx._ctx.inuse.$cd) {
-                    ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, "${data.event}", ($event) => {`
-                        + `$option.events.${data.event} && $option.events.${data.event}($event)});`);
-                } else {
-                    ctx.writeLine(`$runtime.addEvent($component, ${data.el}, "${data.event}", ($event) => {`
-                        + `$option.events.${data.event} && $option.events.${data.event}($event)});`);
-                }
+            }, (ctx, n) => {
+                ctx.writeLine(`$option.events.${n.event} && $runtime.addEvent($cd, ${n.el}, '${n.event}', $option.events.${n.event});`);
             })};
         }
 
@@ -104,11 +99,11 @@ export function bindProp(prop, node, element) {
 
         let needPrevent, preventInserted;
         opts.forEach(opt => {
-            if(opt == 'preventDefault') {
+            if(opt == 'preventDefault' || opt == 'prevent') {
                 if(preventInserted) return;
                 mod += '$event.preventDefault();';
                 preventInserted = true;
-            } else if(opt == 'stopPropagation') {
+            } else if(opt == 'stopPropagation' || opt == 'stop') {
                 mod += '$event.stopPropagation();';
             } else if(opt == 'enter') {
                 mod += 'if($event.keyCode != 13) return;';
@@ -149,7 +144,7 @@ export function bindProp(prop, node, element) {
                     ctx.writeLine(`let $element=${n.el};`)
                 }
                 ctx.writeLine(`const ${n.funcName} = ${n.exp};`);
-                ctx.writeLine(`$runtime.addEvent($cd, ${n.el}, '${n.event}', ($event) => { ${n.mod}${n.funcName}($event); $$apply();});`);
+                ctx.writeLine(`$runtime.addEvent($cd, ${n.el}, '${n.event}', ($event) => { ${n.mod}${n.funcName}($event); $$apply(); });`);
                 if(n.$element) {
                     ctx.indent--;
                     ctx.writeLine('}');

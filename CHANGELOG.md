@@ -20,6 +20,7 @@
 * anchors for components
 * style templates, e.g. style:color={color}, style:border-color="red", style:border="1px solid {color}"
 * compile option "css"
+* event modifier: stop, prevent
 
 ## 0.5.x
 
