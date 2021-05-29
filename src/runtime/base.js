@@ -361,24 +361,26 @@ export const bindAttribute = (cd, element, name, fn) => {
 };
 
 
-export const bindAction = (cd, element, action, fn) => {
+export const bindAction = (cd, element, action, fn, subscribe) => {
     $tick(() => {
         let handler, value;
         if(fn) {
             value = fn();
             handler = action.apply(null, [element].concat(value));
         } else handler = action(element);
-
-        if(handler) {
-            if(handler.update && fn) {
-                $watch(cd, fn, args => {
-                    handler.update.apply(handler, args);
-                }, {cmp: $$deepComparator(1), value: cloneDeep(value, 1) });
-            }
-            if(handler.destroy) cd_onDestroy(cd, handler.destroy);
-        }
+        if(handler?.destroy) cd_onDestroy(cd, handler.destroy);
+        subscribe?.(cd, fn, handler, value);
     });
 };
+
+
+export const __bindActionSubscribe = (cd, fn, handler, value) => {
+    if(handler?.update && fn) {
+        $watch(cd, fn, args => {
+            handler.update.apply(handler, args);
+        }, {cmp: $$deepComparator(1), value: cloneDeep(value, 1) });
+    }
+}
 
 
 export const bindInput = (cd, element, name, get, set) => {

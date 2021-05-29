@@ -258,17 +258,42 @@ export function bindProp(prop, node, element) {
             })]
         })};
     } else if(name == 'use') {
-        this.require('apply', '$cd');
         if(arg) {
+            this.require('$cd');
             assert(isSimpleName(arg), 'Wrong name: ' + arg);
             this.checkRootName(arg);
             let args = prop.value ? `, () => [${getExpression()}]` : '';
             this.detectDependency(args);
-            return {bind: `$runtime.bindAction($cd, ${element.bindName()}, ${arg}${args});`};
+            return {bind: xNode('action', {
+                name: arg,
+                args,
+                el: element.bindName()
+            }, (ctx, n) => {
+                if(ctx.inuse.apply) {
+                    let args = n.args || ', null';
+                    ctx.writeLine(`$runtime.bindAction($cd, ${n.el}, ${n.name}${args}, $runtime.__bindActionSubscribe);`);
+                } else {
+                    ctx.writeLine(`$runtime.bindAction($cd, ${n.el}, ${n.name}${n.args});`);
+                }
+            })}
         }
         let exp = getExpression();
         this.detectDependency(exp);
-        return {bind: `$tick(() => { let $element=${element.bindName()}; ${exp}; $$apply(); });`};
+        let hasElement = exp.includes('$element');
+        return {bind: xNode('inline-action', {
+            exp,
+            el: hasElement && element.bindName(),
+            element,
+            hasElement
+        }, (ctx, n) => {
+            ctx.writeLine(`$tick(() => {`);
+            ctx.goIndent(() => {
+                if(n.hasElement) ctx.writeLine(`let $element=${n.el};`);
+                ctx.writeLine(n.exp);
+                if(ctx.inuse.apply) ctx.writeLine('$$apply();');
+            });
+            ctx.writeLine(`});`);
+        })}
     } else if(name == 'class') {
         if(node.__skipClass) return {};
         node.__skipClass = true;
