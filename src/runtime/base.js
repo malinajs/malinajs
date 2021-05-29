@@ -350,11 +350,14 @@ export const bindStyle = (cd, element, name, fn) => {
 };
 
 
+export const bindAttributeBase = (element, name, value) => {
+    if(value != null) element.setAttribute(name, value);
+    else element.removeAttribute(name);
+}
+
+
 export const bindAttribute = (cd, element, name, fn) => {
-    $watchReadOnly(cd, fn, (value) => {
-        if(value != null) element.setAttribute(name, value);
-        else element.removeAttribute(name);
-    });
+    $watchReadOnly(cd, fn, value => bindAttributeBase(element, name, value));
 };
 
 

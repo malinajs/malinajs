@@ -136,7 +136,7 @@ export function makeComponent(node, element) {
                     return;
                 }
             }
-            
+
             let block = this.buildBlock(slot, {inline: true});
 
             const template = xNode('template', {

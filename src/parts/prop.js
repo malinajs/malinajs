@@ -368,7 +368,6 @@ export function bindProp(prop, node, element) {
         })};
     } else {
         if(prop.value && prop.value.indexOf('{') >= 0) {
-            this.require('apply', '$cd');
             const parsed = this.parseText(prop.value);
             this.detectDependency(parsed);
             let exp = parsed.result;
@@ -402,9 +401,17 @@ export function bindProp(prop, node, element) {
                     }, (ctx, data) => {
                         if(data.hasElement) ctx.writeLine(`let $element=${data.el};`);
                         if(propList[name]) {
-                            ctx.writeLine(`$watchReadOnly($cd, () => (${data.exp}), (value) => {${data.el}.${name} = value;});`);
+                            if(ctx.inuse.apply) {
+                                ctx.writeLine(`$watchReadOnly($cd, () => (${data.exp}), (value) => {${data.el}.${name} = value;});`);
+                            } else {
+                                ctx.writeLine(`${data.el}.${name} = ${data.exp};`);
+                            }
                         } else {
-                            ctx.writeLine(`$runtime.bindAttribute($cd, ${data.el}, '${data.name}', () => (${data.exp}));`);
+                            if(ctx.inuse.apply) {
+                                ctx.writeLine(`$runtime.bindAttribute($cd, ${data.el}, '${data.name}', () => (${data.exp}));`);
+                            } else {
+                                ctx.writeLine(`$runtime.bindAttributeBase(${data.el}, '${data.name}', ${data.exp});`);
+                            }
                         }
                     })
                 ]
