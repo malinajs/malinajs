@@ -195,8 +195,8 @@ export function makeComponent(node, element) {
                 $cd: block.inuse.$cd
             }, (ctx, n) => {
                 ctx.writeLine(`anchor.${n.name} = (el) => {`);
-                if(n.$cd) {
-                    ctx.goIndent(() => {
+                ctx.goIndent(() => {
+                    if(n.$cd) {
                         ctx.writeLine(`let $childCD = $cd.new();`);
                         ctx.writeLine(`{`);
                         ctx.goIndent(() => {
@@ -205,10 +205,10 @@ export function makeComponent(node, element) {
                         });
                         ctx.writeLine(`}`);
                         ctx.writeLine(`return () => {$childCD.destroy();}`);
-                    });
-                } else {
-                    ctx.build(n.source);
-                }
+                    } else {
+                        ctx.build(n.source);
+                    }
+                });
                 ctx.writeLine(`}`);
             }));
         });

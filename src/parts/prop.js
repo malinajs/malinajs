@@ -359,12 +359,12 @@ export function bindProp(prop, node, element) {
             return {bind};
         }
     } else if(name[0] == '^') {
-        this.require('$cd', '$component');
+        this.require('$cd');
         return {bindTail: xNode('bindAnchor', {
             name: name.slice(1) || 'default',
             el: element.bindName()
         }, (ctx, n) => {
-            ctx.writeLine(`$runtime.attachAnchor($component, $cd, '${n.name}', ${n.el});`)
+            ctx.writeLine(`$runtime.attachAnchor($option, $cd, '${n.name}', ${n.el});`)
         })};
     } else {
         if(prop.value && prop.value.indexOf('{') >= 0) {

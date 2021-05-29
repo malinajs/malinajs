@@ -511,7 +511,7 @@ export const attachSlot = ($option, $context, $cd, slotName, label, props, place
 export const eachDefaultKey = (item, index, array) => typeof array[0] === 'object' ? item : index;
 
 
-export const attachAnchor = ($component, $cd, name, el) => {
-    let fn = $component.$option.anchor && $component.$option.anchor[name];
+export const attachAnchor = ($option, $cd, name, el) => {
+    let fn = $option.anchor && $option.anchor[name];
     if(fn) cd_onDestroy($cd, fn(el));
 }
