@@ -20,15 +20,15 @@ export const watchInit = (cd, fn, callback) => {
     return w.value;
 };
 
-export function addEvent(cd_component, el, event, callback) {
+export function addEvent(cd, el, event, callback) {
     el.addEventListener(event, callback);
-    cd_onDestroy(cd_component, () => {
+    cd_onDestroy(cd, () => {
         el.removeEventListener(event, callback);
     });
 };
 
-export function cd_onDestroy(cd_component, fn) {
-    if(fn) cd_component._d.push(fn);
+export function cd_onDestroy(cd, fn) {
+    if(fn) cd._d.push(fn);
 };
 
 export function $$removeItem(array, item) {

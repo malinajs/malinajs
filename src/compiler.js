@@ -25,7 +25,6 @@ export async function compile(source, config = {}) {
 
     config = Object.assign({
         name: 'widget',
-        warning: (w) => console.warn('!', w.message),
         exportDefault: true,
         inlineTemplate: false,
         hideLabel: false,
@@ -41,6 +40,7 @@ export async function compile(source, config = {}) {
         source,
         config,
         uniqIndex: 0,
+        warning: config.warning || (w => console.warn('!', w.message || w)),
         
         Q: config.inlineTemplate ? utils.Q2 : utils.Q,
         buildBlock,

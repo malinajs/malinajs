@@ -77,8 +77,8 @@ export function buildBlock(data, option={}) {
             if(n.type == 'comment' && !this.config.preserveComments) return false;
             if(n.type == 'fragment') {
                 try {
-                    let b = this.makeFragment(n);
-                    binds.push(b.source);
+                    let f = this.makeFragment(n);
+                    f && binds.push(f);
                 } catch (e) {
                     wrapException(e, n);
                 }
@@ -137,8 +137,8 @@ export function buildBlock(data, option={}) {
                 if(n.name == 'fragment') {
                     let el = xNode('node:comment', {label: true, value: `fragment ${n.elArg}`});
                     tpl.push(el);
-                    let b = this.attachFragment(n, el.bindName());
-                    binds.push(b.source);
+                    let b = this.attachFragment(n, el);
+                    b && binds.push(b);
                     return;
                 }
 

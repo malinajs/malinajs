@@ -7,9 +7,12 @@ export const configure = (option) => {
 };
 
 
+export const isFunction = fn => typeof fn == 'function';
+
+
 export const safeCall = fn => {
     try {
-        return typeof fn == 'function' && fn();
+        return isFunction(fn) && fn();
     } catch (e) {
         __app_onerror(e);
     }

@@ -1,7 +1,7 @@
 
 import { $watch, $watchReadOnly, $$deepComparator, cloneDeep, $$cloneDeep, $ChangeDetector, $digest,
     $$compareDeep, cd_onDestroy, addEvent } from './cd';
-import { __app_onerror, safeCall } from './utils';
+import { __app_onerror, safeCall, isFunction } from './utils';
 
 let templatecache = {};
 let templatecacheSvg = {};
@@ -240,6 +240,7 @@ export const makeComponentBase = (init, owncd) => {
             $component.$cd = {
                 _d: $component._d,
                 watchers: [],
+                prefix: [],
                 new: () => $component.$cd
             }
         }
@@ -248,9 +249,12 @@ export const makeComponentBase = (init, owncd) => {
             $bindComponent(init, $element, $option);
             if(owncd) {
                 let watchers = $component.$cd.watchers;
-                while(watchers.length) {
+                let prefix = $component.$cd.prefix;
+                while(watchers.length || prefix.length) {
                     let wl = watchers.slice();
                     watchers.length = 0;
+                    prefix.forEach(safeCall);
+                    prefix.length = 0;
                     wl.forEach(w => w.cb(w.fn()));
                 }
             }
@@ -308,7 +312,7 @@ export const callComponent = (cd, context, component, el, option) => {
 export const autoSubscribe = (component, obj) => {
     if(obj.subscribe) {
         let unsub = obj.subscribe(component.apply);
-        if(typeof unsub == 'function') cd_onDestroy(component.$cd, unsub);
+        if(isFunction(unsub)) cd_onDestroy(component.$cd, unsub);
     }
 }
 
@@ -505,7 +509,7 @@ export const attachSlot = ($option, $context, $cd, slotName, label, props, place
             let setter = `set_${key}`;
             if(s[setter]) {
                 let exp = props[key];
-                if(typeof exp == 'function') $watch($cd, exp, s[setter], {ro: true, cmp: $$compareDeep});
+                if(isFunction(exp)) $watch($cd, exp, s[setter], {ro: true, cmp: $$compareDeep});
                 else s[setter](exp);
             }
         }

@@ -84,7 +84,7 @@ export function bindProp(prop, node, element) {
                 event,
                 el: element.bindName()
             }, (ctx, n) => {
-                ctx.writeLine(`$option.events.${n.event} && $runtime.addEvent($cd, ${n.el}, '${n.event}', $option.events.${n.event});`);
+                ctx.writeLine(`$option.events?.${n.event} && $runtime.addEvent($cd, ${n.el}, '${n.event}', $option.events.${n.event});`);
             })};
         }
 

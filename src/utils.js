@@ -94,11 +94,11 @@ export function detectExpressionType(name) {
 
 export function checkRootName(name) {
     let rx = name.match(/^([\w\$_][\w\d\$_]*)/);
-    if(!rx) return this.config.warning({message: 'Error name: ' + name});
+    if(!rx) return this.warning({message: 'Error name: ' + name});
     let root = rx[1];
 
     if(this.script.rootVariables[root] || this.script.rootFunctions[root]) return true;
-    this.config.warning({message:'No name: ' + name});
+    this.warning({message:'No name: ' + name});
 };
 
 
@@ -248,7 +248,10 @@ export function xWriter(ctx) {
         fn();
         this.indent--;
     };
-    this.write = function(s) {s && this.result.push(s)};
+    this.write = function(a, b) {
+        if(a == true) this.result.push(this.getIndent() + b);
+        else a && this.result.push(a)
+    };
     this.writeLine = function(s) {
         this.write(this.getIndent());
         this.write(s);
