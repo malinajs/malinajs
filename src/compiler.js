@@ -165,12 +165,18 @@ export async function compile(source, config = {}) {
         if(config.exportDefault) ctx.write('export default ');
         else ctx.write(`const ${n.name} = `);
 
-        if(ctx.inuse.apply) {
+        if(ctx.inuse.apply && !ctx._ctx.script.readOnly) {
             ctx.write('$runtime.makeComponent(');
             n.component.args.push('$$apply');
             ctx.build(n.component);
             ctx.write(');\n');
-        } else if(ctx.inuse.$cd || ctx.inuse.$component || ctx.inuse.$context) {
+        } else if(ctx.inuse.$cd || ctx.inuse.$component || ctx.inuse.$context || ctx.inuse.apply) {
+            if(ctx.inuse.apply) {
+                n.component.body[0].body.unshift(xNode('block', (ctx) => {
+                    ctx.writeLine('let $$apply = $runtime.noop;')
+                }));
+            }
+
             ctx.write('$runtime.makeComponentBase(');
             ctx.build(n.component);
             ctx.write(', 1);\n');

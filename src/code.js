@@ -13,9 +13,12 @@ export function parse() {
         importedNames: [],
         props: [],
         rootVariables: {},
-        rootFunctions: {}
+        rootFunctions: {},
+        readOnly: false
     };
     if(source) {
+        this.script.readOnly = this.scriptNodes.some(n => n.attributes.some(a => a.name == 'read-only'));
+
         source = source.split(/\n/).map(line => {
             let rx = line.match(/^(\s*)\/\/(.*)$/);
             if(!rx) return line;
@@ -176,7 +179,7 @@ export function transform() {
             }
         }
     };
-    walk(ast, null, transformNode);
+    if(!this.script.readOnly) walk(ast, null, transformNode);
 
     function makeVariable(name) {
         return {
@@ -349,7 +352,7 @@ export function transform() {
     if(this.config.autoSubscribe) {
         result.importedNames.forEach(name => {
             if(name[0].toUpperCase() == name[0]) return;
-            this.require('$cd', 'apply');
+            if(!this.script.readOnly) this.require('$cd', 'apply');
             header.push(rawNode(() => {
                 if(this.inuse.apply) return `$runtime.autoSubscribe($component, ${name});`;
             }));

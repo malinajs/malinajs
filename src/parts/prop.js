@@ -129,7 +129,8 @@ export function bindProp(prop, node, element) {
         }
 
         if(funcName) {
-            this.require('apply', '$cd');
+            this.require('$cd');
+            if(!this.script.readOnly) this.require('apply');
             let bind = xNode('bindEvent', {
                 event,
                 mod,
@@ -144,7 +145,8 @@ export function bindProp(prop, node, element) {
                     ctx.writeLine(`let $element=${n.el};`)
                 }
                 ctx.writeLine(`const ${n.funcName} = ${n.exp};`);
-                ctx.writeLine(`$runtime.addEvent($cd, ${n.el}, '${n.event}', ($event) => { ${n.mod}${n.funcName}($event); $$apply(); });`);
+                let apply = ctx.inuse.apply ? ' $$apply();' : '';
+                ctx.writeLine(`$runtime.addEvent($cd, ${n.el}, '${n.event}', ($event) => { ${n.mod}${n.funcName}($event);${apply} });`);
                 if(n.$element) {
                     ctx.indent--;
                     ctx.writeLine('}');
@@ -152,15 +154,21 @@ export function bindProp(prop, node, element) {
             });
             return {bind};
         } else {
-            this.require('apply', '$cd');
+            this.require('$cd');
+            if(!this.script.readOnly) this.require('apply');
             const bind = xNode('bindEvent', {
                 el: element.bindName(),
                 event,
                 mod
             }, (ctx, data) => {
-                let exp = data.handlerName ? `${data.handlerName}($event);` : data.exp;
                 let l = data.$element ? `let $element=${data.el}; ` : '';
-                ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, '${data.event}', ($event) => { ${l}${data.mod}${exp}; $$apply(); });`);
+                if(data.handlerName && !ctx.inuse.apply && !data.mod) {
+                    ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, '${data.event}', ${data.handlerName});`);
+                } else {
+                    let exp = data.handlerName ? `${data.handlerName}($event);` : data.exp;
+                    let apply = ctx.inuse.apply ? ' $$apply();' : '';
+                    ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, '${data.event}', ($event) => { ${l}${data.mod}${exp};${apply} });`);
+                }
             });
 
             if(handler) {
@@ -174,6 +182,11 @@ export function bindProp(prop, node, element) {
             return {bind};
         }
     } else if(name == 'bind') {
+        if(this.script.readOnly) {
+            this.warning('script read-only conflicts with bind: ' + node.openTag);
+            return;
+        }
+
         this.require('apply', '$cd');
         let exp;
         arg = arg.split(/[\:\|]/);
