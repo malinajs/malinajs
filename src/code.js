@@ -349,8 +349,10 @@ export function transform() {
     if(this.config.autoSubscribe) {
         result.importedNames.forEach(name => {
             if(name[0].toUpperCase() == name[0]) return;
-            this.require('$cd');
-            header.push(rawNode(`$runtime.autoSubscribe($component, ${name});`));
+            this.require('$cd', 'apply');
+            header.push(rawNode(() => {
+                if(this.inuse.apply) return `$runtime.autoSubscribe($component, ${name});`;
+            }));
         });
     }
 
