@@ -244,6 +244,7 @@ export function transform() {
     let imports = [];
     let resultBody = [];
     let lastPropIndex = null;
+    let constantProps = true;
 
     ast.body.forEach(n => {
         if(n.type == 'ImportDeclaration') {
@@ -256,6 +257,7 @@ export function transform() {
             });
             return;
         } else if(n.type == 'ExportNamedDeclaration') {
+            if(n.declaration.kind != 'const') constantProps = false;
             assert(n.declaration.type == 'VariableDeclaration', 'Wrong export');
             n.declaration.declarations.forEach(d => {
                 assert(d.type == 'VariableDeclarator', 'Wrong export');
@@ -284,7 +286,7 @@ export function transform() {
                         init: {type: 'Identifier', name: '$props'}
                     }]
                 });
-                this.require('$props');
+                this.require('$props:no-deps');
                 lastPropIndex = resultBody.length;
             });
             return;
@@ -308,8 +310,10 @@ export function transform() {
 
     if(lastPropIndex != null) {
         header.push(rawNode(() => {
-            if(this.inuse.$props) return 'const $props = $option.props;';
+            if(this.inuse.$props) return 'const $props = $option.props || {};';
         }));
+
+        if(!constantProps && !this.script.readOnly) this.require('apply', '$cd');
 
         resultBody.splice(lastPropIndex, 0, rawNode(() => {
             let code = [];
@@ -320,7 +324,7 @@ export function transform() {
                 code.push(`  ({${result.props.join(',')}} = $props);`);
                 code.push('  $attributes = $runtime.recalcAttributes($props, $$skipAttrs);');
                 code.push(`}, {${result.props.map(n => n + ': () => '+n).join(',')}});`);
-            } else if(this.inuse.$props) {
+            } else if(this.inuse.$props && !constantProps && !this.script.readOnly) {
                 code.push(`$runtime.completeProps($component, () => {`);
                 code.push(`  ({${result.props.join(',')}} = $props);`);
                 code.push(`}, {${result.props.map(n => n + ': () => '+n).join(',')}});`);
@@ -329,7 +333,7 @@ export function transform() {
         }));
     } else {
         header.push(rawNode(() => {
-            if(this.inuse.$props) return 'const $props = $option.props;';
+            if(this.inuse.$props) return 'const $props = $option.props || {};';
         }));
         header.push(rawNode(() => {
             if(this.inuse.$attributes) return 'let $attributes = $props;';

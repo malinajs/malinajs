@@ -59,10 +59,14 @@ export async function compile(source, config = {}) {
         inuse: {},
         require: function() {
             for(let name of arguments) {
+                let deps = true;
+                if(name == '$props:no-deps') {name = '$props'; deps = false;};
+                if(name == 'apply' && ctx.script.readOnly) name = 'blankApply';
                 if(ctx.inuse[name] == null) ctx.inuse[name] = 0;
                 ctx.inuse[name]++;
+                if(!deps) continue;
                 if(name == '$attributes') ctx.require('$props');
-                if(name == '$props') ctx.require('apply', '$cd');
+                if(name == '$props' && !ctx.script.readOnly) ctx.require('apply', '$cd');
                 if(name == '$cd') ctx.require('$component');
                 if(name == '$onDestroy') ctx.require('$component');
                 if(name == '$onMount') ctx.require('$component');
@@ -165,13 +169,13 @@ export async function compile(source, config = {}) {
         if(config.exportDefault) ctx.write('export default ');
         else ctx.write(`const ${n.name} = `);
 
-        if(ctx.inuse.apply && !ctx._ctx.script.readOnly) {
+        if(ctx.inuse.apply) {
             ctx.write('$runtime.makeComponent(');
             n.component.args.push('$$apply');
             ctx.build(n.component);
             ctx.write(');\n');
-        } else if(ctx.inuse.$cd || ctx.inuse.$component || ctx.inuse.$context || ctx.inuse.apply) {
-            if(ctx.inuse.apply) {
+        } else if(ctx.inuse.$cd || ctx.inuse.$component || ctx.inuse.$context || ctx.inuse.blankApply) {
+            if(ctx.inuse.blankApply) {
                 n.component.body[0].body.unshift(xNode('block', (ctx) => {
                     ctx.writeLine('let $$apply = $runtime.noop;')
                 }));

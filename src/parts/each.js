@@ -106,7 +106,7 @@ export function makeEachBlock(data, option) {
         svg: itemData.svg
     });
 
-    this.require('apply', '$cd');
+    this.require('$cd');
     const source = xNode('each', {
         keyFunction,
         template,

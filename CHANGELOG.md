@@ -22,6 +22,7 @@
 * compile option "css"
 * event modifier: stop, prevent
 * script option "read-only"
+* constant props - "export const prop;"
 
 ## 0.5.x
 
