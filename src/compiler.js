@@ -175,7 +175,7 @@ export async function compile(source, config = {}) {
             ctx.write('$runtime.makeComponent(');
             component.args.push('$$apply');
             ctx.build(component);
-            ctx.write(');\n');
+            ctx.write(', $runtime.$base);\n');
         } else if(ctx.inuse.$cd || ctx.inuse.$component || ctx.inuse.$context || ctx.inuse.blankApply) {
             if(ctx.inuse.blankApply) {
                 component.body[0].body.unshift(xNode('block', (ctx) => {
@@ -183,9 +183,9 @@ export async function compile(source, config = {}) {
                 }));
             }
 
-            ctx.write('$runtime.makeComponentBase(');
+            ctx.write('$runtime.makeComponent(');
             ctx.build(component);
-            ctx.write(', 1);\n');
+            ctx.write(', $runtime.$readOnlyBase);\n');
         } else {
             ctx.write('($element, $option={}) => {\n');
             ctx.goIndent(() => {

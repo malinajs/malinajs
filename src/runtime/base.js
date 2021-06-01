@@ -223,7 +223,60 @@ export const $insertElementByOption = ($label, $option, $element) => {
 };
 
 
-export const makeComponentBase = (init, owncd) => {
+export const $readOnlyBase = {
+    a: ($component) => {
+        $component.$cd = {
+            _d: $component._d,
+            watchers: [],
+            prefix: [],
+            new: () => $component.$cd
+        };
+    },
+    b: ($component) => {
+        let watchers = $component.$cd.watchers;
+        let prefix = $component.$cd.prefix;
+        while(watchers.length || prefix.length) {
+            let wl = watchers.slice();
+            watchers.length = 0;
+            prefix.forEach(safeCall);
+            prefix.length = 0;
+            wl.forEach(w => w.cb(w.fn()));
+        }
+    }
+};
+
+
+export const $base = {
+    a: ($component) => {
+        let $cd = new $ChangeDetector();
+        $onDestroy(() => $cd.destroy());
+
+        let id = `a${$$uniqIndex++}`;
+        let process;
+        let apply = r => {
+            if (process) return r;
+            $tick(() => {
+                try {
+                    process = true;
+                    $digest($cd);
+                } finally {
+                    process = false;
+                }
+            }, id);
+            return r;
+        };
+
+        $component.$cd = $cd;
+        $component.apply = apply;
+        $component.push = apply;
+    },
+    b: ($component) => {
+        $component.apply();
+    }
+};
+
+
+export const makeComponent = (init, $base) => {
     return ($element, $option={}) => {
         let prev = current_component;
         $context = $option.context || {};
@@ -234,28 +287,11 @@ export const makeComponentBase = (init, owncd) => {
             _d: [],
             _m: []
         };
-        if(owncd) {
-            $component.$cd = {
-                _d: $component._d,
-                watchers: [],
-                prefix: [],
-                new: () => $component.$cd
-            }
-        }
+        $base.a($component);
 
         try {
-            $insertElementByOption($element, $option, init($option));
-            if(owncd) {
-                let watchers = $component.$cd.watchers;
-                let prefix = $component.$cd.prefix;
-                while(watchers.length || prefix.length) {
-                    let wl = watchers.slice();
-                    watchers.length = 0;
-                    prefix.forEach(safeCall);
-                    prefix.length = 0;
-                    wl.forEach(w => w.cb(w.fn()));
-                }
-            }
+            $insertElementByOption($element, $option, init($option, $component.apply));
+            $base.b($component);
         } finally {
             current_component = prev;
             $context = null;
@@ -263,38 +299,6 @@ export const makeComponentBase = (init, owncd) => {
 
         $component._d.push(...$component._m.map(safeCall));
         return $component;
-    };
-}
-
-
-export const makeComponent = (init) => {
-    return ($element, $option={}) => {
-        if(!$option.props) $option.props = {};
-        return makeComponentBase(() => {
-            let $cd = new $ChangeDetector();
-            $onDestroy(() => $cd.destroy());
-
-            let id = `a${$$uniqIndex++}`;
-            let process;
-            let apply = r => {
-                if (process) return r;
-                $tick(() => {
-                    try {
-                        process = true;
-                        $digest($cd);
-                    } finally {
-                        process = false;
-                    }
-                }, id);
-                return r;
-            };
-
-            current_component.$cd = $cd;
-            current_component.apply = apply;
-            current_component.push = apply;
-
-            return apply(init($option, apply));
-        })($element, $option);
     };
 };
 
