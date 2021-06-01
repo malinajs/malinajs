@@ -35,7 +35,10 @@ export function buildRuntime() {
         }
     }));
 
-    runtime.push(`return $parentElement;`);
+    runtime.push(xNode('bind-component-element', (ctx) => {
+        if(ctx.inuse.$insertElementByOption) ctx.writeLine('$runtime.$insertElementByOption($element, $option, $parentElement);');
+        else ctx.writeLine('return $parentElement;');
+    }));
 
     this.module.body.push(runtime);
 

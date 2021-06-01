@@ -213,16 +213,14 @@ export const $onDestroy = fn => current_component._d.push(fn);
 export const $onMount = fn => current_component._m.push(fn);
 
 
-export const $bindComponent = (init, $element, $option) => {
-    if(!$option.events) $option.events = {};
-    let r = init($option);
+export const $insertElementByOption = ($label, $option, $element) => {
     if ($option.afterElement) {
-        insertBefore($element, r, $element.nextSibling);
+        insertBefore($label, $element, $label.nextSibling);
     } else {
-        $element.innerHTML = '';
-        $element.appendChild(r);
+        $label.innerHTML = '';
+        $label.appendChild($element);
     }
-}
+};
 
 
 export const makeComponentBase = (init, owncd) => {
@@ -246,7 +244,7 @@ export const makeComponentBase = (init, owncd) => {
         }
 
         try {
-            $bindComponent(init, $element, $option);
+            $insertElementByOption($element, $option, init($option));
             if(owncd) {
                 let watchers = $component.$cd.watchers;
                 let prefix = $component.$cd.prefix;

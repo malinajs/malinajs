@@ -158,38 +158,39 @@ export async function compile(source, config = {}) {
 
     result.push(xNode('block', {
         name: config.name,
-        component: xNode('function', {
-            args: ['$option'],
-            inline: true,
-            arrow: true,
-            body: [ctx.module.head, ctx.module.code, ctx.module.body]
-        })
+        body: [ctx.module.head, ctx.module.code, ctx.module.body]
     }, (ctx, n) => {
         ctx.writeIndent();
         if(config.exportDefault) ctx.write('export default ');
         else ctx.write(`const ${n.name} = `);
 
+        let component = xNode('function', {
+            args: ['$option'],
+            inline: true,
+            arrow: true,
+            body: n.body
+        })
+
         if(ctx.inuse.apply) {
             ctx.write('$runtime.makeComponent(');
-            n.component.args.push('$$apply');
-            ctx.build(n.component);
+            component.args.push('$$apply');
+            ctx.build(component);
             ctx.write(');\n');
         } else if(ctx.inuse.$cd || ctx.inuse.$component || ctx.inuse.$context || ctx.inuse.blankApply) {
             if(ctx.inuse.blankApply) {
-                n.component.body[0].body.unshift(xNode('block', (ctx) => {
+                component.body[0].body.unshift(xNode('block', (ctx) => {
                     ctx.writeLine('let $$apply = $runtime.noop;')
                 }));
             }
 
             ctx.write('$runtime.makeComponentBase(');
-            ctx.build(n.component);
+            ctx.build(component);
             ctx.write(', 1);\n');
         } else {
             ctx.write('($element, $option={}) => {\n');
             ctx.goIndent(() => {
-                ctx.write(ctx.getIndent() + '$runtime.$bindComponent(');
-                ctx.build(n.component);
-                ctx.write(', $element, $option);\n');
+                ctx.inuse.$insertElementByOption = true;
+                ctx.build(xNode('block', {body: n.body}));
             });
             ctx.write('}');
         }
