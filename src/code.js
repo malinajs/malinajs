@@ -326,7 +326,7 @@ export function transform() {
                 code.push(`}, {${result.props.map(n => n + ': () => '+n).join(',')}});`);
             } else if(this.inuse.$props && !constantProps && !this.script.readOnly) {
                 code.push(`$runtime.completeProps($component, () => {`);
-                code.push(`  ({${result.props.join(',')}} = $props);`);
+                code.push(`  ({${result.props.map(p => p+'='+p).join(',')}} = $props);`);
                 code.push(`}, {${result.props.map(n => n + ': () => '+n).join(',')}});`);
             }
             return code;

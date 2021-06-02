@@ -485,7 +485,7 @@ export function makeComponent(node, element) {
             ctx.writeLine(`$runtime.callComponent(${$cd}, $context, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
         } else {
             ctx.writeLine(`let $child = $runtime.callComponent(${$cd}, $context, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
-            ctx.writeLine(`if($child) {`);
+            ctx.writeLine(`if($child?.push) {`);
             ctx.goIndent(() => {
                 ctx.build(data.body);
             });
