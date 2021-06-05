@@ -465,15 +465,6 @@ export const recalcAttributes = (props, skip) => {
 };
 
 
-export const completeProps = ($component, setter, getters) => {
-    $component.push = () => {
-        setter();
-        $component.apply();
-    }
-    $component.exportedProps = getters;
-};
-
-
 export const bindPropToComponent = ($component, name, parentWatch, up) => {
     let getter = $component.exportedProps[name];
     if(!getter) return __app_onerror(`Component doesn't have prop ${name}`);

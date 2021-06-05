@@ -263,31 +263,15 @@ export function transform() {
             assert(n.declaration.type == 'VariableDeclaration', 'Wrong export');
             n.declaration.declarations.forEach(d => {
                 assert(d.type == 'VariableDeclarator', 'Wrong export');
-                result.props.push(d.id.name);
-                resultBody.push({
-                    type: 'VariableDeclaration',
-                    kind: 'let',
-                    declarations: [{
-                        type: 'VariableDeclarator',
-                        id: {
-                            type: 'ObjectPattern',
-                            properties: [{
-                                type: 'Property',
-                                method: false,
-                                shorthand: true,
-                                computed: false,
-                                kind: 'init',
-                                key: d.id,
-                                value: d.init ? {
-                                    type: 'AssignmentPattern',
-                                    left: d.id,
-                                    right: d.init
-                                } : d.id
-                            }]
-                        },
-                        init: {type: 'Identifier', name: '$props'}
-                    }]
-                });
+                let p = {name: d.id.name};
+                if(d.init) {
+                    if(d.init.type == 'Literal') {
+                        p.value = d.init.raw;
+                    } else {
+                        p.value = astring.generate(d.init);
+                    }
+                }
+                result.props.push(p);
                 this.require('$props:no-deps');
                 lastPropIndex = resultBody.length;
             });
@@ -320,25 +304,41 @@ export function transform() {
         resultBody.splice(lastPropIndex, 0, rawNode(() => {
             let code = [];
             if(this.inuse.$attributes) {
-                code.push(`let $$skipAttrs = {${result.props.map(n => n + ':1').join(',')}};`);
-                code.push('let $attributes = $runtime.recalcAttributes($props, $$skipAttrs);');
-                code.push(`$runtime.completeProps($component, () => {`);
-                code.push(`  ({${result.props.map(p => p+'='+p).join(',')}} = $props);`);
-                code.push('  $attributes = $runtime.recalcAttributes($props, $$skipAttrs);');
-                code.push(`}, {${result.props.map(n => n + ': () => '+n).join(',')}});`);
+                let pa = result.props.map(p => {
+                    if(p.value === void 0) return `${p.name}`;
+                    return `${p.name}=${p.value}`;
+                }).join(', ');
+                code.push(`let {${pa}, ...$attributes} = $props;`);
+
+                if(!this.script.readOnly) {
+                    code.push(`$runtime.current_component.push = () => {  `);
+                    code.push(`  ({${result.props.map(p => p.name+'='+p.name).join(', ')}, ...$attributes} = $props);`);
+                    code.push(`  $$apply();`);
+                    code.push(`};`);
+                    code.push(`$runtime.current_component.exportedProps = {${result.props.map(p => p.name + ': () => '+p.name).join(', ')}};`)
+                }
             } else if(this.inuse.$props && !constantProps && !this.script.readOnly) {
-                code.push(`$runtime.completeProps($component, () => {`);
-                code.push(`  ({${result.props.map(p => p+'='+p).join(',')}} = $props);`);
-                code.push(`}, {${result.props.map(n => n + ': () => '+n).join(',')}});`);
+                let pa = result.props.map(p => {
+                    if(p.value === void 0) return `${p.name}`;
+                    return `${p.name}=${p.value}`;
+                }).join(', ');
+                code.push(`let {${pa}} = $props;`);
+
+                if(!this.script.readOnly) {
+                    code.push(`$runtime.current_component.push = () => {  `);
+                    code.push(`  ({${result.props.map(p => p.name+'='+p.name).join(', ')}} = $props);`);
+                    code.push(`  $$apply();`);
+                    code.push(`};`);
+                    code.push(`$runtime.current_component.exportedProps = {${result.props.map(p => p.name + ': () => '+p.name).join(', ')}};`)
+                }
             }
             return code;
         }));
     } else {
         header.push(rawNode(() => {
-            if(this.inuse.$props) return 'const $props = $option.props || {};';
-        }));
-        header.push(rawNode(() => {
-            if(this.inuse.$attributes) return 'let $attributes = $props;';
+            if(this.inuse.$props && this.inuse.$attributes) return 'const $props = $option.props || {}, $attributes = $props;';
+            else if(this.inuse.$props) return 'const $props = $option.props || {};';
+            else if(this.inuse.$attributes) return 'const $attributes = $option.props || {};';
         }));
     }
 
@@ -372,9 +372,9 @@ export function transform() {
     }
 
     if(this.scriptNodes[0] && this.scriptNodes[0].attributes.some(a => a.name == 'property')) {
-        result.props.forEach(name => {
+        result.props.forEach(p => {
             this.require('$cd');
-            resultBody.push(rawNode(`$runtime.makeExternalProperty($component, '${name}', () => ${name}, _${name} => ${name} = _${name});`));
+            resultBody.push(rawNode(`$runtime.makeExternalProperty($component, '${p.name}', () => ${p.name}, _${p.name} => ${p.name} = _${p.name});`));
         });
     }
 
