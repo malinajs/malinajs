@@ -19,13 +19,15 @@ export function parse() {
     if(source) {
         this.script.readOnly = this.scriptNodes.some(n => n.attributes.some(a => a.name == 'read-only'));
 
-        source = source.split(/\n/).map(line => {
-            let rx = line.match(/^(\s*)\/\/(.*)$/);
-            if(!rx) return line;
-            let code = rx[2].trim()
-            if(code != '!no-check') return line;
-            return rx[1] + '$$_noCheck;';
-        }).join('\n');
+        if(!this.script.readOnly) {
+            source = source.split(/\n/).map(line => {
+                let rx = line.match(/^(\s*)\/\/(.*)$/);
+                if(!rx) return line;
+                let code = rx[2].trim()
+                if(code != '!no-check') return line;
+                return rx[1] + '$$_noCheck;';
+            }).join('\n');
+        }
         this.script.ast = acorn.parse(source, {sourceType: 'module', ecmaVersion: 12});
 
         if(source.includes('$props')) this.require('$props');
@@ -321,7 +323,7 @@ export function transform() {
                 code.push(`let $$skipAttrs = {${result.props.map(n => n + ':1').join(',')}};`);
                 code.push('let $attributes = $runtime.recalcAttributes($props, $$skipAttrs);');
                 code.push(`$runtime.completeProps($component, () => {`);
-                code.push(`  ({${result.props.join(',')}} = $props);`);
+                code.push(`  ({${result.props.map(p => p+'='+p).join(',')}} = $props);`);
                 code.push('  $attributes = $runtime.recalcAttributes($props, $$skipAttrs);');
                 code.push(`}, {${result.props.map(n => n + ': () => '+n).join(',')}});`);
             } else if(this.inuse.$props && !constantProps && !this.script.readOnly) {

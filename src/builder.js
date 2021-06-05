@@ -223,7 +223,7 @@ export function buildBlock(data, option={}) {
                 if(name == 'html') {
                     let el = xNode('node:comment', {label: true, value: 'html'});
                     tpl.push(el);
-                    binds.push(this.makeHtmlBlock(exp, el.bindName()));
+                    binds.push(this.makeHtmlBlock(exp, el));
                     return;
                 } else throw 'Wrong tag';
             } else if(n.type === 'await') {

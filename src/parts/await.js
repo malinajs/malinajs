@@ -44,8 +44,8 @@ export function makeAwaitBlock(node, element) {
     }
 
     this.detectDependency(exp);
-    this.require('apply', '$cd');
     if(this.script.readOnly) this.warning('script read-only conflicts with await');
+    this.require('apply', '$cd');
 
     return xNode('await', {
         el: element.bindName(),

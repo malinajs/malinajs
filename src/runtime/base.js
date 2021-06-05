@@ -229,7 +229,8 @@ export const $readOnlyBase = {
             _d: $component._d,
             watchers: [],
             prefix: [],
-            new: () => $component.$cd
+            new: () => $component.$cd,
+            destroy: noop
         };
     },
     b: ($component) => {
