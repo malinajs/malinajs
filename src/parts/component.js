@@ -24,12 +24,12 @@ export function makeComponent(node, element) {
     let body = xNode('block');
 
     head.push(xNode('push', {
-        $cond: (ctx) => passOption.push && ctx.inuse.apply
+        $cond: (ctx) => passOption.push || (passOption.pushIfApply && ctx.inuse.apply)
     }, ctx => {
         ctx.writeLine(`let $$push = $runtime.noop;`)
     }));
     body.push(xNode('push', {
-        $cond: (ctx) => passOption.push && ctx.inuse.apply
+        $cond: (ctx) => (passOption.push || passOption.pushIfApply) && ctx.inuse.apply
     }, ctx => {
         ctx.writeLine(`$$push = $child.push;`)
     }));
@@ -45,7 +45,7 @@ export function makeComponent(node, element) {
         $cond: () => forwardAllEvents || passOption.events
     }, ctx => {
         if(forwardAllEvents) {
-            ctx.writeLine('let events = Object.assign({}, $option.events);');
+            ctx.writeLine('let events = {...$option.events};');
         } else if(passOption.events) {
             ctx.writeLine('let events = {};');
         }
@@ -235,6 +235,9 @@ export function makeComponent(node, element) {
             passOption.props = true;
             passOption.push = true;
 
+            if(this.script.readOnly) this.warning('Conflict: read-only and 2-way binding to component')
+            this.require('apply');
+
             head.push(xNode('bindProp2', {
                 watchName,
                 outer,
@@ -356,7 +359,8 @@ export function makeComponent(node, element) {
                 this.checkRootName(handler);
                 callback = handler;
             } else {
-                callback = `($event) => {${this.Q(exp)}}`;
+                this.require('apply');
+                callback = `($event) => {${this.Q(exp)}; $$apply();}`;
             }
 
             passOption.events = true;
@@ -403,7 +407,7 @@ export function makeComponent(node, element) {
             }));
 
             passOption.class = true;
-            passOption.push = true;
+            passOption.pushIfApply = true;
             this.require('resolveClass');
             return;
         }
@@ -441,7 +445,7 @@ export function makeComponent(node, element) {
                 let propObject = propLevel ? `$$lvl[${propLevel}]` : 'props';
 
                 passOption.props = true;
-                passOption.push = true;
+                passOption.pushIfApply = true;
                 head.push(xNode('bindProp', {
                     exp,
                     name,
@@ -519,24 +523,34 @@ export function makeComponent(node, element) {
         }, (ctx, n) => {
             ctx.writeLine('{');
             ctx.goIndent(() => {
-                ctx.writeLine(`let childCD, finalLabel = $runtime.getFinalLabel(${n.el});`);
-                ctx.writeLine(`$watch($cd, () => (${n.exp}), ($ComponentConstructor) => {`);
-                ctx.goIndent(() => {
-                    ctx.writeLine(`if(childCD) {`);
+                if(ctx.inuse.apply) {
+                    ctx.writeLine(`let childCD, finalLabel = $runtime.getFinalLabel(${n.el});`);
+                    ctx.writeLine(`$watch($cd, () => (${n.exp}), ($ComponentConstructor) => {`);
                     ctx.goIndent(() => {
-                        ctx.writeLine(`childCD.destroy();`);
-                        ctx.writeLine(`$runtime.removeElementsBetween(${n.el}, finalLabel);`);
+                        ctx.writeLine(`if(childCD) {`);
+                        ctx.goIndent(() => {
+                            ctx.writeLine(`childCD.destroy();`);
+                            ctx.writeLine(`$runtime.removeElementsBetween(${n.el}, finalLabel);`);
+                        });
+                        ctx.writeLine(`}`);
+                        ctx.writeLine(`childCD = null;`);
+                        ctx.writeLine(`if($ComponentConstructor) {`);
+                        ctx.goIndent(() => {
+                            ctx.writeLine(`childCD = $cd.new();`);
+                            ctx.build(n.component);
+                        });
+                        ctx.writeLine(`}`);
                     });
-                    ctx.writeLine(`}`);
-                    ctx.writeLine(`childCD = null;`);
+                    ctx.writeLine(`});`);
+                } else {
+                    ctx.writeLine(`let $ComponentConstructor = ${n.exp};`);
                     ctx.writeLine(`if($ComponentConstructor) {`);
                     ctx.goIndent(() => {
-                        ctx.writeLine(`childCD = $cd.new();`);
+                        ctx.writeLine(`let childCD = $cd;`);
                         ctx.build(n.component);
                     });
                     ctx.writeLine(`}`);
-                });
-                ctx.writeLine(`});`);
+                }
             });
             ctx.writeLine('}');
         })};
