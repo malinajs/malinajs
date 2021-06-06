@@ -74,7 +74,7 @@ export function parse() {
             }
             if(a == '>') {
                 flush();
-                const voidTags = ['fragment', 'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
+                const voidTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
                 let voidTag = voidTags.indexOf(name) >= 0;
                 let closedTag = voidTag || source[index-2] == '/';
                 return {
@@ -225,7 +225,10 @@ export function parse() {
                         if(a === '>') break;
                         name += a;
                     }
-                    assert(name === parent.name, 'Wrong close-tag: ' + parent.name + ' - ' + name);
+                    if(name) {
+                        name = name.split(':')[0];
+                        assert(name === parent.name, 'Wrong close-tag: ' + parent.name + ' - ' + name);
+                    }
                     return;
                 }
 

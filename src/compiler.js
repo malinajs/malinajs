@@ -14,7 +14,7 @@ import { makeEachBlock } from './parts/each.js'
 import { makeHtmlBlock } from './parts/html.js'
 import { makeAwaitBlock } from './parts/await.js'
 import { attachSlot } from './parts/slot.js'
-import { makeFragment, attachFragment } from './parts/fragment.js'
+import { makeFragment, attachFragment, attachFragmentSlot } from './parts/fragment.js'
 
 
 export const version = '0.6.21';
@@ -53,6 +53,7 @@ export async function compile(source, config = {}) {
         makeAwaitBlock,
         attachSlot,
         makeFragment,
+        attachFragmentSlot,
         attachFragment,
         checkRootName: utils.checkRootName,
 

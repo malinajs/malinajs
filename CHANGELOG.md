@@ -24,6 +24,7 @@
 * script option "read-only"
 * constant props - "export const prop;"
 * compile option: debugLabel
+* slot for fragment
 
 ## 0.5.x
 

@@ -138,10 +138,16 @@ export function buildBlock(data, option={}) {
                     return;
                 }
                 if(n.name == 'fragment') {
-                    let el = xNode('node:comment', {label: true, value: `fragment ${n.elArg}`});
-                    tpl.push(el);
-                    let b = this.attachFragment(n, el);
-                    b && binds.push(b);
+                    if(n.elArg) {
+                        let el = xNode('node:comment', {label: true, value: `fragment ${n.elArg}`});
+                        tpl.push(el);
+                        let b = this.attachFragment(n, el);
+                        b && binds.push(b);
+                    } else {
+                        let el = xNode('node:comment', {label: true, value: 'fragment'});
+                        tpl.push(el);
+                        binds.push(this.attachFragmentSlot(el, n));
+                    }
                     return;
                 }
 
