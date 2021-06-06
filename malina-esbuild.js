@@ -61,7 +61,6 @@ function malinaPlugin(options={}){
     const cssModules = new Map();
 
     options = {
-        css: false,
         ...malinaConfig,
         ...options
     }
