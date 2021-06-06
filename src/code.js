@@ -356,13 +356,13 @@ export function transform() {
     }));
 
     if(this.config.autoSubscribe) {
-        result.importedNames.forEach(name => {
-            if(name[0].toUpperCase() == name[0]) return;
+        let names = result.importedNames.filter(name => name[0].toLowerCase() == name[0]);
+        if(names.length) {
             if(!this.script.readOnly) this.require('$cd', 'apply');
             header.push(rawNode(() => {
-                if(this.inuse.apply) return `$runtime.autoSubscribe($component, ${name});`;
+                if(this.inuse.apply) return `$runtime.autoSubscribe(${names.join(', ')});`;
             }));
-        });
+        }
     }
 
     if(!rootFunctions.$emit) {

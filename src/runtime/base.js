@@ -312,11 +312,13 @@ export const callComponent = (cd, context, component, el, option) => {
     return $component;
 };
 
-export const autoSubscribe = (component, obj) => {
-    if(obj.subscribe) {
-        let unsub = obj.subscribe(component.apply);
-        if(isFunction(unsub)) cd_onDestroy(component.$cd, unsub);
-    }
+export const autoSubscribe = (...list) => {
+    list.forEach(i => {
+        if(i.subscribe) {
+            let unsub = i.subscribe(current_component.apply);
+            if(isFunction(unsub)) cd_onDestroy(current_component, unsub);
+        }
+    })
 }
 
 
