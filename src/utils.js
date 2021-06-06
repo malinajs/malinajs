@@ -439,7 +439,7 @@ xNode.init = {
             node.bindName = xNode.init.node.bindName;
         },
         handler: (ctx, node) => {
-            if(ctx._ctx.config.debug && !ctx._ctx.config.hideLabel) ctx.write(`<!-- ${node.value} -->`);
+            if(ctx._ctx.config.debug && ctx._ctx.config.debugLabel) ctx.write(`<!-- ${node.value} -->`);
             else ctx.write(`<!---->`);
         }
     },
@@ -448,7 +448,10 @@ xNode.init = {
         let convert;
         if(node.svg) convert = '$runtime.svgToFragment';
         else if(!template.match(/[<>]/)) convert = '$runtime.createTextNode';
-        else convert = '$$htmlToFragment';
+        else {
+            convert = '$$htmlToFragment';
+            template = template.replace(/<!---->/g, '<>');
+        }
         if(node.inline) {
             ctx.write(`${convert}(\`${ctx._ctx.Q(template)}\`)`);
         } else {

@@ -27,7 +27,7 @@ export const $$htmlToFragment = (html) => {
     if(templatecache[html]) return templatecache[html].cloneNode(true);
 
     let t = document.createElement('template');
-    t.innerHTML = html;
+    t.innerHTML = html.replace(/<>/g, '<!---->');
     let result = t.content;
     templatecache[html] = result.cloneNode(true);
     return result;
@@ -37,7 +37,7 @@ export const $$htmlToFragmentClean = (html) => {
     if(templatecache[html]) return templatecache[html].cloneNode(true);
 
     let t = document.createElement('template');
-    t.innerHTML = html;
+    t.innerHTML = html.replace(/<>/g, '<!---->');
     let result = t.content;
 
     let it = document.createNodeIterator(result, 128);

@@ -23,6 +23,7 @@
 * event modifier: stop, prevent
 * script option "read-only"
 * constant props - "export const prop;"
+* compile option: debugLabel
 
 ## 0.5.x
 
