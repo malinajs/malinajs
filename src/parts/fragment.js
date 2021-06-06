@@ -144,7 +144,7 @@ export function attachFragment(node, element) {
     }, (ctx, n) => {
         ctx.write(true, `$fragment_${n.name}($cd, ${n.el}`);
         if(n.props.length || n.events.length) {
-            ctx.write(`, {\n`);
+            ctx.write(`, {...$option,\n`);
             ctx.indent++;
 
             if(n.props.length) {
@@ -162,7 +162,7 @@ export function attachFragment(node, element) {
                 ctx.write(true, 'events: $option.events');
             } else if(n.events.length) {
                 if(n.props.length) ctx.write(',\n');
-                ctx.write(true, 'events: {');
+                ctx.write(true, 'events: {...$option.events,');
                 n.events.forEach((e, i) => {
                     if(i) ctx.write(', ');
                     if(e.name == e.callback) ctx.write(`${e.name}`);
@@ -175,7 +175,7 @@ export function attachFragment(node, element) {
             ctx.indent--;
             ctx.writeLine(`});`);
         } else {
-            ctx.write(`);\n`);
+            ctx.write(`, $option);\n`);
         }
     });
 };
