@@ -1,5 +1,5 @@
 
-import { $$htmlToFragment, insertBefore } from '../runtime/base';
+import { $$htmlToFragment, insertAfter } from '../runtime/base';
 import { $watch } from '../runtime/cd';
 
 export function $$htmlBlock($cd, tag, fn) {
@@ -7,7 +7,7 @@ export function $$htmlBlock($cd, tag, fn) {
     let create = (html) => {
         let fr = $$htmlToFragment(html);
         lastElement = fr.lastChild;
-        insertBefore(tag, fr, tag.nextSibling);
+        insertAfter(tag, fr);
     };
     let destroy = () => {
         if(!lastElement) return;

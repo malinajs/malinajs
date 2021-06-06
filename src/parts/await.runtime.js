@@ -1,5 +1,5 @@
 
-import { $$removeElements, firstChild, insertBefore } from '../runtime/base';
+import { $$removeElements, firstChild, insertAfter } from '../runtime/base';
 import { $watchReadOnly } from '../runtime/cd';
 
 export function $$awaitBlock($cd, label, fn, $$apply, build_main, tpl_main, build_then, tpl_then, build_catch, tpl_catch) {
@@ -23,7 +23,7 @@ export function $$awaitBlock($cd, label, fn, $$apply, build_main, tpl_main, buil
         $$apply();
         first = fr[firstChild];
         last = fr.lastChild;
-        insertBefore(label, fr, label.nextSibling);
+        insertAfter(label, fr);
     };
 
     $watchReadOnly($cd, fn, p => {

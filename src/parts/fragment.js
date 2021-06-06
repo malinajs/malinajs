@@ -44,7 +44,7 @@ export function makeFragment(node) {
 
         ctx.build(n.template);
         ctx.build(n.source);
-        ctx.writeLine(`$runtime.insertBefore(label, $parentElement, label.nextSibling);`);
+        ctx.writeLine(`$runtime.insertAfter(label, $parentElement);`);
 
         ctx.indent--;
         ctx.writeLine('}');

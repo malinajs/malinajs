@@ -13,8 +13,8 @@ export const firstChild = 'firstChild';
 
 export let noop = a => a;
 
-export const insertBefore = (el, node, before) => {
-    el.parentNode.insertBefore(node, before);
+export const insertAfter = (label, node) => {
+    label.parentNode.insertBefore(node, label.nextSibling);
 }
 
 export const createTextNode = (text) => {
@@ -215,7 +215,7 @@ export const $onMount = fn => current_component._m.push(fn);
 
 export const $insertElementByOption = ($label, $option, $element) => {
     if ($option.afterElement) {
-        insertBefore($label, $element, $label.nextSibling);
+        insertAfter($label, $element);
     } else {
         $label.innerHTML = '';
         $label.appendChild($element);

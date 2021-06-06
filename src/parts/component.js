@@ -172,7 +172,7 @@ export function makeComponent(node, element) {
                         }
                     }
 
-                    ctx.writeLine(`$runtime.insertBefore($label, $parentElement, $label.nextSibling);`);
+                    ctx.writeLine(`$runtime.insertAfter($label, $parentElement);`);
                     ctx.writeLine(`return {`);
                     ctx.goIndent(() => {
                         if(data.$cd) ctx.writeLine(`destroy: () => {$childCD.destroy();}`);
