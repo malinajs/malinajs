@@ -493,7 +493,7 @@ export const attachSlotBase = ($component, $context, $cd, slotName, label, place
     let $slot = $component.$option.slots?.[slotName];
     if($slot) {
         let s = $slot(label, $context, $component);
-        cd_onDestroy($cd, s.destroy);
+        s && cd_onDestroy($cd, s.destroy);
         return s;
     } else placeholder && placeholder();
 };

@@ -143,7 +143,8 @@ export function makeComponent(node, element) {
             const template = xNode('template', {
                 name: '$parentElement',
                 body: block.tpl,
-                svg: block.svg
+                svg: block.svg,
+                inline: !block.source
             });
 
             head.push(xNode('slot', {
@@ -154,33 +155,42 @@ export function makeComponent(node, element) {
                 props,
                 setters,
                 $cd: block.inuse.$cd
-            }, (ctx, data) => {
-                ctx.writeLine(`slots.${data.name} = function($label, $context, $instance_${data.componentName}) {`);
+            }, (ctx, n) => {
+                ctx.writeLine(`slots.${n.name} = ($label, $context, $instance_${n.componentName}) => {`);
                 ctx.goIndent(() => {
-                    if(data.$cd) ctx.writeLine(`let $childCD = $cd.new();`);
-                    ctx.build(data.template);
-                    ctx.build(data.props);
-                    if(data.bind) {
-                        if(data.$cd) {
+                    if(n.$cd) ctx.writeLine(`let $childCD = $cd.new();`);
+                    if(n.template.inline) {
+                        ctx.write(true, `$runtime.insertAfter($label, `);
+                        ctx.build(n.template);
+                        ctx.write(`);\n`);
+                    } else {
+                        ctx.build(n.template);
+                    }
+                    ctx.build(n.props);
+                    if(n.bind) {
+                        if(n.$cd) {
                             ctx.writeLine(`{`);
                             ctx.goIndent(() => {
                                 ctx.writeLine(`let $cd = $childCD;`);
-                                ctx.build(data.bind);
+                                ctx.build(n.bind);
                             });
                             ctx.writeLine(`}`);
                         } else {
-                            ctx.build(data.bind);
+                            ctx.build(n.bind);
                         }
                     }
 
-                    ctx.writeLine(`$runtime.insertAfter($label, $parentElement);`);
-                    if(ctx.inuse.apply) ctx.writeLine(`$$apply();`);
-                    ctx.writeLine(`return {`);
-                    ctx.goIndent(() => {
-                        if(data.$cd) ctx.writeLine(`destroy: () => {$childCD.destroy();}`);
-                        ctx.build(data.setters);
-                    });
-                    ctx.writeLine(`};`);
+                    if(!n.template.inline) ctx.writeLine(`$runtime.insertAfter($label, $parentElement);`);
+                    if(n.$cd && ctx.inuse.apply) ctx.writeLine(`$$apply();`);
+
+                    if(n.$cd || n.setter) {
+                        ctx.writeLine(`return {`);
+                        ctx.goIndent(() => {
+                            if(n.$cd) ctx.writeLine(`destroy: () => {$childCD.destroy();}`);
+                            ctx.build(n.setters);
+                        });
+                        ctx.writeLine(`};`);
+                    }
                 });
                 ctx.writeLine(`}`);
             }));
