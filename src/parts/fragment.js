@@ -69,9 +69,9 @@ export function attachFragment(node, element, componentName) {
     let props = [];
     let events = [];
     let forwardAllEvents;
-    let slot = null;
+    let slotBlock = null;
 
-    if(node.body?.length) slot = this.buildBlock({body: trimEmptyNodes(node.body)}, {inline: true});
+    if(node.body?.length) slotBlock = this.buildBlock({body: trimEmptyNodes(node.body)}, {inline: true});
 
     node.attributes.forEach(prop => {
         let name = prop.name;
@@ -148,6 +148,21 @@ export function attachFragment(node, element, componentName) {
 
     this.require('$cd');
 
+    let slot = null;
+    if(slotBlock) {
+        let template = xNode('template', {
+            name: '$parentElement',
+            body: slotBlock.tpl,
+            svg: slotBlock.svg,
+            inline: !slotBlock.source
+        });
+
+        slot = {
+            source: slotBlock.source,
+            template
+        }
+    }
+
     return xNode('call-fragment', {
         forwardAllEvents,
         el: element.bindName(),
@@ -155,19 +170,13 @@ export function attachFragment(node, element, componentName) {
         parentComponent: componentName,
         events,
         props,
-        slot: slot ? {
-            source: slot.source,
-            template: xNode('template', {
-                name: '$parentElement',
-                body: slot.tpl,
-                svg: slot.svg
-            })
-        } : null
+        slot
     }, (ctx, n) => {
-        if(n.parentComponent) ctx.write(true, `$instance_${componentName}.exported.${name}?.($instance_${componentName}.$cd, ${n.el}`);
+        if(n.parentComponent) ctx.write(true, `$instance_${componentName}.$$.exported.${name}?.($instance_${componentName}, ${n.el}`);
         else ctx.write(true, `$fragment_${n.name}($cd, ${n.el}`);
         if(n.props.length || n.events.length || n.slot) {
-            ctx.write(`, {...$option,\n`);
+            if(n.parentComponent) ctx.write(`, {\n`);
+            else ctx.write(`, {...$option,\n`);
             ctx.indent++;
             let comma;
 
@@ -200,21 +209,19 @@ export function attachFragment(node, element, componentName) {
             if(n.slot) {
                 if(comma) ctx.write(',\n');
                 if(n.parentComponent) {
-                    ctx.writeLine(`fragment: ($parentCD, label, $option) => {`);
-                    ctx.goIndent(() => {
-                        ctx.writeLine(`let $childCD = $cd.new();`);
-                        ctx.writeLine(`$runtime.cd_onDestroy($parentCD, () => $childCD.destroy());`);
-                        ctx.writeLine(`{`);
+                    if(n.slot.template.inline) {
+                        ctx.write(true, `fragment: $runtime.makeFragmentSlotStatic(() => `);
+                        ctx.build(n.slot.template);
+                        ctx.write(`)`);
+                    } else {
+                        ctx.writeLine(`fragment: $runtime.makeFragmentSlot($cd, ($cd) => {`);
                         ctx.goIndent(() => {
-                            ctx.writeLine(`let $cd = $childCD;`);
                             ctx.build(n.slot.template);
                             ctx.build(n.slot.source);
-                            ctx.writeLine(`$runtime.insertAfter(label, $parentElement);`);
-                            if(ctx.inuse.apply) ctx.writeLine(`$$apply();`);
+                            ctx.writeLine(`return $parentElement;`);
                         });
-                        ctx.writeLine(`}`);
-                    });
-                    ctx.write(true, `}`);
+                        ctx.writeLine(`})`);
+                    }
                 } else {
                     ctx.writeLine(`fragment: ($cd, label, $option) => {`);
                     ctx.goIndent(() => {
@@ -229,18 +236,19 @@ export function attachFragment(node, element, componentName) {
             ctx.indent--;
             ctx.writeLine(`});`);
         } else {
-            ctx.write(`, $option);\n`);
+            if(n.parentComponent) ctx.write(`);\n`);
+            else ctx.write(`, $option);\n`);
         }
     });
 };
 
 
 export function attachFragmentSlot(label, node) {
-    this.require('$cd', '$context');
+    this.require('$cd');
 
     return xNode('fragment-slot', {
         el: label.bindName()
     }, (ctx, n) => {
-        ctx.writeLine(`$option.fragment?.($cd, ${n.el}, $option);`);
+        ctx.writeLine(`$option.fragment?.($cd, ${n.el});`);
     });
 };

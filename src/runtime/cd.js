@@ -42,6 +42,7 @@ export function $ChangeDetector(parent) {
     this.watchers = [];
     this._d = [];
     this.prefix = [];
+    this.$$ = parent?.$$;
 };
 
 $ChangeDetector.prototype.new = function() {

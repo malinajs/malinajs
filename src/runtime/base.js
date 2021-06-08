@@ -230,7 +230,8 @@ export const $readOnlyBase = {
             watchers: [],
             prefix: [],
             new: () => $component.$cd,
-            destroy: noop
+            destroy: noop,
+            $$: $component
         };
     },
     b: ($component) => {
@@ -250,6 +251,7 @@ export const $readOnlyBase = {
 export const $base = {
     a: ($component) => {
         let $cd = new $ChangeDetector();
+        $cd.$$ = $component;
         $onDestroy(() => $cd.destroy());
 
         let id = `a${$$uniqIndex++}`;
@@ -489,18 +491,18 @@ export const makeExternalProperty = ($component, name, getter, setter) => {
 }
 
 
-export const attachSlotBase = ($component, $context, $cd, slotName, label, placeholder) => {
-    let $slot = $component.$option.slots?.[slotName];
+export const attachSlotBase = ($context, $cd, slotName, label, placeholder) => {
+    let $slot = $cd.$$.$option.slots?.[slotName];
     if($slot) {
-        let s = $slot(label, $context, $component);
+        let s = $slot(label, $context, $cd);
         s && cd_onDestroy($cd, s.destroy);
         return s;
     } else placeholder && placeholder();
 };
 
 
-export const attachSlot = ($component, $context, $cd, slotName, label, props, placeholder) => {
-    let slot = attachSlotBase($component, $context, $cd, slotName, label, placeholder);
+export const attachSlot = ($context, $cd, slotName, label, props, placeholder) => {
+    let slot = attachSlotBase($context, $cd, slotName, label, placeholder);
     if(slot) {
         for(let key in props) {
             let setter = `set_${key}`;
@@ -512,6 +514,23 @@ export const attachSlot = ($component, $context, $cd, slotName, label, props, pl
         }
     }
 };
+
+
+export const makeFragmentSlot = (parentCD, fn) => {
+    return (callerCD, label) => {
+        let $cd = parentCD.new();
+        cd_onDestroy(callerCD, () => $cd.destroy());
+        insertAfter(label, fn($cd));
+        $cd.$$.apply();
+    }
+}
+
+
+export const makeFragmentSlotStatic = (fn) => {
+    return (callerCD, label) => {
+        insertAfter(label, fn());
+    }
+}
 
 
 export const eachDefaultKey = (item, index, array) => typeof array[0] === 'object' ? item : index;
