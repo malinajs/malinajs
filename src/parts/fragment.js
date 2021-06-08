@@ -3,7 +3,14 @@ import { assert, isSimpleName, unwrapExp, detectExpressionType, xNode, toCamelCa
 
 
 export function makeFragment(node) {
-    let rx = node.value.match(/#fragment\:(\S+)(.*)$/);
+    let rx, exported = false;
+    if(node.type == 'export') {
+        this.require('$component');
+        exported = true;
+        rx = node.value.match(/#export\:(\S+)(.*)$/);
+    } else {
+        rx = node.value.match(/#fragment\:(\S+)(.*)$/);
+    }
     assert(rx);
     let name = rx[1];
     assert(isSimpleName(name));
@@ -22,6 +29,7 @@ export function makeFragment(node) {
     return xNode('fragment', {
         name,
         props,
+        exported,
         source: block.source,
         template: xNode('template', {
             name: '$parentElement',
@@ -29,7 +37,9 @@ export function makeFragment(node) {
             svg: block.svg
         })
     }, (ctx, n) => {
-        ctx.writeLine(`function $fragment_${n.name}($cd, label, $option={}) {`);
+        ctx.write(true);
+        if(n.exported) ctx.write(`$component.exported.${n.name} = `);
+        ctx.write(`function $fragment_${n.name}($cd, label, $option={}) {\n`);
         ctx.indent++;
 
         if(n.props) {
@@ -52,7 +62,7 @@ export function makeFragment(node) {
 }
 
 
-export function attachFragment(node, element) {
+export function attachFragment(node, element, componentName) {
     let name = node.elArg;
     assert(isSimpleName(name));
 
@@ -142,6 +152,7 @@ export function attachFragment(node, element) {
         forwardAllEvents,
         el: element.bindName(),
         name,
+        parentComponent: componentName,
         events,
         props,
         slot: slot ? {
@@ -153,7 +164,8 @@ export function attachFragment(node, element) {
             })
         } : null
     }, (ctx, n) => {
-        ctx.write(true, `$fragment_${n.name}($cd, ${n.el}`);
+        if(n.parentComponent) ctx.write(true, `$instance_${componentName}.exported.${name}?.($instance_${componentName}.$cd, ${n.el}`);
+        else ctx.write(true, `$fragment_${n.name}($cd, ${n.el}`);
         if(n.props.length || n.events.length || n.slot) {
             ctx.write(`, {...$option,\n`);
             ctx.indent++;
@@ -187,13 +199,31 @@ export function attachFragment(node, element) {
             }
             if(n.slot) {
                 if(comma) ctx.write(',\n');
-                ctx.writeLine(`fragment: ($cd, label, $option) => {`);
-                ctx.goIndent(() => {
-                    ctx.build(n.slot.template);
-                    ctx.build(n.slot.source);
-                    ctx.writeLine(`$runtime.insertAfter(label, $parentElement);`);
-                });
-                ctx.write(true, `}`);
+                if(n.parentComponent) {
+                    ctx.writeLine(`fragment: ($parentCD, label, $option) => {`);
+                    ctx.goIndent(() => {
+                        ctx.writeLine(`let $childCD = $cd.new();`);
+                        ctx.writeLine(`$runtime.cd_onDestroy($parentCD, () => $childCD.destroy());`);
+                        ctx.writeLine(`{`);
+                        ctx.goIndent(() => {
+                            ctx.writeLine(`let $cd = $childCD;`);
+                            ctx.build(n.slot.template);
+                            ctx.build(n.slot.source);
+                            ctx.writeLine(`$runtime.insertAfter(label, $parentElement);`);
+                            if(ctx.inuse.apply) ctx.writeLine(`$$apply();`);
+                        });
+                        ctx.writeLine(`}`);
+                    });
+                    ctx.write(true, `}`);
+                } else {
+                    ctx.writeLine(`fragment: ($cd, label, $option) => {`);
+                    ctx.goIndent(() => {
+                        ctx.build(n.slot.template);
+                        ctx.build(n.slot.source);
+                        ctx.writeLine(`$runtime.insertAfter(label, $parentElement);`);
+                    });
+                    ctx.write(true, `}`);
+                }
             }
             ctx.write('\n');
             ctx.indent--;

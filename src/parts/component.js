@@ -13,7 +13,8 @@ export function makeComponent(node, element) {
 
     let propLevel = 0, propLevelType;
 
-    if(node.name == 'component') {
+    let componentName = node.name;
+    if(componentName == 'component') {
         assert(node.elArg);
         dynamicComponent = node.elArg[0] == '{' ? unwrapExp(node.elArg) : node.elArg;
     }
@@ -149,12 +150,12 @@ export function makeComponent(node, element) {
                 name: slot.name,
                 template,
                 bind: block.source,
-
+                componentName,
                 props,
                 setters,
                 $cd: block.inuse.$cd
             }, (ctx, data) => {
-                ctx.writeLine(`slots.${data.name} = function($label, $context) {`);
+                ctx.writeLine(`slots.${data.name} = function($label, $context, $instance_${data.componentName}) {`);
                 ctx.goIndent(() => {
                     if(data.$cd) ctx.writeLine(`let $childCD = $cd.new();`);
                     ctx.build(data.template);
@@ -173,6 +174,7 @@ export function makeComponent(node, element) {
                     }
 
                     ctx.writeLine(`$runtime.insertAfter($label, $parentElement);`);
+                    if(ctx.inuse.apply) ctx.writeLine(`$$apply();`);
                     ctx.writeLine(`return {`);
                     ctx.goIndent(() => {
                         if(data.$cd) ctx.writeLine(`destroy: () => {$childCD.destroy();}`);
@@ -477,7 +479,7 @@ export function makeComponent(node, element) {
 
     let result = xNode('component', {
         el: element.bindName(),
-        componentName: node.name,
+        componentName,
         head,
         body,
         options,

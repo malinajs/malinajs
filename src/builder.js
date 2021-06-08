@@ -78,7 +78,7 @@ export function buildBlock(data, option={}) {
         let body = data.body.filter(n => {
             if(n.type == 'script' || n.type == 'style' || n.type == 'slot') return false;
             if(n.type == 'comment' && !this.config.preserveComments) return false;
-            if(n.type == 'fragment') {
+            if(n.type == 'fragment' || n.type == 'export') {
                 try {
                     let f = this.makeFragment(n);
                     f && binds.push(f);
@@ -123,11 +123,18 @@ export function buildBlock(data, option={}) {
                 tpl.push('</template>');
             } else if(n.type === 'node') {
                 if(n.name == 'component' || n.name.match(/^[A-Z]/)) {
-                    // component
-                    let el = xNode('node:comment', {label: true, value: n.name});
-                    tpl.push(el);
-                    let b = this.makeComponent(n, el);
-                    binds.push(b.bind);
+                    if(n.elArg) {
+                        let el = xNode('node:comment', {label: true, value: `exported ${n.elArg}`});
+                        tpl.push(el);
+                        let b = this.attachFragment(n, el, n.name);
+                        b && binds.push(b);
+                    } else {
+                        // component
+                        let el = xNode('node:comment', {label: true, value: n.name});
+                        tpl.push(el);
+                        let b = this.makeComponent(n, el);
+                        binds.push(b.bind);
+                    }
                     return;
                 }
                 if(n.name == 'slot') {

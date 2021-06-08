@@ -285,6 +285,7 @@ export const makeComponent = (init, $base) => {
             $option,
             destroy: () => $component._d.map(safeCall),
             context: $context,
+            exported: {},
             _d: [],
             _m: []
         };
@@ -488,18 +489,18 @@ export const makeExternalProperty = ($component, name, getter, setter) => {
 }
 
 
-export const attachSlotBase = ($option, $context, $cd, slotName, label, placeholder) => {
-    let $slot = $option.slots && $option.slots[slotName];
+export const attachSlotBase = ($component, $context, $cd, slotName, label, placeholder) => {
+    let $slot = $component.$option.slots?.[slotName];
     if($slot) {
-        let s = $slot(label, $context);
+        let s = $slot(label, $context, $component);
         cd_onDestroy($cd, s.destroy);
         return s;
     } else placeholder && placeholder();
 };
 
 
-export const attachSlot = ($option, $context, $cd, slotName, label, props, placeholder) => {
-    let slot = attachSlotBase($option, $context, $cd, slotName, label, placeholder);
+export const attachSlot = ($component, $context, $cd, slotName, label, props, placeholder) => {
+    let slot = attachSlotBase($component, $context, $cd, slotName, label, placeholder);
     if(slot) {
         for(let key in props) {
             let setter = `set_${key}`;

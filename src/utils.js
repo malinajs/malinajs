@@ -249,8 +249,11 @@ export function xWriter(ctx) {
         this.indent--;
     };
     this.write = function(a, b) {
-        if(a == true) this.result.push(this.getIndent() + b);
-        else a && this.result.push(a)
+        if(a === true) {
+            this.result.push(this.getIndent());
+            a = b;
+        }
+        a && this.result.push(a)
     };
     this.writeLine = function(s) {
         this.write(this.getIndent());

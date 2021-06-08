@@ -341,9 +341,9 @@ export function parse() {
                     } else if(bind.value == '/slot') {
                         assert(parent.type === 'slot', 'Slot error: /slot');
                         return;
-                    } else if(bind.value.match(/^\#fragment\W/)) {
+                    } else if(bind.value.startsWith('#fragment:') || bind.value.startsWith('#export:')) {
                         let tag = {
-                            type: 'fragment',
+                            type: bind.value.startsWith('#export:') ? 'export' : 'fragment',
                             value: bind.value,
                             body: []
                         };
@@ -352,6 +352,9 @@ export function parse() {
                         continue;
                     } else if(bind.value == '/fragment') {
                         assert(parent.type === 'fragment', 'Fragment error: /fragment');
+                        return;
+                    } else if(bind.value == '/export') {
+                        assert(parent.type === 'export', 'Fragment error: /export');
                         return;
                     } else throw 'Error binding: ' + bind.value;
                 }
