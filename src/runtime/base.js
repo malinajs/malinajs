@@ -349,7 +349,7 @@ export const setClassToElement = (element, value) => {
 
 
 export const bindText = (cd, element, fn) => {
-    $watchReadOnly(cd, fn, value => {
+    $watchReadOnly(cd, () => '' + fn(), value => {
         element.textContent = value;
     });
 };
@@ -369,7 +369,7 @@ export const bindAttributeBase = (element, name, value) => {
 
 
 export const bindAttribute = (cd, element, name, fn) => {
-    $watchReadOnly(cd, fn, value => bindAttributeBase(element, name, value));
+    $watchReadOnly(cd, () => '' + fn(), value => bindAttributeBase(element, name, value));
 };
 
 
@@ -397,7 +397,7 @@ export const __bindActionSubscribe = (cd, fn, handler, value) => {
 
 export const bindInput = (cd, element, name, get, set) => {
     let w = $watchReadOnly(cd, name == 'checked' ? () => !!get() : get, value => {
-        if(value != element[name]) element[name] = value;
+        element[name] = value == null ? '' : value;
     });
     addEvent(cd, element, 'input', () => {
         set(w.value = element[name]);
