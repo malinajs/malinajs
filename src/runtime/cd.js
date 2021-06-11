@@ -14,12 +14,6 @@ export function $watchReadOnly(cd, fn, callback) {
     return $watch(cd, fn, callback, {ro: true});
 };
 
-export const watchInit = (cd, fn, callback) => {
-    let w = $watchReadOnly(cd, fn, callback);
-    w.value = fn();
-    return w.value;
-};
-
 export function addEvent(cd, el, event, callback) {
     el.addEventListener(event, callback);
     cd_onDestroy(cd, () => {
