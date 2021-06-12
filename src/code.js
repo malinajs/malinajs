@@ -310,21 +310,21 @@ export function transform() {
                 }).join(', ');
                 code.push(`let {${pa}, ...$attributes} = $props;`);
 
-                if(!this.script.readOnly) {
+                if(!this.script.readOnly && !constantProps) {
                     code.push(`$runtime.current_component.push = () => {  `);
                     code.push(`  ({${result.props.map(p => p.name+'='+p.name).join(', ')}, ...$attributes} = $props);`);
                     code.push(`  $$apply();`);
                     code.push(`};`);
                     code.push(`$runtime.current_component.exportedProps = {${result.props.map(p => p.name + ': () => '+p.name).join(', ')}};`)
                 }
-            } else if(this.inuse.$props && !constantProps && !this.script.readOnly) {
+            } else if(this.inuse.$props) {
                 let pa = result.props.map(p => {
                     if(p.value === void 0) return `${p.name}`;
                     return `${p.name}=${p.value}`;
                 }).join(', ');
                 code.push(`let {${pa}} = $props;`);
 
-                if(!this.script.readOnly) {
+                if(!this.script.readOnly && !constantProps) {
                     code.push(`$runtime.current_component.push = () => {  `);
                     code.push(`  ({${result.props.map(p => p.name+'='+p.name).join(', ')}} = $props);`);
                     code.push(`  $$apply();`);
