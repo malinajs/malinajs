@@ -1,8 +1,8 @@
 
 import { $$removeElements, firstChild, insertAfter } from '../runtime/base';
-import { $watchReadOnly } from '../runtime/cd';
+import { $watch, $$deepComparator } from '../runtime/cd';
 
-export function $$awaitBlock($cd, label, fn, $$apply, build_main, tpl_main, build_then, tpl_then, build_catch, tpl_catch) {
+export function $$awaitBlock($cd, label, relation, fn, $$apply, build_main, tpl_main, build_then, tpl_then, build_catch, tpl_catch) {
     let promise, childCD;
     let first, last, status = 0;
 
@@ -26,7 +26,8 @@ export function $$awaitBlock($cd, label, fn, $$apply, build_main, tpl_main, buil
         insertAfter(label, fr);
     };
 
-    $watchReadOnly($cd, fn, p => {
+    $watch($cd, relation, () => {
+        let p = fn();
         if(status !== 1) render(build_main, tpl_main);
         status = 1;
         if(p && p instanceof Promise) {
@@ -41,5 +42,5 @@ export function $$awaitBlock($cd, label, fn, $$apply, build_main, tpl_main, buil
                 render(build_catch, tpl_catch, value);
             });
         }
-    });
+    }, {ro: true, cmp: $$deepComparator(1)})
 }

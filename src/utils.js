@@ -231,6 +231,47 @@ export const genId = () => {
 };
 
 
+export const extractKeywords = (exp) => {
+    let ast = acorn.parse(exp, {sourceType: 'module', ecmaVersion: 12});
+
+    const keys = new Set();
+    const rec = (n) => {
+        let self;
+        if(n.type) {
+            self = n;
+            if(n.type == 'Identifier' && (n._parent.type != 'MemberExpression' || n._parent.property !== n)) {
+                let name = [n.name];
+                let i = n._parent;
+                while(i?.type == 'MemberExpression') {
+                    if(i.property.type == 'Identifier') name.push('.' + i.property.name);
+                    else if(i.property.type == 'Literal') name.push(`[${i.property.raw}]`);
+                    else throw `Wrong member type: ${i.property.type}`;
+                    i = i._parent;
+                }
+                keys.add(name.join(''));
+            }
+        }
+
+        for(let k in n) {
+            if(k == '_parent') continue;
+            let v = n[k];
+            if(typeof(v) != 'object') continue;
+            if(Array.isArray(v)) v.forEach(i => {
+                i._parent = self || n._parent;
+                rec(i);
+            });
+            else {
+                v._parent = self || n._parent;
+                rec(v);
+            }
+        }
+    }
+    rec(ast);
+
+    return [...keys];
+};
+
+
 export function xWriter(ctx) {
     this._ctx = ctx;
     this.inuse = ctx.inuse;

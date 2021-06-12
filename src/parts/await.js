@@ -1,8 +1,9 @@
-import { isSimpleName, assert, xNode } from "../utils";
+import { isSimpleName, assert, xNode, extractKeywords } from "../utils";
 
 export function makeAwaitBlock(node, element) {
     let valueForThen, exp;
-    let rx = node.value.match(/^#await\s+(\S+)\s+then\s+(\S+)\s*$/);
+
+    let rx = node.value.match(/^#await\s+(.+)\s+then\s+(\S+)\s*$/);
     if(rx) {
         assert(!node.parts.then);
         node.parts.then = node.parts.main;
@@ -10,10 +11,12 @@ export function makeAwaitBlock(node, element) {
         exp = rx[1];
         valueForThen = rx[2];
     } else {
-        rx = node.value.match(/^#await\s+(\S+)\s*$/);
+        rx = node.value.match(/^#await\s+(.+)\s*$/);
         assert(rx);
         exp = rx[1].trim();
     }
+
+    let keywords = extractKeywords(exp);
 
     let parts = [null, null, null];
     if(node.parts.main && node.parts.main.length) {
@@ -50,10 +53,11 @@ export function makeAwaitBlock(node, element) {
     return xNode('await', {
         el: element.bindName(),
         exp,
-        parts
+        parts,
+        keywords
     }, (ctx, n) => {
         ctx.writeIndent();
-        ctx.write(`$runtime.$$awaitBlock($cd, ${n.el}, () => ${n.exp}, $$apply,\n`);
+        ctx.write(`$runtime.$$awaitBlock($cd, ${n.el}, () => [${n.keywords.join(', ')}], () => ${n.exp}, $$apply,\n`);
         ctx.goIndent(() => {
             n.parts.forEach((part, index) => {
                 if(part) {
