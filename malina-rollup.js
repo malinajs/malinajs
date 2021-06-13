@@ -22,7 +22,7 @@ function malinaRollup(option = {}) {
                 let ctx = await malina.compile(code, opts);
                 result = ctx.result;
                 if(ctx.css.result) {
-                    let name = id + '.css';
+                    let name = id.replace(/[^\w.\-]/g, '') + '.css';
                     content_cache[name] = ctx.css.result;
                     result += `\nimport "${name}";\n`;
                 }
