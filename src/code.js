@@ -311,7 +311,7 @@ export function transform() {
                 code.push(`let {${pa}, ...$attributes} = $props;`);
 
                 if(!this.script.readOnly && !constantProps) {
-                    code.push(`$runtime.current_component.push = () => {  `);
+                    code.push(`$runtime.current_component.push = () => {`);
                     code.push(`  ({${result.props.map(p => p.name+'='+p.name).join(', ')}, ...$attributes} = $props);`);
                     code.push(`  $$apply();`);
                     code.push(`};`);
@@ -325,7 +325,7 @@ export function transform() {
                 code.push(`let {${pa}} = $props;`);
 
                 if(!this.script.readOnly && !constantProps) {
-                    code.push(`$runtime.current_component.push = () => {  `);
+                    code.push(`$runtime.current_component.push = () => {`);
                     code.push(`  ({${result.props.map(p => p.name+'='+p.name).join(', ')}} = $props);`);
                     code.push(`  $$apply();`);
                     code.push(`};`);

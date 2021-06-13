@@ -1,6 +1,6 @@
 
 import { $watch, $watchReadOnly, $$deepComparator, cloneDeep, $$cloneDeep, $ChangeDetector, $digest,
-    $$compareDeep, cd_onDestroy, addEvent } from './cd';
+    $$compareDeep, cd_onDestroy, addEvent, fire } from './cd';
 import { __app_onerror, safeCall, isFunction } from './utils';
 
 let templatecache = {};
@@ -491,29 +491,53 @@ export const makeExternalProperty = ($component, name, getter, setter) => {
 }
 
 
-export const attachSlotBase = ($context, $cd, slotName, label, placeholder) => {
+export const attachSlotBase = ($context, $cd, slotName, label, props, placeholder) => {
     let $slot = $cd.$$.$option.slots?.[slotName];
-    if($slot) {
-        let s = $slot(label, $context, $cd);
-        s && cd_onDestroy($cd, s.destroy);
-        return s;
-    } else placeholder && placeholder();
+    if($slot) $slot($cd, label, $context, props);
+    else placeholder && placeholder();
 };
 
 
 export const attachSlot = ($context, $cd, slotName, label, props, placeholder) => {
-    let slot = attachSlotBase($context, $cd, slotName, label, placeholder);
-    if(slot) {
-        for(let key in props) {
-            let setter = `set_${key}`;
-            if(s[setter]) {
-                let exp = props[key];
-                if(isFunction(exp)) $watch($cd, exp, s[setter], {ro: true, cmp: $$compareDeep});
-                else s[setter](exp);
+    let $slot = $cd.$$.$option.slots?.[slotName];
+    if($slot) {
+        let resultProps = {}, push;
+        if(props) {
+            let setter = (k) => {
+                return v => {
+                    resultProps[k] = v;
+                    push?.();
+                }
+            }
+            for(let k in props) {
+                let v = props[k];
+                if(isFunction(v)) {
+                    fire($watch($cd, v, setter(k), {ro: true, cmp: $$compareDeep}));
+                } else resultProps[k] = v;
             }
         }
-    }
+        push = $slot($cd, label, $context, resultProps);
+    } else placeholder && placeholder();
 };
+
+
+export const makeSlot = (parentCD, fn) => {
+    return (callerCD, label, $context, props) => {
+        let $cd = parentCD.new();
+        cd_onDestroy(callerCD, () => $cd.destroy());
+        let r = fn($cd, $context, callerCD, props || {});
+        insertAfter(label, r.el || r);
+        $cd.$$.apply?.();
+        return r.push;
+    };
+}
+
+
+export const makeSlotStatic = (fn) => {
+    return (callerCD, label) => {
+        insertAfter(label, fn());
+    }
+}
 
 
 export const makeFragmentSlot = (parentCD, fn) => {
@@ -522,13 +546,6 @@ export const makeFragmentSlot = (parentCD, fn) => {
         cd_onDestroy(callerCD, () => $cd.destroy());
         insertAfter(label, fn($cd));
         $cd.$$.apply();
-    }
-}
-
-
-export const makeFragmentSlotStatic = (fn) => {
-    return (callerCD, label) => {
-        insertAfter(label, fn());
     }
 }
 

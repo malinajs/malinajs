@@ -210,7 +210,7 @@ export function attachFragment(node, element, componentName) {
                 if(comma) ctx.write(',\n');
                 if(n.parentComponent) {
                     if(n.slot.template.inline) {
-                        ctx.write(true, `fragment: $runtime.makeFragmentSlotStatic(() => `);
+                        ctx.write(true, `fragment: $runtime.makeSlotStatic(() => `);
                         ctx.build(n.slot.template);
                         ctx.write(`)`);
                     } else {

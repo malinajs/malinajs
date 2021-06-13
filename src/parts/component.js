@@ -99,30 +99,19 @@ export function makeComponent(node, element) {
         if(!slots.default && defaultSlot.body.length) slots.default = defaultSlot;
 
         Object.values(slots).forEach(slot => {
+            if(!slot.body.length) return;
             assert(isSimpleName(slot.name));
-            let props, setters;
+            passOption.slots = true;
+
+            let props;
             let rx = slot.value && slot.value.match(/^#slot\S*\s+(.*)$/);
             if(rx) {
-                let args = rx[1].trim().split(/\s*,\s*/);
-                args.forEach(n => {
+                props = rx[1].trim().split(/\s*,\s*/);
+                assert(props.length);
+                props.forEach(n => {
                     assert(isSimpleName(n), 'Wrong prop for slot');
                 });
-                props = xNode('slot:props', {
-                    props: args
-                }, (ctx, data) => {
-                    ctx.writeLine(`let ${data.props.join(', ')};`);
-                });
-                setters = xNode('slot:setters', {
-                    props: args
-                }, (ctx, data) => {
-                    for(let name of data.props) {
-                        ctx.writeLine(`, set_${name}: (_${name}) => {${name} = _${name}; $$apply();}`);
-                    }
-                });
             }
-
-            if(!slot.body.length) return;
-            passOption.slots = true;
 
             let contentNodes = trimEmptyNodes(slot.body);
             if(contentNodes.length == 1 && contentNodes[0].type == 'node' && contentNodes[0].name == 'slot') {
@@ -138,13 +127,15 @@ export function makeComponent(node, element) {
                 }
             }
 
+            if(props) this.require('apply');
+            this.require('$cd');
+
             let block = this.buildBlock(slot, {inline: true});
 
             const template = xNode('template', {
-                name: '$parentElement',
                 body: block.tpl,
                 svg: block.svg,
-                inline: !block.source
+                inline: true
             });
 
             head.push(xNode('slot', {
@@ -152,47 +143,37 @@ export function makeComponent(node, element) {
                 template,
                 bind: block.source,
                 componentName,
-                props,
-                setters,
-                $cd: block.inuse.$cd
+                props
             }, (ctx, n) => {
-                ctx.writeLine(`slots.${n.name} = ($label, $context, $instance_${n.componentName}) => {`);
-                ctx.goIndent(() => {
-                    if(n.$cd) ctx.writeLine(`let $childCD = $cd.new();`);
-                    if(n.template.inline) {
-                        ctx.write(true, `$runtime.insertAfter($label, `);
-                        ctx.build(n.template);
-                        ctx.write(`);\n`);
-                    } else {
-                        ctx.build(n.template);
-                    }
-                    ctx.build(n.props);
-                    if(n.bind) {
-                        if(n.$cd) {
-                            ctx.writeLine(`{`);
-                            ctx.goIndent(() => {
-                                ctx.writeLine(`let $cd = $childCD;`);
-                                ctx.build(n.bind);
-                            });
-                            ctx.writeLine(`}`);
-                        } else {
+                if(n.bind) {
+                    ctx.write(true, `slots.${n.name} = $runtime.makeSlot($cd, ($cd, $context, $instance_${n.componentName}`);
+                    if(n.props) ctx.write(`, props`);
+                    ctx.write(`) => {\n`);
+                    ctx.goIndent(() => {
+                        if(n.bind) {
+                            let push = n.props && ctx.inuse.apply;
+                            ctx.write(true, `let $parentElement = `);
+                            ctx.build(n.template);
+                            ctx.write(`;\n`);
+                            if(n.props) {
+                                ctx.writeLine(`let {${n.props.join(', ')}} = props;`);
+                                if(push) ctx.writeLine(`let push = () => ({${n.props.join(', ')}} = props, $$apply());`)
+                            }
                             ctx.build(n.bind);
+                            if(push) ctx.writeLine(`return {push, el: $parentElement};`);
+                            else ctx.writeLine(`return $parentElement;`);
+                        } else {
+                            ctx.write(true, `return `);
+                            ctx.build(n.template);
+                            ctx.write(`;\n`);
                         }
-                    }
-
-                    if(!n.template.inline) ctx.writeLine(`$runtime.insertAfter($label, $parentElement);`);
-                    if(n.$cd && ctx.inuse.apply) ctx.writeLine(`$$apply();`);
-
-                    if(n.$cd || n.setter) {
-                        ctx.writeLine(`return {`);
-                        ctx.goIndent(() => {
-                            if(n.$cd) ctx.writeLine(`destroy: () => {$childCD.destroy();}`);
-                            ctx.build(n.setters);
-                        });
-                        ctx.writeLine(`};`);
-                    }
-                });
-                ctx.writeLine(`}`);
+                    });
+                    ctx.writeLine(`});`);
+                } else {
+                    ctx.write(true, `slots.${n.name} = $runtime.makeSlotStatic(() => `);
+                    ctx.build(n.template);
+                    ctx.write(`);\n`);
+                }
             }));
         });
 

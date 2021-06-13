@@ -21,9 +21,11 @@ export function attachSlot(slotName, label, node) {
 
                 props.push(xNode('prop', {
                     name,
-                    value
+                    value,
+                    dyn: true
                 }, (ctx, n) => {
-                    ctx.write(`${n.name}: () => (${n.value})`);
+                    if(this.inuse.apply) ctx.write(`${n.name}: () => (${n.value})`);
+                    else ctx.write(`${n.name}: (${n.value})`);
                 }));
             } else {
                 props.push(xNode('static-prop', {
@@ -65,30 +67,34 @@ export function attachSlot(slotName, label, node) {
         props,
         placeholder
     }, (ctx, n) => {
-        ctx.writeIndent();
+        let hasDynProps = n.props.some(p => p.dyn);
+        let base = 'Base';
+        if(hasDynProps && ctx.inuse.apply) {
+            assert(!ctx._ctx.script.readOnly);
+            base = '';
+        }
+        ctx.write(true, `$runtime.attachSlot${base}($context, $cd, '${n.name}', ${n.el}, `);
         if(n.props.length) {
-            ctx.write(`$runtime.attachSlot($context, $cd, '${n.name}', ${n.el}, {\n`);
+            ctx.write(`{\n`);
             ctx.goIndent(() => {
-                for(let i=0; i < props.length; i++) {
-                    let prop = props[i];
+                for(let i=0; i < n.props.length; i++) {
+                    let prop = n.props[i];
                     ctx.writeIndent();
                     ctx.build(prop)
-                    if(i + 1 < props.length) ctx.write(',');
+                    if(i + 1 < n.props.length) ctx.write(',');
                     ctx.write('\n');
                 }
             });
-            ctx.writeIndent();
-            ctx.write('}');
+            ctx.write(true, `}`);
         } else {
-            ctx.write(`$runtime.attachSlotBase($context, $cd, '${n.name}', ${n.el}`);
+            ctx.write(`null`);
         }
         if(n.placeholder) {
             ctx.write(', () => {\n');
             ctx.goIndent(() => {
                 ctx.build(n.placeholder);
             });
-            ctx.writeIndent();
-            ctx.write('}');
+            ctx.write(true, '}');
         }
         ctx.write(');\n');
     });
