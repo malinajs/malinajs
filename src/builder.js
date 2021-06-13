@@ -123,17 +123,17 @@ export function buildBlock(data, option={}) {
                 tpl.push('</template>');
             } else if(n.type === 'node') {
                 if(n.name == 'component' || n.name.match(/^[A-Z]/)) {
-                    if(n.elArg) {
-                        let el = xNode('node:comment', {label: true, value: `exported ${n.elArg}`});
-                        tpl.push(el);
-                        let b = this.attachFragment(n, el, n.name);
-                        b && binds.push(b);
-                    } else {
+                    if(n.name == 'component' || !n.elArg) {
                         // component
                         let el = xNode('node:comment', {label: true, value: n.name});
                         tpl.push(el);
                         let b = this.makeComponent(n, el);
                         binds.push(b.bind);
+                    } else {
+                        let el = xNode('node:comment', {label: true, value: `exported ${n.elArg}`});
+                        tpl.push(el);
+                        let b = this.attachFragment(n, el, n.name);
+                        b && binds.push(b);
                     }
                     return;
                 }
