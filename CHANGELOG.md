@@ -25,6 +25,7 @@
 * constant props - "export const prop;"
 * compile option: debugLabel
 * slot for fragment
+* exported fragments (inverted slots)
 
 ## 0.5.x
 
