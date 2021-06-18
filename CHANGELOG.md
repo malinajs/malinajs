@@ -26,6 +26,7 @@
 * compile option: debugLabel
 * slot for fragment
 * exported fragments (inverted slots)
+* <malina:head>, <malina:body>, <malina:window>
 
 ## 0.5.x
 
