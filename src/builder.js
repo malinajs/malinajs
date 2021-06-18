@@ -123,48 +123,8 @@ export function buildBlock(data, option={}) {
                 tpl.push('</template>');
             } else if(n.type === 'node') {
                 if(n.name == 'malina' && !option.malinaElement) {
-                    if(n.elArg == 'window' || n.elArg == 'body') {
-                        let name = 'el' + (this.uniqIndex++);
-                        let block = this.buildBlock({body: [n]}, {malinaElement: true, inline: true, oneElement: name, bindAttributes: true});
-                        if(block.source) {
-                            binds.push(xNode('block', {
-                                name,
-                                target: n.elArg,
-                                source: block.source
-                            }, (ctx, n) => {
-                                if(n.target == 'window') ctx.writeLine(`let ${n.name} = window;`)
-                                else ctx.writeLine(`let ${n.name} = document.body;`)
-                                ctx.build(n.source);
-                            }))
-                        }
-                    } else if(n.elArg == 'head') {
-                        let body = (n.body || []).filter(n => n.type != 'text');
-                        if(!body.length) return;
-                        let block = this.buildBlock({body}, {inline: true});
-
-                        binds.push(xNode('malina:head', {
-                            source: block.source,
-                            template: xNode('template', {
-                                name: '$parentElement',
-                                body: block.tpl
-                            })
-                        }, (ctx, n) => {
-                            if(n.source) {
-                                ctx.writeLine(`{`);
-                                ctx.indent++;
-                                ctx.build(n.template);
-                                ctx.build(n.source);
-                                ctx.writeLine(`document.head.appendChild($parentElement);`);
-                                ctx.indent--;
-                                ctx.writeLine(`}`);
-                            } else {
-                                n.template.inline = true;
-                                ctx.write(true, `document.head.appendChild(`);
-                                ctx.build(n.template);
-                                ctx.write(`);\n`);
-                            }
-                        }));
-                    } else throw 'Wrong tag'
+                    let b = this.attachHead(n);
+                    b && binds.push(b);
                     return;
                 }
                 if(n.name == 'component' || n.name.match(/^[A-Z]/)) {

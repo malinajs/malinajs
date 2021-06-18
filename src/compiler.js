@@ -15,9 +15,10 @@ import { makeHtmlBlock } from './parts/html.js'
 import { makeAwaitBlock } from './parts/await.js'
 import { attachSlot } from './parts/slot.js'
 import { makeFragment, attachFragment, attachFragmentSlot } from './parts/fragment.js'
+import { attachHead } from './parts/head.js'
 
 
-export const version = '0.6.27';
+export const version = '0.6.28';
 
 
 export async function compile(source, config = {}) {
@@ -55,6 +56,7 @@ export async function compile(source, config = {}) {
         makeFragment,
         attachFragmentSlot,
         attachFragment,
+        attachHead,
         checkRootName: utils.checkRootName,
 
         inuse: {},
