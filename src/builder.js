@@ -274,7 +274,7 @@ export function buildBlock(data, option={}) {
                 binds.push(ifBlock.source);
                 return;
             } else if(n.type === 'systag') {
-                let r = n.value.match(/^@(\w+)\s+(.*)$/)
+                let r = n.value.match(/^@(\w+)\s+(.*)$/s);
                 let name = r[1];
                 let exp = r[2];
 

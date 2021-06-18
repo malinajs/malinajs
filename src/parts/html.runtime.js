@@ -1,11 +1,13 @@
 
-import { $$htmlToFragment, insertAfter } from '../runtime/base';
+import { $$htmlToFragment, insertAfter, svgToFragment } from '../runtime/base';
 import { $watch } from '../runtime/cd';
 
 export function $$htmlBlock($cd, tag, fn) {
     let lastElement;
     let create = (html) => {
-        let fr = $$htmlToFragment(html);
+        let fr;
+        if(tag.parentElement instanceof SVGElement) fr = svgToFragment(html);
+        else fr = $$htmlToFragment(html);
         lastElement = fr.lastChild;
         insertAfter(tag, fr);
     };
