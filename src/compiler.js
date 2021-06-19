@@ -34,7 +34,8 @@ export async function compile(source, config = {}) {
         cssGenId: null,
         plugins: [],
         debug: true,
-        css: true
+        css: true,
+        passClass: true
     }, config);
 
     const ctx = {

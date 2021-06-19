@@ -325,7 +325,7 @@ export function bindProp(prop, node, element) {
             } else {
                 classes = [prop.name.slice(6)];
             }
-            return classes.some(name => {
+            return this.config.passClass && classes.some(name => {
                 if(this.css.isExternalClass(name)) compound=true;
                 else if(name[0] == '$') {
                     this.css.markAsExternal(name.substring(1));
@@ -338,7 +338,7 @@ export function bindProp(prop, node, element) {
             let defaultHash = '';
             if(node.classes.has(this.css.id)) defaultHash = this.css.id;
             node.classes.clear();
-            this.require('resolveClass');
+            if(this.config.passClass) this.require('resolveClass');
             let exp = props.map(prop => {
                 if(prop.name == 'class') {
                     return this.parseText(prop.value).result;
@@ -355,11 +355,20 @@ export function bindProp(prop, node, element) {
                 exp,
                 defaultHash
             }, (ctx, n) => {
-                let base = n.defaultHash ? `,'${n.defaultHash}'` : '';
-                if(ctx.inuse.apply) {
-                    ctx.writeLine(`$watchReadOnly($cd, () => $$resolveClass((${n.exp})${base}), value => $runtime.setClassToElement(${n.el}, value));`);
+                if(ctx.inuse.resolveClass) {
+                    let base = n.defaultHash ? `,'${n.defaultHash}'` : '';
+                    if(ctx.inuse.apply) {
+                        ctx.writeLine(`$watchReadOnly($cd, () => $$resolveClass((${n.exp})${base}), value => $runtime.setClassToElement(${n.el}, value));`);
+                    } else {
+                        ctx.writeLine(`$runtime.setClassToElement(${n.el}, $$resolveClass((${n.exp})${base}));`);
+                    }
                 } else {
-                    ctx.writeLine(`$runtime.setClassToElement(${n.el}, $$resolveClass((${n.exp})${base}));`);
+                    let base = n.defaultHash ? ` + ' ${n.defaultHash}'` : '';
+                    if(ctx.inuse.apply) {
+                        ctx.writeLine(`$watchReadOnly($cd, () => ${n.exp}${base}, value => $runtime.setClassToElement(${n.el}, value));`);
+                    } else {
+                        ctx.writeLine(`$runtime.setClassToElement(${n.el}, ${n.exp}${base});`);
+                    }
                 }
             });
             return {bind};

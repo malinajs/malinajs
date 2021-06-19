@@ -366,7 +366,7 @@ export function makeComponent(node, element) {
                 else ctx.writeLine(`events.${data.event} = ${data.callback};`);
             }));
             return;
-        } else if(name == 'class' || name.startsWith('class:')) {
+        } else if(this.config.passClass && (name == 'class' || name.startsWith('class:'))) {
             let metaClass, args = name.split(':');
             if(args.length == 1) {
                 metaClass = '$$main';
@@ -422,6 +422,8 @@ export function makeComponent(node, element) {
                 ctx.writeLine(`${data.propObject}.${data.name} = ${data.value};`);
             }));
         }
+
+        if(name == 'class') name = '_class';
 
         assert(name.match(/^([\w\$_][\w\d\$_\.\-]*)$/), `Wrong property: '${name}'`);
         name = toCamelCase(name);
