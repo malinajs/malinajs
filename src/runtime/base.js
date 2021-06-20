@@ -470,7 +470,7 @@ export const recalcAttributes = (props, skip) => {
 };
 
 
-export const bindPropToComponent = ($component, name, parentWatch, up) => {
+export const bindPropToComponent = ($component, name, parentWatch, up, cmp) => {
     let getter = $component.exportedProps[name];
     if(!getter) return __app_onerror(`Component doesn't have prop ${name}`);
 
@@ -478,7 +478,7 @@ export const bindPropToComponent = ($component, name, parentWatch, up) => {
         parentWatch.value = w.value;
         $component.$option.props[name] = value;
         up(value);
-    }, { value: parentWatch.value, cmp: $$compareDeep });
+    }, { value: parentWatch.value, cmp });
     parentWatch.pair = value => w.value = value;
 }
 
@@ -498,7 +498,7 @@ export const attachSlotBase = ($context, $cd, slotName, label, props, placeholde
 };
 
 
-export const attachSlot = ($context, $cd, slotName, label, props, placeholder) => {
+export const attachSlot = ($context, $cd, slotName, label, props, placeholder, cmp) => {
     let $slot = $cd.$$.$option.slots?.[slotName];
     if($slot) {
         let resultProps = {}, push;
@@ -512,7 +512,7 @@ export const attachSlot = ($context, $cd, slotName, label, props, placeholder) =
             for(let k in props) {
                 let v = props[k];
                 if(isFunction(v)) {
-                    fire($watch($cd, v, setter(k), {ro: true, cmp: $$compareDeep}));
+                    fire($watch($cd, v, setter(k), {ro: true, cmp}));
                 } else resultProps[k] = v;
             }
         }

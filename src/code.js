@@ -198,7 +198,7 @@ export function transform() {
         }
     }
 
-    function makeWatch(n) {
+    const makeWatch = (n) => {
         function assertExpression(n) {
             if(n.type == 'Identifier') return;
             if(n.type.endsWith('Expression')) return;
@@ -234,7 +234,8 @@ export function transform() {
             if(ex.length == 2) {
                 assertExpression(ex[0]);
                 let exp = source.substring(ex[0].start, ex[0].end);
-                result.watchers.push(`$watch($cd, () => (${exp}), ${callback}, {cmp: $runtime.$$deepComparator(0)});`);
+                if(this.config.immutable) result.watchers.push(`$watch($cd, () => (${exp}), ${callback});`);
+                else result.watchers.push(`$watch($cd, () => (${exp}), ${callback}, {cmp: $runtime.$$deepComparator(0)});`);
             } else if(ex.length > 2) {
                 for(let i = 0;i<ex.length-1;i++) assertExpression(ex[i]);
                 let exp = source.substring(ex[0].start, ex[ex.length-2].end);

@@ -280,9 +280,8 @@ export function bindProp(prop, node, element) {
                 args,
                 el: element.bindName()
             }, (ctx, n) => {
-                if(ctx.inuse.apply) {
-                    let args = n.args || ', null';
-                    ctx.writeLine(`$runtime.bindAction($cd, ${n.el}, ${n.name}${args}, $runtime.__bindActionSubscribe);`);
+                if(ctx.inuse.apply && n.args) {
+                    ctx.writeLine(`$runtime.bindAction($cd, ${n.el}, ${n.name}${n.args}, $runtime.__bindActionSubscribe);`);
                 } else {
                     ctx.writeLine(`$runtime.bindAction($cd, ${n.el}, ${n.name}${n.args});`);
                 }

@@ -236,13 +236,14 @@ export function makeComponent(node, element) {
                 outer,
                 inner
             }, (ctx, data) => {
-                ctx.writeLine(`const ${data.watchName} = $watch($cd, () => (${data.outer}), _${data.inner} => {`);
+                ctx.writeLine(`const ${data.watchName} = ${this.config.immutable ? '$watchReadOnly' : '$watch'}($cd, () => (${data.outer}), _${data.inner} => {`);
                 ctx.goIndent(() => {
                     ctx.writeLine(`props.${data.inner} = _${data.inner};`);
                     ctx.writeLine(`${data.watchName}.pair && ${data.watchName}.pair(${data.watchName}.value);`);
                     ctx.writeLine(`$$push();`);
                 });
-                ctx.writeLine(`}, {ro: true, cmp: $runtime.$$compareDeep});`);
+                if(this.config.immutable) ctx.writeLine(`});`);
+                else ctx.writeLine(`}, {ro: true, cmp: $runtime.$$compareDeep});`);
                 ctx.writeLine(`$runtime.fire(${data.watchName});`);
             }));
             body.push(xNode('bindProp2', {
@@ -255,7 +256,8 @@ export function makeComponent(node, element) {
                     ctx.writeLine(`${data.outer} = _${data.outer};`);
                     ctx.writeLine(`$$apply();`);
                 });
-                ctx.writeLine(`});`);
+                if(this.config.immutable) ctx.writeLine(`});`);
+                else ctx.writeLine(`}, $runtime.$$compareDeep);`);
             }));
             return false;
         } else if(name == 'this') {
@@ -447,12 +449,13 @@ export function makeComponent(node, element) {
                     propObject
                 }, (ctx, data) => {
                     if(ctx.inuse.apply) {
-                        ctx.writeLine(`$runtime.fire($watch($cd, () => (${data.exp}), _${data.name} => {`);
+                        ctx.writeLine(`$runtime.fire(${this.config.immutable ? '$watchReadOnly' : '$watch'}($cd, () => (${data.exp}), _${data.name} => {`);
                         ctx.goIndent(() => {
                             ctx.writeLine(`${data.propObject}.${data.name} = _${data.name};`);
                             ctx.writeLine(`$$push();`);
                         });
-                        ctx.writeLine(`}, {ro: true, cmp: $runtime.$$compareDeep}));`);
+                        if(this.config.immutable) ctx.writeLine(`}));`);
+                        else ctx.writeLine(`}, {ro: true, cmp: $runtime.$$compareDeep}));`);
                     } else {
                         ctx.writeLine(`${data.propObject}.${data.name} = ${data.exp};`);
                     }

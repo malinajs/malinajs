@@ -35,7 +35,8 @@ export async function compile(source, config = {}) {
         plugins: [],
         debug: true,
         css: true,
-        passClass: true
+        passClass: true,
+        immutable: false
     }, config);
 
     const ctx = {

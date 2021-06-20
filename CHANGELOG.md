@@ -28,6 +28,7 @@
 * exported fragments (inverted slots)
 * <malina:head>, <malina:body>, <malina:window>
 * option: passClass
+* option: immutable
 
 ## 0.5.x
 
