@@ -220,6 +220,36 @@ export function compactDOM() {
 
     }
 
+    function trimNodes(srcNodes) {
+        let nodes = srcNodes.slice();
+        let ex = [];
+        while(nodes.length) {
+            let n = nodes[0];
+            if(n.type == 'fragment' || n.type == 'export' || n.type == 'comment') {
+                ex.push(n);
+                nodes.shift();
+                continue;
+            }
+            if(n.type == 'text' && !n.value.trim()) nodes.shift();
+            else break;
+        }
+        nodes = [...ex, ...nodes];
+        ex = [];
+        while(nodes.length) {
+            let n = last(nodes);
+            if(n.type == 'fragment' || n.type == 'export' || n.type == 'comment') {
+                ex.push(n);
+                nodes.pop();
+                continue;
+            }
+            if(n.type == 'text' && !n.value.trim()) nodes.pop();
+            else break;
+        }
+        return [...nodes, ...ex];
+    }
+
+    data.body = trimNodes(data.body);
+
     go(data.body);
 };
 

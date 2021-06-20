@@ -18,7 +18,7 @@ export function makeFragment(node) {
     if(props) props = props.split(/\s*,\s*/);
 
     let block;
-    if(node.body && node.body.length) block = this.buildBlock(node, {inline: true});
+    if(node.body && node.body.length) block = this.buildBlock({body: trimEmptyNodes(node.body)}, {inline: true});
     else {
         this.warning(`Empty fragment: '${node.value}'`);
         return xNode('empty-fragment', {name}, (ctx, n) => {
