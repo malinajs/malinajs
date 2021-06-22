@@ -24,27 +24,31 @@ export function makeComponent(node, element) {
     let head = xNode('block');
     let body = xNode('block');
 
+    let depsPush = [];
     head.push(xNode('push', {
-        $cond: (ctx) => passOption.push || (passOption.pushIfApply && ctx.inuse.apply)
-    }, ctx => {
-        ctx.writeLine(`let $$push = $runtime.noop;`)
+        $deps: depsPush
+    }, (ctx, n) => {
+        if(n.$deps.some(i => i.requirePush)) ctx.writeLine(`let $$push = $runtime.noop;`)
     }));
     body.push(xNode('push', {
-        $cond: (ctx) => (passOption.push || passOption.pushIfApply) && ctx.inuse.apply
-    }, ctx => {
-        ctx.writeLine(`$$push = $child.push;`)
+        $deps: depsPush
+    }, (ctx, n) => {
+        if(n.$deps.some(i => i.requirePush)) ctx.writeLine(`$$push = $child.push;`)
     }));
 
-    head.push(xNode('prop', {
-        $cond: () => propLevel || propLevelType
-    }, ctx => {
+    const propNode = xNode('prop', {
+        $deps: []
+    }, (ctx, n) => {
+        if(!propLevel && !propLevelType) return;
         if(propLevel) ctx.writeLine(`let $$lvl = [], props = $runtime.makeTree(${propLevel}, $$lvl);`);
-        else ctx.writeLine('let props = {};');
-    }));
+        else {
+            let inline = n.$deps.map(p => p._inline).filter(p => p).join(', ');
+            ctx.writeLine(`let props = {${inline}};`);
+        }
+    });
+    head.push(propNode);
 
-    head.push(xNode('events', {
-        $cond: () => forwardAllEvents || passOption.events
-    }, ctx => {
+    head.push(xNode('events', ctx => {
         if(forwardAllEvents) {
             ctx.writeLine('let events = {...$option.events};');
         } else if(passOption.events) {
@@ -52,22 +56,16 @@ export function makeComponent(node, element) {
         }
     }));
 
-    head.push(xNode('slots', {
-        $cond: () => passOption.slots
-    }, ctx => {
-        ctx.writeLine('let slots = {};');
+    head.push(xNode('slots', ctx => {
+        if(passOption.slots) ctx.writeLine('let slots = {};');
     }));
 
-    head.push(xNode('class', {
-        $cond: () => passOption.class
-    }, ctx => {
-        ctx.writeLine(`let $class = {}`);
+    head.push(xNode('class', ctx => {
+        if(passOption.class) ctx.writeLine(`let $class = {}`);
     }));
 
-    head.push(xNode('anchor', {
-        $cond: () => passOption.anchor
-    }, ctx => {
-        ctx.writeLine('let anchor = {};');
+    head.push(xNode('anchor', ctx => {
+        if(passOption.anchor) ctx.writeLine('let anchor = {};');
     }));
 
     let _boundEvents = {};
@@ -225,27 +223,28 @@ export function makeComponent(node, element) {
 
             let watchName = '$$w' + (this.uniqIndex++);
             propLevelType = 'binding';
-            passOption.props = true;
-            passOption.push = true;
 
             if(this.script.readOnly) this.warning('Conflict: read-only and 2-way binding to component')
             this.require('apply');
 
-            head.push(xNode('bindProp2', {
+            let n = xNode('bindProp2', {
                 watchName,
                 outer,
                 inner
-            }, (ctx, data) => {
-                ctx.writeLine(`const ${data.watchName} = ${this.config.immutable ? '$watchReadOnly' : '$watch'}($cd, () => (${data.outer}), _${data.inner} => {`);
+            }, (ctx, n) => {
+                ctx.writeLine(`const ${n.watchName} = ${this.config.immutable ? '$watchReadOnly' : '$watch'}($cd, () => (${n.outer}), _${n.inner} => {`);
                 ctx.goIndent(() => {
-                    ctx.writeLine(`props.${data.inner} = _${data.inner};`);
-                    ctx.writeLine(`${data.watchName}.pair && ${data.watchName}.pair(${data.watchName}.value);`);
+                    ctx.writeLine(`props.${n.inner} = _${n.inner};`);
+                    ctx.writeLine(`${n.watchName}.pair && ${n.watchName}.pair(${n.watchName}.value);`);
                     ctx.writeLine(`$$push();`);
+                    n.requirePush = true;
                 });
                 if(this.config.immutable) ctx.writeLine(`});`);
                 else ctx.writeLine(`}, {ro: true, cmp: $runtime.$$compareDeep});`);
-                ctx.writeLine(`$runtime.fire(${data.watchName});`);
-            }));
+                ctx.writeLine(`$runtime.fire(${n.watchName});`);
+            });
+            head.push(n);
+            depsPush.push(n);
             body.push(xNode('bindProp2', {
                 watchName,
                 outer,
@@ -291,10 +290,9 @@ export function makeComponent(node, element) {
                 name = name.substring(3);
                 assert(detectExpressionType(name) == 'identifier', 'Wrong prop');
                 this.detectDependency(name);
-                passOption.push = true;
                 let propObject = propLevel ? `$$lvl[${propLevel}]` : 'props';
 
-                head.push(xNode('spread-object', {
+                let n = xNode('spread-object', {
                     name,
                     propObject
                 }, (ctx, n) => {
@@ -302,9 +300,12 @@ export function makeComponent(node, element) {
                     ctx.goIndent(() => {
                         ctx.writeLine(`$runtime.spreadObject(${n.propObject}, value);`);
                         ctx.writeLine(`$$push();`);
+                        n.requirePush = true;
                     });
                     ctx.writeLine(`}, {ro: true, cmp: $runtime.$$deepComparator(0)}));`);
-                }));
+                });
+                head.push(n);
+                depsPush.push(n);
                 return;
             };
             assert(detectExpressionType(name) == 'identifier', 'Wrong prop');
@@ -384,25 +385,27 @@ export function makeComponent(node, element) {
             let exp = parsed.result;
             let funcName = `$$pf${this.uniqIndex++}`;
 
-            head.push(xNode('passClass', {
+            let n = xNode('passClass', {
                 funcName,
                 exp,
                 metaClass
-            }, (ctx, data) => {
-                ctx.writeLine(`const ${data.funcName} = () => $$resolveClass(${data.exp});`);
-                ctx.writeLine(`$class['${data.metaClass}'] = ${data.funcName}();`);
+            }, (ctx, n) => {
+                ctx.writeLine(`const ${n.funcName} = () => $$resolveClass(${n.exp});`);
+                ctx.writeLine(`$class['${n.metaClass}'] = ${n.funcName}();`);
                 if(ctx.inuse.apply) {
-                    ctx.writeLine(`$watch($cd, ${data.funcName}, (result) => {`);
+                    ctx.writeLine(`$watch($cd, ${n.funcName}, (result) => {`);
                     ctx.goIndent(() => {
-                        ctx.writeLine(`$class['${data.metaClass}'] = result;`);
+                        ctx.writeLine(`$class['${n.metaClass}'] = result;`);
                         ctx.writeLine(`$$push();`);
+                        n.requirePush = true;
                     });
-                    ctx.writeLine(`}, {ro: true, value: $class['${data.metaClass}']});`);
+                    ctx.writeLine(`}, {ro: true, value: $class['${n.metaClass}']});`);
                 }
-            }));
+            });
+            head.push(n);
+            depsPush.push(n);
 
             passOption.class = true;
-            passOption.pushIfApply = true;
             this.require('resolveClass');
             return;
         }
@@ -416,13 +419,16 @@ export function makeComponent(node, element) {
             propLevelType = 'attr';
 
             let propObject = propLevel ? `$$lvl[${propLevel}]` : 'props';
-            head.push(xNode('staticProp', {
+            let n = xNode('staticProp', {
                 name,
                 value,
                 propObject
             }, (ctx, data) => {
-                ctx.writeLine(`${data.propObject}.${data.name} = ${data.value};`);
-            }));
+                if(!propLevel) data._inline = `${data.name}: ${data.value}`;
+                else ctx.writeLine(`${data.propObject}.${data.name} = ${data.value};`);
+            });
+            head.push(n);
+            propNode.$deps.push(n);
         }
 
         if(name == 'class') name = '_class';
@@ -441,25 +447,28 @@ export function makeComponent(node, element) {
                 propLevelType = 'prop';
                 let propObject = propLevel ? `$$lvl[${propLevel}]` : 'props';
 
-                passOption.props = true;
-                passOption.pushIfApply = true;
-                head.push(xNode('bindProp', {
+                let n = xNode('bindProp', {
                     exp,
                     name,
                     propObject
-                }, (ctx, data) => {
+                }, (ctx, n) => {
                     if(ctx.inuse.apply) {
-                        ctx.writeLine(`$runtime.fire(${this.config.immutable ? '$watchReadOnly' : '$watch'}($cd, () => (${data.exp}), _${data.name} => {`);
+                        ctx.writeLine(`$runtime.fire(${this.config.immutable ? '$watchReadOnly' : '$watch'}($cd, () => (${n.exp}), _${n.name} => {`);
                         ctx.goIndent(() => {
-                            ctx.writeLine(`${data.propObject}.${data.name} = _${data.name};`);
+                            ctx.writeLine(`${n.propObject}.${n.name} = _${n.name};`);
                             ctx.writeLine(`$$push();`);
+                            n.requirePush = true;
                         });
                         if(this.config.immutable) ctx.writeLine(`}));`);
                         else ctx.writeLine(`}, {ro: true, cmp: $runtime.$$compareDeep}));`);
                     } else {
-                        ctx.writeLine(`${data.propObject}.${data.name} = ${data.exp};`);
+                        if(!propLevel) n._inline = `${n.name}: ${n.exp}`;
+                        else ctx.writeLine(`${n.propObject}.${n.name} = ${n.exp};`);
                     }
-                }));
+                });
+                head.push(n);
+                propNode.$deps.push(n);
+                depsPush.push(n);
             }
         } else {
             staticProp(name, value);
@@ -482,14 +491,23 @@ export function makeComponent(node, element) {
         $cd: '$cd'
     }, (ctx, data) => {
         const $cd = data.$cd || '$cd';
-        ctx.build(data.head);
-        if(data.body.empty(ctx)) {
+
+        let head = ctx.subBuild(data.head);
+        if(head) {
+            ctx.addBlock(head);
+            data.requireScope = true;
+        }
+
+        let body = ctx.subBuild(data.body);
+
+        if(!body) {
             ctx.writeLine(`$runtime.callComponent(${$cd}, $context, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
         } else {
+            data.requireScope = true;
             ctx.writeLine(`let $child = $runtime.callComponent(${$cd}, $context, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
             ctx.writeLine(`if($child?.push) {`);
             ctx.goIndent(() => {
-                ctx.build(data.body);
+                ctx.addBlock(body);
             });
             ctx.writeLine(`}`);
         }
@@ -497,17 +515,17 @@ export function makeComponent(node, element) {
 
     if(!dynamicComponent) {
         return {bind: xNode('component-scope', {
-            result
+            component: result
         }, (ctx, n) => {
-            let r = n.result;
-            if(r.head.empty(ctx) && r.body.empty(ctx)) ctx.build(r);
-            else {
+            let r = ctx.subBuild(n.component);
+            
+            if(n.component.requireScope) {
                 ctx.writeLine('{');
                 ctx.goIndent(() => {
-                    ctx.build(r);
+                    ctx.addBlock(r);
                 })
                 ctx.writeLine('}');
-            }
+            } else ctx.addBlock(r);
         })};
     } else {
         this.detectDependency(dynamicComponent);

@@ -471,7 +471,7 @@ export const recalcAttributes = (props, skip) => {
 
 
 export const bindPropToComponent = ($component, name, parentWatch, up, cmp) => {
-    let getter = $component.exportedProps[name];
+    let getter = $component.exportedProps?.[name];
     if(!getter) return __app_onerror(`Component doesn't have prop ${name}`);
 
     let w = $watch($component.$cd, getter, value => {

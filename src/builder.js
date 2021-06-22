@@ -271,7 +271,7 @@ export function buildBlock(data, option={}) {
 
     result.tpl = rootTemplate;
 
-    if(!binds.empty()) {
+    if(binds.body.length) {
         const innerBlock = xNode('block');
         if(!option.oneElement) {
             innerBlock.push(xNode('bindNodes', ctx => {

@@ -301,6 +301,9 @@ export const extractKeywords = (exp) => {
     return [...keys];
 };
 
+function I(value = 0) {
+    this.$indent = value;
+}
 
 export function xWriter(ctx) {
     this._ctx = ctx;
@@ -309,9 +312,7 @@ export function xWriter(ctx) {
     this.indent = 0;
 
     this.getIndent = function() {
-        let p = '';
-        while(p.length < this.indent * 2) p += '  ';
-        return p;
+        return new I(this.indent);
     };
     this.writeIndent = function() {this.write(this.getIndent())};
     this.goIndent = function(fn) {
@@ -327,15 +328,65 @@ export function xWriter(ctx) {
         a && this.result.push(a)
     };
     this.writeLine = function(s) {
-        this.write(this.getIndent());
-        this.write(s);
-        this.write('\n');
+        this.write(true, s + '\n');
+    };
+    this._compile = function() {
+        let result = this.result.slice();
+        let dyn, prevDyn = 0, index = 99;
+
+        for(;index>0;index--) {
+            dyn = 0;
+            let parts = result.slice();
+            result = [];
+            parts.forEach(n => {
+                if(n.node) {
+                    dyn++;
+                    let r = this.subBuild(n.node, n.indent);
+                    if(r?.length) result.push(...r);
+                } else result.push(n);
+            });
+            if(dyn == 0) break;
+            if(dyn == prevDyn) throw 'Compile error: circular dependencies';
+            prevDyn = dyn;
+        }
+        if(index <= 0) throw 'Compile error: circular dependencies';
+
+        return result;
+    };
+    this.toString = function() {
+        let result = this._compile();
+        return result.map(i => {
+            if(i instanceof I) {
+                let r = '', l = i.$indent;
+                while(l--) r += '  ';
+                return r;
+            }
+            return i;
+        }).join('');
     }
-    this.toString = function() {return this.result.join('');}
     this.build = function(node) {
         if(node == null) return;
-        if(node.$cond && !node.$cond(node)) return;
+        if(node.$deps?.length) {
+            if(node.$deps.some(n => !n.$done)) {
+                this.result.push({node, indent: this.indent});
+                return;
+            }
+        }
         node.handler(this, node);
+        node.$done = true;
+    }
+    this.subBuild = function(node, indent=0) {
+        let w = new xWriter(this._ctx);
+        w.indent = indent;
+        w.build(node);
+        let r = w._compile();
+        return r.length ? r : null;
+    }
+    this.addBlock = function(b) {
+        b && b.forEach(i => {
+            if(i instanceof I) i.$indent += this.indent;
+            this.result.push(i);
+        })
     }
 }
 
@@ -394,9 +445,6 @@ xNode.init = {
                 if(typeof child == 'string') child = xNode('raw', {value: child});
                 this.body.push(child)
             };
-            node.empty = function(ctx) {
-                return !this.body.some(n => !n.$cond || n.$cond(ctx, n));
-            };
         },
         handler: (ctx, node) => {
             if(node.scope) {
@@ -405,10 +453,9 @@ xNode.init = {
             }
             node.body.forEach(n => {
                 if(n == null) return;
-                if(n.$cond && !n.$cond(ctx, n)) return;
                 if(typeof n == 'string') {
                     if(n) ctx.writeLine(n);
-                } else n.handler(ctx, n);
+                } else ctx.build(n);
             });
             if(node.scope) {
                 ctx.indent--;
@@ -436,7 +483,7 @@ xNode.init = {
             ctx.indent++;
             xNode.init.block.handler(ctx, node);
             ctx.indent--;
-            if(node.inline) ctx.write(ctx.getIndent() + '}');
+            if(node.inline) ctx.write(true, '}');
             else ctx.writeLine('}');
         }
     },
