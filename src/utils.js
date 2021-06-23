@@ -320,12 +320,11 @@ export function xWriter(ctx) {
         fn();
         this.indent--;
     };
-    this.write = function(a, b) {
-        if(a === true) {
-            this.result.push(this.getIndent());
-            a = b;
+    this.write = function(...args) {
+        for(let i of args) {
+            if(i === true) this.result.push(this.getIndent());
+            else this.result.push(i);
         }
-        a && this.result.push(a)
     };
     this.writeLine = function(s) {
         this.write(true, s + '\n');

@@ -297,7 +297,7 @@ export function transform() {
 
     if(lastPropIndex != null) {
         header.push(rawNode(() => {
-            if(this.inuse.$props) return 'const $props = $option.props || {};';
+            if(this.inuse.$props) return 'let $props = $option.props || {};';
         }));
 
         if(!constantProps && !this.script.readOnly) this.require('apply', '$cd');
@@ -312,11 +312,8 @@ export function transform() {
                 code.push(`let {${pa}, ...$attributes} = $props;`);
 
                 if(!this.script.readOnly && !constantProps) {
-                    code.push(`$runtime.current_component.push = () => {`);
-                    code.push(`  ({${result.props.map(p => p.name+'='+p.name).join(', ')}, ...$attributes} = $props);`);
-                    code.push(`  $$apply();`);
-                    code.push(`};`);
-                    code.push(`$runtime.current_component.exportedProps = {${result.props.map(p => p.name + ': () => '+p.name).join(', ')}};`)
+                    code.push(`$runtime.current_component.push = () => ({${result.props.map(p => p.name+'='+p.name).join(', ')}, ...$attributes} = $props = $option.props || {});`);
+                    code.push(`$runtime.current_component.exportedProps = () => ({${result.props.map(p => p.name).join(', ')}});`)
                 }
             } else if(this.inuse.$props) {
                 let pa = result.props.map(p => {
@@ -326,20 +323,26 @@ export function transform() {
                 code.push(`let {${pa}} = $props;`);
 
                 if(!this.script.readOnly && !constantProps) {
-                    code.push(`$runtime.current_component.push = () => {`);
-                    code.push(`  ({${result.props.map(p => p.name+'='+p.name).join(', ')}} = $props);`);
-                    code.push(`  $$apply();`);
-                    code.push(`};`);
-                    code.push(`$runtime.current_component.exportedProps = {${result.props.map(p => p.name + ': () => '+p.name).join(', ')}};`)
+                    code.push(`$runtime.current_component.push = () => ({${result.props.map(p => p.name+'='+p.name).join(', ')}} = $props = $option.props || {});`);
+                    code.push(`$runtime.current_component.exportedProps = () => ({${result.props.map(p => p.name).join(', ')}});`)
                 }
             }
             return code;
         }));
     } else {
         header.push(rawNode(() => {
-            if(this.inuse.$props && this.inuse.$attributes) return 'const $props = $option.props || {}, $attributes = $props;';
-            else if(this.inuse.$props) return 'const $props = $option.props || {};';
-            else if(this.inuse.$attributes) return 'const $attributes = $option.props || {};';
+            let code = [];
+            if(this.inuse.$props && this.inuse.$attributes) {
+                code.push('let $props = $option.props || {}, $attributes = $props;');
+                if(!constantProps && !this.script.readOnly) code.push(`$runtime.current_component.push = () => $props = $option.props || {}, $attributes = $props;`);
+            } else if(this.inuse.$props) {
+                code.push('let $props = $option.props || {};');
+                if(!constantProps && !this.script.readOnly) code.push(`$runtime.current_component.push = () => $props = $option.props || {};`);
+            } else if(this.inuse.$attributes) {
+                code.push('let $attributes = $option.props || {};');
+                if(!constantProps && !this.script.readOnly) code.push(`$runtime.current_component.push = () => $attributes = $option.props || {};`);
+            }
+            return code;
         }));
     }
 

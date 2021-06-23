@@ -1,6 +1,6 @@
 
 import { $watch, $watchReadOnly, $$deepComparator, cloneDeep, $$cloneDeep, $ChangeDetector, $digest,
-    $$compareDeep, cd_onDestroy, addEvent, fire } from './cd';
+    $$compareDeep, cd_onDestroy, addEvent, fire, keyComparator } from './cd';
 import { __app_onerror, safeCall, isFunction } from './utils';
 
 let templatecache = {};
@@ -307,13 +307,46 @@ export const makeComponent = (init, $base) => {
 };
 
 
-export const callComponent = (cd, context, component, el, option) => {
+export const callComponent = (cd, context, component, label, option, propFn, cmp, setter, classFn) => {
     option.afterElement = true;
     option.context = {...context};
-    let $component = safeCall(() => component(el, option));
-    if($component && $component.destroy) cd_onDestroy(cd, $component.destroy);
+    let $component, parentWatch, childWatch;
+
+    if(propFn) {
+        if(cmp) {
+            parentWatch = $watch(cd, propFn, value => {
+                option.props = value;
+                if($component) {
+                    $component.push?.();
+                    childWatch && (childWatch.idle = true);
+                    $component.apply?.();
+                }
+            }, {ro: true, value: {}, cmp});
+            fire(parentWatch);
+        } else option.props = propFn();
+    }
+
+    if(classFn) {
+        fire($watch(cd, classFn, value => {
+            option.$class = value;
+            $component?.apply?.();
+        }, {ro: true, value: {}, cmp: keyComparator}));
+    }
+
+    $component = safeCall(() => component(label, option));
+    if($component) {
+      cd_onDestroy(cd, $component.destroy);
+
+      if(setter && $component.exportedProps) {
+        childWatch = $watch($component.$cd, $component.exportedProps, value => {
+          setter(value);
+          cd.$$.apply();
+        }, {ro: true, idle: true, value: parentWatch.value, cmp})
+      }
+    }
     return $component;
 };
+
 
 export const autoSubscribe = (...list) => {
     list.forEach(i => {
@@ -439,48 +472,6 @@ export const makeClassResolver = ($option, classMap, metaClass, mainName) => {
         return result.join(' ');
     }
 };
-
-
-export const makeTree = (n, lvl) => {
-    let p = null;
-    while(n--) {
-        let c = p ? Object.create(p) : {};
-        lvl.push(c);
-        p = c;
-    }
-    let root = Object.create(p);
-    lvl.unshift(root);
-    return root;
-};
-
-
-export const spreadObject = (d, src) => {
-    for(let k in src) d[k] = src[k];
-    for(let k in d) {
-        if(!(k in src)) delete d[k];
-    }
-};
-
-
-export const recalcAttributes = (props, skip) => {
-    let result = {};
-    for(let k in props)
-        if(!skip[k]) result[k] = props[k];
-    return result;
-};
-
-
-export const bindPropToComponent = ($component, name, parentWatch, up, cmp) => {
-    let getter = $component.exportedProps?.[name];
-    if(!getter) return __app_onerror(`Component doesn't have prop ${name}`);
-
-    let w = $watch($component.$cd, getter, value => {
-        parentWatch.value = w.value;
-        $component.$option.props[name] = value;
-        up(value);
-    }, { value: parentWatch.value, cmp });
-    parentWatch.pair = value => w.value = value;
-}
 
 
 export const makeExternalProperty = ($component, name, getter, setter) => {

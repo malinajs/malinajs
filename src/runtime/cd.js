@@ -131,14 +131,27 @@ export const $$cloneDeep = function(d) {
 
 export function $$deepComparator(depth) {
     return function(w, value) {
-        if(!compareDeep(w.value, value, depth)) return 0;
-        w.value = cloneDeep(value, depth);
-        w.cb(value);
-        return w.ro ? 0 : 1;
+        let diff = compareDeep(w.value, value, depth);
+        diff && (w.value = cloneDeep(value, depth), !w.idle && w.cb(value));
+        w.idle = false;
+        return !w.ro && diff ? 1 : 0;
     };
 };
 
 export const $$compareDeep = $$deepComparator(10);
+
+
+export const keyComparator = (w, value) => {
+    let diff = false;
+    for(let k in value) {
+        if(w.value[k] != value[k]) diff = true;
+        w.value[k] = value[k];
+    }
+    diff && !w.idle && w.cb(value);
+    w.idle = false;
+    return !w.ro && diff ? 1 : 0;
+}
+
 
 export const fire = w => {
     if(w.cmp) w.cmp(w, w.fn());

@@ -10,8 +10,8 @@ export function makeComponent(node, element) {
 
     let options = [];
     let dynamicComponent;
-
-    let propLevel = 0, propLevelType;
+    let reference = null;
+    let propsFn = [], propsSetter = [], $class=[], staticProps = true;
 
     let componentName = node.name;
     if(componentName == 'component') {
@@ -20,33 +20,7 @@ export function makeComponent(node, element) {
     }
 
     let passOption = {};
-
     let head = xNode('block');
-    let body = xNode('block');
-
-    let depsPush = [];
-    head.push(xNode('push', {
-        $deps: depsPush
-    }, (ctx, n) => {
-        if(n.$deps.some(i => i.requirePush)) ctx.writeLine(`let $$push = $runtime.noop;`)
-    }));
-    body.push(xNode('push', {
-        $deps: depsPush
-    }, (ctx, n) => {
-        if(n.$deps.some(i => i.requirePush)) ctx.writeLine(`$$push = $child.push;`)
-    }));
-
-    const propNode = xNode('prop', {
-        $deps: []
-    }, (ctx, n) => {
-        if(!propLevel && !propLevelType) return;
-        if(propLevel) ctx.writeLine(`let $$lvl = [], props = $runtime.makeTree(${propLevel}, $$lvl);`);
-        else {
-            let inline = n.$deps.map(p => p._inline).filter(p => p).join(', ');
-            ctx.writeLine(`let props = {${inline}};`);
-        }
-    });
-    head.push(propNode);
 
     head.push(xNode('events', ctx => {
         if(forwardAllEvents) {
@@ -58,10 +32,6 @@ export function makeComponent(node, element) {
 
     head.push(xNode('slots', ctx => {
         if(passOption.slots) ctx.writeLine('let slots = {};');
-    }));
-
-    head.push(xNode('class', ctx => {
-        if(passOption.class) ctx.writeLine(`let $class = {}`);
     }));
 
     head.push(xNode('anchor', ctx => {
@@ -211,54 +181,6 @@ export function makeComponent(node, element) {
         if(name == '@@') {
             forwardAllEvents = true;
             return false;
-        } else if(name[0] == ':' || name.startsWith('bind:')) {
-            let inner, outer;
-            if(name[0] == ':') inner = name.substring(1);
-            else inner = name.substring(5);
-            if(value) outer = unwrapExp(value);
-            else outer = inner;
-            assert(isSimpleName(inner), `Wrong property: '${inner}'`);
-            assert(detectExpressionType(outer) == 'identifier', 'Wrong bind name: ' + outer);
-            this.detectDependency(outer);
-
-            let watchName = '$$w' + (this.uniqIndex++);
-            propLevelType = 'binding';
-
-            if(this.script.readOnly) this.warning('Conflict: read-only and 2-way binding to component')
-            this.require('apply');
-
-            let n = xNode('bindProp2', {
-                watchName,
-                outer,
-                inner
-            }, (ctx, n) => {
-                ctx.writeLine(`const ${n.watchName} = ${this.config.immutable ? '$watchReadOnly' : '$watch'}($cd, () => (${n.outer}), _${n.inner} => {`);
-                ctx.goIndent(() => {
-                    ctx.writeLine(`props.${n.inner} = _${n.inner};`);
-                    ctx.writeLine(`${n.watchName}.pair && ${n.watchName}.pair(${n.watchName}.value);`);
-                    ctx.writeLine(`$$push();`);
-                    n.requirePush = true;
-                });
-                if(this.config.immutable) ctx.writeLine(`});`);
-                else ctx.writeLine(`}, {ro: true, cmp: $runtime.$$compareDeep});`);
-                ctx.writeLine(`$runtime.fire(${n.watchName});`);
-            });
-            head.push(n);
-            depsPush.push(n);
-            body.push(xNode('bindProp2', {
-                watchName,
-                outer,
-                inner
-            }, (ctx, data) => {
-                ctx.writeLine(`$runtime.bindPropToComponent($child, '${data.inner}', ${data.watchName}, _${data.outer} => {`);
-                ctx.goIndent(() => {
-                    ctx.writeLine(`${data.outer} = _${data.outer};`);
-                    ctx.writeLine(`$$apply();`);
-                });
-                if(this.config.immutable) ctx.writeLine(`});`);
-                else ctx.writeLine(`}, $runtime.$$compareDeep);`);
-            }));
-            return false;
         } else if(name == 'this') {
             dynamicComponent = unwrapExp(value);
             return false;
@@ -274,38 +196,36 @@ export function makeComponent(node, element) {
             let name = name.substring(1);
             assert(isSimpleName(name), name);
             this.checkRootName(name);
-            body.push(xNode('ref', {
-                name
-            }, (ctx, data) => {
-                ctx.writeLine(`${data.name} = $child;`);
-            }));
+            reference = name;
+            return;
+        } else if(name[0] == ':' || name.startsWith('bind:')) {
+            let inner, outer;
+            if(name[0] == ':') inner = name.substring(1);
+            else inner = name.substring(5);
+            if(value) outer = unwrapExp(value);
+            else outer = inner;
+            assert(isSimpleName(inner), `Wrong property: '${inner}'`);
+            assert(detectExpressionType(outer) == 'identifier', 'Wrong bind name: ' + outer);
+            this.detectDependency(outer);
+
+            if(this.script.readOnly) this.warning('Conflict: read-only and 2-way binding to component')
+            this.require('apply');
+            staticProps = false;
+
+            if(inner == outer) propsFn.push(`${inner}`);
+            else propsFn.push(`${inner}: ${outer}`);
+            propsSetter.push(`${inner}: ${outer} = ${outer}`);
+
             return;
         } else if(name[0] == '{') {
             value = name;
             name = unwrapExp(name);
             if(name.startsWith('...')) {
-                if(propLevelType) propLevel++;
-                propLevelType = 'spreading';
-
                 name = name.substring(3);
                 assert(detectExpressionType(name) == 'identifier', 'Wrong prop');
                 this.detectDependency(name);
-                let propObject = propLevel ? `$$lvl[${propLevel}]` : 'props';
-
-                let n = xNode('spread-object', {
-                    name,
-                    propObject
-                }, (ctx, n) => {
-                    ctx.writeLine(`$runtime.fire($watch($cd, () => (${n.name}), (value) => {`);
-                    ctx.goIndent(() => {
-                        ctx.writeLine(`$runtime.spreadObject(${n.propObject}, value);`);
-                        ctx.writeLine(`$$push();`);
-                        n.requirePush = true;
-                    });
-                    ctx.writeLine(`}, {ro: true, cmp: $runtime.$$deepComparator(0)}));`);
-                });
-                head.push(n);
-                depsPush.push(n);
+                staticProps = false;
+                propsFn.push(`...${name}`);
                 return;
             };
             assert(detectExpressionType(name) == 'identifier', 'Wrong prop');
@@ -383,52 +303,18 @@ export function makeComponent(node, element) {
             const parsed = this.parseText(prop.value);
             this.detectDependency(parsed);
             let exp = parsed.result;
-            let funcName = `$$pf${this.uniqIndex++}`;
+            $class.push(`${metaClass}: $$resolveClass(${exp})`);
 
-            let n = xNode('passClass', {
-                funcName,
-                exp,
-                metaClass
-            }, (ctx, n) => {
-                ctx.writeLine(`const ${n.funcName} = () => $$resolveClass(${n.exp});`);
-                ctx.writeLine(`$class['${n.metaClass}'] = ${n.funcName}();`);
-                if(ctx.inuse.apply) {
-                    ctx.writeLine(`$watch($cd, ${n.funcName}, (result) => {`);
-                    ctx.goIndent(() => {
-                        ctx.writeLine(`$class['${n.metaClass}'] = result;`);
-                        ctx.writeLine(`$$push();`);
-                        n.requirePush = true;
-                    });
-                    ctx.writeLine(`}, {ro: true, value: $class['${n.metaClass}']});`);
-                }
-            });
-            head.push(n);
-            depsPush.push(n);
-
-            passOption.class = true;
             this.require('resolveClass');
             return;
         }
 
         const staticProp = (name, value) => {
             if(typeof value == 'number') value = '' + value;
-            else if(value) value = '`' + this.Q(value) + '`';
-            else value = 'true';
-
-            if(propLevelType == 'spreading') propLevel++;
-            propLevelType = 'attr';
-
-            let propObject = propLevel ? `$$lvl[${propLevel}]` : 'props';
-            let n = xNode('staticProp', {
-                name,
-                value,
-                propObject
-            }, (ctx, data) => {
-                if(!propLevel) data._inline = `${data.name}: ${data.value}`;
-                else ctx.writeLine(`${data.propObject}.${data.name} = ${data.value};`);
-            });
-            head.push(n);
-            propNode.$deps.push(n);
+            else if(value === true || value === false || value === null) value = '' + value;
+            else if(value === void 0) value = 'true'
+            else value = '`' + this.Q(value) + '`';
+            propsFn.push(`${name}: ${value}`);
         }
 
         if(name == 'class') name = '_class';
@@ -440,35 +326,15 @@ export function makeComponent(node, element) {
             this.detectDependency(pe);
             if(pe.parts.length == 1 && isNumber(pe.parts[0].value)) {
                 staticProp(name, Number(pe.parts[0].value));
+            } else if(pe.parts.length == 1 && (pe.parts[0].value === 'true' || pe.parts[0].value === 'false')) {
+                staticProp(name, pe.parts[0].value === 'true');
+            } else if(pe.parts.length == 1 && pe.parts[0].value === 'null') {
+                staticProp(name, null);
             } else {
+                staticProps = false;
                 let exp = pe.result;
-
-                if(propLevelType == 'spreading') propLevel++;
-                propLevelType = 'prop';
-                let propObject = propLevel ? `$$lvl[${propLevel}]` : 'props';
-
-                let n = xNode('bindProp', {
-                    exp,
-                    name,
-                    propObject
-                }, (ctx, n) => {
-                    if(ctx.inuse.apply) {
-                        ctx.writeLine(`$runtime.fire(${this.config.immutable ? '$watchReadOnly' : '$watch'}($cd, () => (${n.exp}), _${n.name} => {`);
-                        ctx.goIndent(() => {
-                            ctx.writeLine(`${n.propObject}.${n.name} = _${n.name};`);
-                            ctx.writeLine(`$$push();`);
-                            n.requirePush = true;
-                        });
-                        if(this.config.immutable) ctx.writeLine(`}));`);
-                        else ctx.writeLine(`}, {ro: true, cmp: $runtime.$$compareDeep}));`);
-                    } else {
-                        if(!propLevel) n._inline = `${n.name}: ${n.exp}`;
-                        else ctx.writeLine(`${n.propObject}.${n.name} = ${n.exp};`);
-                    }
-                });
-                head.push(n);
-                propNode.$deps.push(n);
-                depsPush.push(n);
+                if(name == exp) propsFn.push(`${name}`);
+                else propsFn.push(`${name}: ${exp}`);
             }
         } else {
             staticProp(name, value);
@@ -476,41 +342,66 @@ export function makeComponent(node, element) {
     });
 
 
-    if(propLevel || propLevelType) options.push('props');
     if(forwardAllEvents || passOption.events) options.push('events');
     if(passOption.slots) options.push('slots');
-    if(passOption.class) options.push('$class');
     if(passOption.anchor) options.push('anchor');
 
     let result = xNode('component', {
         el: element.bindName(),
         componentName,
         head,
-        body,
         options,
-        $cd: '$cd'
-    }, (ctx, data) => {
-        const $cd = data.$cd || '$cd';
+        $cd: '$cd',
+        props: propsFn,
+        propsSetter,
+        reference,
+        $class
+    }, (ctx, n) => {
+        const $cd = n.$cd || '$cd';
 
-        let head = ctx.subBuild(data.head);
+        let head = ctx.subBuild(n.head);
         if(head) {
             ctx.addBlock(head);
-            data.requireScope = true;
+            n.requireScope = true;
         }
 
-        let body = ctx.subBuild(data.body);
-
-        if(!body) {
-            ctx.writeLine(`$runtime.callComponent(${$cd}, $context, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
-        } else {
-            data.requireScope = true;
-            ctx.writeLine(`let $child = $runtime.callComponent(${$cd}, $context, ${data.componentName}, ${data.el}, {${data.options.join(', ')}});`);
-            ctx.writeLine(`if($child?.push) {`);
-            ctx.goIndent(() => {
-                ctx.addBlock(body);
-            });
-            ctx.writeLine(`}`);
+        if(n.props.length && staticProps) {
+            n.options.push(`props: {${n.props.join(', ')}}`);
+            n.props = [];
         }
+
+        ctx.write(true);
+        if(n.reference) ctx.write(`${n.reference} = `);
+        ctx.write(`$runtime.callComponent(${$cd}, $context, ${n.componentName}, ${n.el}, {${n.options.join(', ')}}`);
+
+        let other = '';
+        ctx.indent++;
+        if(n.props.length) ctx.write(`,\n`, true, `() => ({${n.props.join(', ')}})`);
+        else other = ', null';
+
+        if(ctx.inuse.apply && n.props.length) {
+            if(other) ctx.write(other);
+            other = '';
+            ctx.write(`,`);
+            if(n.props.length) ctx.write('\n', true);
+            if(this.config.immutable) ctx.write(`$runtime.keyComparator`);
+            else ctx.write(`$runtime.$$compareDeep`);
+        } else other += ', null';
+
+        if(n.propsSetter.length) {
+            if(other) ctx.write(other);
+            other = '';
+            ctx.write(`,\n`, true, `($$_value) => ({${n.propsSetter.join(', ')}} = $$_value)`);
+        } else other += ', null';
+
+        if(n.$class.length) {
+            if(other) ctx.write(other);
+            other = '';
+            ctx.write(`,\n`, true, `() => ({${n.$class.join(', ')}})`);
+        } else other += ', null';
+
+        ctx.indent--;
+        ctx.write(`);\n`);
     });
 
     if(!dynamicComponent) {
