@@ -225,6 +225,7 @@ export function parse() {
                         if(a === '>') break;
                         name += a;
                     }
+                    name = name.trim();
                     if(name) {
                         name = name.split(':')[0];
                         assert(name === parent.name, 'Wrong close-tag: ' + parent.name + ' - ' + name);

@@ -437,7 +437,8 @@ export function bindProp(prop, node, element) {
                 innerHTML: true,
                 innerText: true,
                 placeholder: true,
-                src: true
+                src: true,
+                readonly: 'readOnly'
             }
 
             return {bind: xNode('block', {
@@ -451,10 +452,11 @@ export function bindProp(prop, node, element) {
                     }, (ctx, data) => {
                         if(data.hasElement) ctx.writeLine(`let $element=${data.el};`);
                         if(propList[name]) {
+                            let propName = propList[name] === true ? name : propList[name];
                             if(ctx.inuse.apply) {
-                                ctx.writeLine(`$watchReadOnly($cd, () => (${data.exp}), (value) => {${data.el}.${name} = value;});`);
+                                ctx.writeLine(`$watchReadOnly($cd, () => (${data.exp}), (value) => {${data.el}.${propName} = value;});`);
                             } else {
-                                ctx.writeLine(`${data.el}.${name} = ${data.exp};`);
+                                ctx.writeLine(`${data.el}.${propName} = ${data.exp};`);
                             }
                         } else {
                             if(ctx.inuse.apply) {
