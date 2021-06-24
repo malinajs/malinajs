@@ -31,7 +31,7 @@ export function bindProp(prop, node, element) {
                 // spread operator
                 name = name.substring(3);
                 assert(detectExpressionType(name) == 'identifier');
-                return {bind: `${node.spreadObject}.spread(() => ${name});`};
+                return node.spreading.push(`...${name}`);
             } else {
                 prop.value = prop.name;
             }
@@ -175,7 +175,7 @@ export function bindProp(prop, node, element) {
                 this.checkRootName(handler);
                 bind.handlerName = handler;
             } else {
-                bind.exp = this.Q(exp);
+                bind.exp = exp;
                 bind.$element = exp.includes('$element');
             }
 
@@ -214,15 +214,11 @@ export function bindProp(prop, node, element) {
         if(attr == 'value' && ['number', 'range'].includes(inputType)) attr = 'valueAsNumber';
         this.detectDependency(exp);
 
-        let spreading = '';
-        if(node.spreadObject) spreading = `${node.spreadObject}.except(['${attr}']);`;
-
         let argName = 'a' + (this.uniqIndex++);
 
         return {bind: xNode('bindInput', {
             el: element.bindName()
         }, (ctx, n) => {
-            if(spreading) ctx.writeLine(spreading);
             ctx.writeLine(`$runtime.bindInput($cd, ${n.el}, '${attr}', () => ${exp}, ${argName} => {${exp} = ${argName}; $$apply();});`);
         })};
     } else if(name == 'style' && arg) {
@@ -423,11 +419,8 @@ export function bindProp(prop, node, element) {
             let exp = parsed.result;
             let hasElement = prop.value.includes('$element');
 
-            if(node.spreadObject) {
-                return {bind: `
-                    ${node.spreadObject}.prop('${name}', () => ${exp});
-                `};
-            }
+            if(node.spreading) return node.spreading.push(`${name}: ${exp}`);
+
             const propList = {
                 hidden: true,
                 checked: true,
@@ -470,11 +463,7 @@ export function bindProp(prop, node, element) {
             })};
         }
 
-        if(node.spreadObject) {
-            return {bind: `
-                ${node.spreadObject}.attr('${name}', '${prop.value}');
-            `};
-        }
+        if(node.spreading) return node.spreading.push(`${name}: \`${this.Q(prop.value)}\``);
 
         element.attributes.push({
             name: prop.name,

@@ -168,15 +168,13 @@ export function buildBlock(data, option={}) {
                 tpl.push(el);
 
                 if(n.attributes.some(a => a.name.startsWith('{...'))) {
-                    n.spreadObject = 'spread' + (this.uniqIndex++);
-                    if(this.css.active()) n.classes.add(this.css.id);
-                    this.require('apply', '$cd');
+                    n.spreading = [];
+                    this.require('$cd');
                     binds.push(xNode('spread-to-element', {
                         el: el.bindName(),
-                        name: n.spreadObject
+                        props: n.spreading
                     }, (ctx, n) => {
-                        let css = this.css.active() ? `, '${this.css.id}'` : '';
-                        ctx.writeLine(`let ${n.name} = $runtime.$$makeSpreadObject($cd, ${n.el}${css});`);
+                        ctx.writeLine(`$runtime.spreadAttributes($cd, ${n.el}, () => ({${n.props.join(', ')}}));`);
                     }));
                 }
                 let bindTail = [];

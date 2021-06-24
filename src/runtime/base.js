@@ -136,76 +136,6 @@ export function $$addEventForComponent(list, event, fn) {
     } else list[event] = fn;
 };
 
-export function $$makeSpreadObject($cd, el, css) {
-    let prev = {};
-    let index = 0;
-    let list = [];
-    let defaultUsed = {};
-
-    const props = Object.getOwnPropertyDescriptors(el.__proto__);
-
-    const render = $$groupCall(function() {
-        let obj, name, value, used = Object.assign({}, defaultUsed);
-        for(let i=index-1; i>=0; i--) {
-            obj = list[i];
-            for(name in obj) {
-                if(used[name]) continue;
-                used[name] = true;
-                value = obj[name];
-                if(prev[name] == value) continue;
-                prev[name] = value;
-
-                if(props[name] && props[name].set) {
-                    el[name] = value;
-                } else {
-                    if(value == null) el.removeAttribute(name);
-                    else {
-                        if(name == 'class' && css) value += ' ' + css;
-                        el.setAttribute(name, value);
-                    }
-                }
-            }
-        }
-    });
-
-    return {
-        spread: function(fn) {
-            let i = index++;
-            $watch($cd, fn, value => {
-                list[i] = value;
-                render();
-            }, {ro: true, cmp: $$deepComparator(1)});
-        },
-        prop: function(name, fn) {
-            let i = index++;
-            list[i] = {};
-            $watch($cd, fn, value => {
-                list[i][name] = value;
-                render();
-            }, {ro: true});
-        },
-        attr: function(name, value) {
-            let d = {};
-            d[name] = value;
-            list[index++] = d;
-        },
-        except: function(list) {
-            list.forEach(n => defaultUsed[n] = true);
-        }
-    }
-};
-
-
-export function $$groupCall(emit) {
-    let id = `gc${$$uniqIndex++}`;
-    const fn = function() {
-        $tick(() => {
-            fn.emit && fn.emit();
-        }, id);
-    };
-    fn.emit = emit;
-    return fn;
-};
 
 export let current_component, $context;
 
@@ -547,4 +477,34 @@ export const eachDefaultKey = (item, index, array) => typeof array[0] === 'objec
 export const attachAnchor = ($option, $cd, name, el) => {
     let fn = $option.anchor && $option.anchor[name];
     if(fn) cd_onDestroy($cd, fn(el));
+}
+
+
+export const spreadAttributes = (cd, el, fn) => {
+    const props = Object.getOwnPropertyDescriptors(el.__proto__);
+    let prev = {};
+    const set = (k, v) => {
+        if(k == 'style') el.style.cssText = v;
+        else if(props[k]?.set) el[k] = v;
+        else bindAttributeBase(el, k, v);
+    }
+    const apply = (state) => {
+        for(let k in state) {
+            let value = state[k];
+            if(prev[k] != value) {
+                set(k, value);
+                prev[k] = value;
+            }
+        }
+        for(let k in prev) {
+            if(!(k in state)) {
+                set(k, null);
+                delete prev[k];
+            }
+        }
+    }
+    $watch(cd, fn, apply, {cmp: (_, state) => {
+        apply(state);
+        return 0;
+    }})
 }
