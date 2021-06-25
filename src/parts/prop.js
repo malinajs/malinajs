@@ -72,7 +72,7 @@ export function bindProp(prop, node, element) {
             });
             return {bind};
         }
-        let mod = '', opts = arg.split(/[\|:]/);
+        let opts = arg.split(/[\|:]/);
         let event = opts.shift();
         let exp, handler, funcName;
 
@@ -97,23 +97,54 @@ export function bindProp(prop, node, element) {
         assert(event, prop.content);
         assert(!handler ^ !exp, prop.content);
 
+        let keyEvent = ['keydown', 'keypress', 'keyup'].includes(event);
+        let keyCodes = {
+            enter: 'Enter',
+            tab: 'Tab',
+            esc: 'Escape',
+            space: ' ',
+            up: 'ArrowUp',
+            down: 'ArrowDown',
+            left: 'ArrowLeft',
+            right: 'ArrowRight'
+        };
+
+        let mod = [];
         let needPrevent, preventInserted;
         opts.forEach(opt => {
             if(opt == 'preventDefault' || opt == 'prevent') {
                 if(preventInserted) return;
-                mod += '$event.preventDefault();';
+                mod.push('$event.preventDefault();');
                 preventInserted = true;
+                return;
             } else if(opt == 'stopPropagation' || opt == 'stop') {
-                mod += '$event.stopPropagation();';
-            } else if(opt == 'enter') {
-                mod += 'if($event.keyCode != 13) return;';
-                needPrevent = true;
-            } else if(opt == 'escape') {
-                mod += 'if($event.keyCode != 27) return;';
-                needPrevent = true;
-            } else throw 'Wrong modificator: ' + opt;
+                mod.push('$event.stopPropagation();');
+                return;
+            };
+
+            if(keyEvent) {
+                if(opt === 'delete') {
+                    mod.push(`if($event.key != 'Backspace' && $event.key != 'Delete') return;`);
+                    needPrevent = true;
+                    return;
+                }
+                let keyCode = keyCodes[opt];
+                if(keyCode) {
+                    mod.push(`if($event.key != '${keyCode}') return;`);
+                    needPrevent = true;
+                    return;
+                }
+            }
+
+            if(opt == 'ctrl') {mod.push(`if(!$event.ctrlKey) return;`); return;}
+            if(opt == 'alt') {mod.push(`if(!$event.altKey) return;`); return;}
+            if(opt == 'shift') {mod.push(`if(!$event.shiftKey) return;`); return;}
+            if(opt == 'meta') {mod.push(`if(!$event.metaKey) return;`); return;}
+
+            throw 'Wrong modificator: ' + opt;
         });
-        if(needPrevent && !preventInserted) mod += '$event.preventDefault();';
+        if(needPrevent && !preventInserted) mod.push('$event.preventDefault();');
+        mod = mod.join(' ');
         if(mod) mod += ' ';
 
         this.detectDependency(exp || handler);
@@ -165,7 +196,7 @@ export function bindProp(prop, node, element) {
                 if(data.handlerName && !ctx.inuse.apply && !data.mod) {
                     ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, '${data.event}', ${data.handlerName});`);
                 } else {
-                    let exp = data.handlerName ? `${data.handlerName}($event);` : data.exp;
+                    let exp = data.handlerName ? `${data.handlerName}($event)` : data.exp;
                     let apply = ctx.inuse.apply ? ' $$apply();' : '';
                     ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, '${data.event}', ($event) => { ${l}${data.mod}${exp};${apply} });`);
                 }

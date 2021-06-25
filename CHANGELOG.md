@@ -29,6 +29,7 @@
 * <malina:head>, <malina:body>, <malina:window>
 * option: passClass
 * option: immutable
+* event modifiers: prevent, stop, ctrl, alt, shift, meta. key-events: enter, tab, esc, space, up, down, left, right, delete
 
 ## 0.5.x
 
