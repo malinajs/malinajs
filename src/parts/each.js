@@ -1,4 +1,5 @@
 
+import acorn from 'acorn';
 import { assert, isSimpleName, detectExpressionType, xNode, trimEmptyNodes } from '../utils.js'
 
 
@@ -24,20 +25,31 @@ export function makeEachBlock(data, option) {
     }
     right = right.trim();
 
-    let itemName, indexName, keywords, bind0 = null;
+    let itemName, indexName, bind0 = null;
     if(right[0] == '{') {
-        rx = right.match(/^\{([^}]+)\}(.*)$/);
+        rx = right.match(/^(\{[^}]+\})(.*)$/);
         assert(rx, `Wrong #each expression '${data.value}'`);
-        keywords = rx[1].trim().split(/\s*\,\s*/);
+        let exp = rx[1], keywords;
+
+        try {
+            keywords = acorn.parse(`(${exp} = $$item)`, {sourceType: 'module', ecmaVersion: 12}).body[0].expression.left.properties.map(p => p.key.name);
+        } catch (e) {
+            throw new Error('Wrong destructuring in each: ' + data.value);
+        }
+
         itemName = '$$item';
         indexName = rx[2].trim();
         if(indexName[0] == ',') indexName = indexName.substring(1).trim();
         indexName = indexName || '$index';
 
-        let assignVars = keywords.map(k => `${k} = $$item.${k}`).join(', ');
-        bind0 = xNode('each:unwrap', ctx => {
-            ctx.writeLine(`var ${assignVars};`);
-            ctx.writeLine(`$ctx.cd.prefix.push(() => {${assignVars};});`);
+        bind0 = xNode('each:unwrap', {
+            exp,
+            keywords
+        }, (ctx, n) => {
+            ctx.writeLine(`let ${n.keywords.join(', ')};`);
+            ctx.writeLine(`const $$_up = () => (${n.exp} = $$item);`);
+            ctx.writeLine(`$ctx.cd.prefix.push($$_up);`);
+            ctx.writeLine(`$$_up();`);
         });
     } else {
         rx = right.trim().split(/\s*\,\s*/);
