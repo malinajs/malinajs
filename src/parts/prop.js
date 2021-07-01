@@ -1,5 +1,6 @@
 
-import { assert, detectExpressionType, isSimpleName, unwrapExp, xNode, last, toCamelCase } from '../utils.js'
+import { assert, detectExpressionType, isSimpleName, unwrapExp, xNode, last, toCamelCase, replaceElementKeyword } from '../utils.js'
+import { parseText } from '../parser.js'
 
 
 export function bindProp(prop, node, element) {
@@ -22,6 +23,15 @@ export function bindProp(prop, node, element) {
             name = 'use';
             arg = prop.name.substring(1);
         }
+    }
+    if(prop.content.startsWith('{*')) {
+        const pe = parseText(prop.content);
+        assert(pe.parts[0].type == 'js');
+        let exp = pe.parts[0].value;
+        if(!exp.endsWith(';')) exp += ';';
+        return {bind: xNode('block', {body: [
+            replaceElementKeyword(exp, () => element.bindName())
+        ]})};
     }
     if(!name && prop.value == null) {
         let rx = prop.name.match(/^\{(.*)\}$/);

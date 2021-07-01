@@ -1,5 +1,7 @@
 
 import acorn from 'acorn';
+import astring from 'astring';
+
 
 let _svgElements = 'animate,animateMotion,animateTransform,circle,clipPath,color-profile,defs,desc,discard,ellipse,feBlend,feColorMatrix,feComponentTransfer,feComposite,feConvolveMatrix,feDiffuseLighting,feDisplacementMap,feDistantLight,feDropShadow,feFlood,feFuncA,feFuncB,feFuncG,feFuncR,feGaussianBlur,feImage,feMerge,feMergeNode,feMorphology,feOffset,fePointLight,feSpecularLighting,feSpotLight,feTile,feTurbulence,filter,g,hatch,hatchpath,image,line,linearGradient,marker,mask,mesh,meshgradient,meshpatch,meshrow,metadata,mpath,path,pattern,polygon,polyline,radialGradient,rect,set,solidcolor,stop,switch,symbol,text,textPath,tspan,unknown,use,view';
 let svgElements = {};
@@ -301,6 +303,55 @@ export const extractKeywords = (exp) => {
 
     return [...keys];
 };
+
+
+export const replaceElementKeyword = (exp, fn) => {
+    let changed = false;
+    let r = parseJS(exp, (n, pk) => {
+        if(n.type != 'Identifier') return;
+        if(pk == 'property') return;
+        if(n.name != '$element') return;
+        n.name = fn();
+        changed = true;
+    });
+    return changed ? r.build().trim() : exp;
+}
+
+
+export const parseJS = (exp, fn) => {
+    let result = {};
+    let ast = result.ast = acorn.parse(exp, {sourceType: 'module', ecmaVersion: 12});
+
+    const rec = (n, pk) => {
+        let self;
+        if(n.type) {
+            self = n;
+            fn?.(n, pk);
+        }
+
+        for(let k in n) {
+            if(k == '_parent') continue;
+            let v = n[k];
+            if(typeof(v) != 'object') continue;
+            if(Array.isArray(v)) {
+                v.forEach(i => {
+                    i._parent = self || n._parent;
+                    rec(i, k);
+                });
+            } else {
+                v._parent = self || n._parent;
+                rec(v, k);
+            }
+        }
+    }
+    rec(ast, null);
+
+    result.build = (data) => {
+        return astring.generate(data || ast);
+    }
+    return result;
+};
+
 
 function I(value = 0) {
     this.$indent = value;

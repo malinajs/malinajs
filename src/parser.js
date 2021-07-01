@@ -407,6 +407,7 @@ export function parseText(source) {
             if(a === '}') {
                 step = 0;
                 let js = exp[0] == '*';
+                if(js) exp = exp.substring(1);
                 exp = exp.trim();
                 if(!exp) throw 'Wrong expression';
                 parts.push({value: exp, type: js ? 'js' : 'exp'});

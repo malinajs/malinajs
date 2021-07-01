@@ -1,5 +1,5 @@
 
-import {svgElements, xNode, last} from './utils.js'
+import {svgElements, xNode, last, replaceElementKeyword} from './utils.js'
 
 
 export function buildRuntime() {
@@ -106,24 +106,29 @@ export function buildBlock(data, option={}) {
                     const pe = this.parseText(n.value);
                     this.detectDependency(pe);
 
-                    pe.parts.forEach(p => {
-                        if(p.type != 'js') return;
-                        let e = p.value.substring(1).trim();
-                        binds.push(e);
-                    });
-
+                    let textNode;
                     if(pe.staticText != null) {
-                        tpl.push(pe.staticText);
+                        textNode = tpl.push(pe.staticText);
                     } else {
-                        let t = tpl.push(' ');
+                        textNode = tpl.push(' ');
                         binds.push(xNode('bindText', {
-                            el: t.bindName(),
+                            el: textNode.bindName(),
                             exp: pe.result
                         }, (ctx, n) => {
                             if(this.inuse.apply) ctx.writeLine(`$runtime.bindText($cd, ${n.el}, () => ${n.exp});`);
                             else ctx.writeLine(`${n.el}.textContent = ${n.exp};`);
                         }));
                     }
+
+                    pe.parts.forEach(p => {
+                        if(p.type != 'js') return;
+                        let exp = p.value;
+                        if(!exp.endsWith(';')) exp += ';';
+                        binds.push(xNode('block', {body: [
+                            replaceElementKeyword(exp, () => textNode.bindName())
+                        ]}));
+                    });
+
                 } else {
                     tpl.push(n.value);
                 }
