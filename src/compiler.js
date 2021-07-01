@@ -229,7 +229,7 @@ function detectDependency(data) {
         assert(data.parts);
 
         for(let p of data.parts) {
-            if(p.type == 'exp') check(p.value);
+            if(p.type == 'exp' || p.type == 'js') check(p.value);
         }
     }
 }

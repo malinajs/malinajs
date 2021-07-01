@@ -1,5 +1,5 @@
 
-import { assert } from './utils.js'
+import { assert, last } from './utils.js'
 
 
 export function parse() {
@@ -406,9 +406,10 @@ export function parseText(source) {
             }
             if(a === '}') {
                 step = 0;
+                let js = exp[0] == '*';
                 exp = exp.trim();
                 if(!exp) throw 'Wrong expression';
-                parts.push({value: exp, type: 'exp'});
+                parts.push({value: exp, type: js ? 'js' : 'exp'});
                 exp = '';
                 continue;
             }
@@ -427,11 +428,18 @@ export function parseText(source) {
     }
     if(text) parts.push({value: text, type: 'text'});
     assert(step == 0, 'Wrong expression: ' + source);
-    let result;
-    if(parts.length == 1 && parts[0].type == 'exp' && parts[0].value == '$class') {
-        result = "''+$class";
-    } else {
-        result = parts.map(p => p.type == 'text' ? '`' + this.Q(p.value) + '`' : '(' + p.value + ')').join('+');
-    }
-    return {result, parts};
+    let staticText = null;
+    if(!parts.some(p => p.type == 'exp')) staticText = parts.map(p => p.type == 'text' ? p.value : '').join('');
+    let result = [];
+    parts.forEach(p => {
+        if(p.type == 'js') return;
+        if(p.type == 'exp') result.push(p);
+        else {
+            let l = last(result);
+            if(l?.type == 'text') l.value += p.value;
+            else result.push({...p});
+        }
+    });
+    result = result.map(p => p.type == 'text' ? '`' + this.Q(p.value) + '`' : '(' + p.value + ')').join('+');
+    return {result, parts, staticText};
 };

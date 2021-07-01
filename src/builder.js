@@ -103,17 +103,27 @@ export function buildBlock(data, option={}) {
         const bindNode = (n) => {
             if(n.type === 'text') {
                 if(n.value.indexOf('{') >= 0) {
-                    let t = tpl.push(' ');
                     const pe = this.parseText(n.value);
                     this.detectDependency(pe);
-                    binds.push(xNode('bindText', {
-                        el: t.bindName(),
-                        exp: pe.result
-                    }, (ctx, n) => {
-                        if(this.inuse.apply) ctx.writeLine(`$runtime.bindText($cd, ${n.el}, () => ${n.exp});`);
-                        else ctx.writeLine(`${n.el}.textContent = ${n.exp};`);
-                    }));
 
+                    pe.parts.forEach(p => {
+                        if(p.type != 'js') return;
+                        let e = p.value.substring(1).trim();
+                        binds.push(e);
+                    });
+
+                    if(pe.staticText != null) {
+                        tpl.push(pe.staticText);
+                    } else {
+                        let t = tpl.push(' ');
+                        binds.push(xNode('bindText', {
+                            el: t.bindName(),
+                            exp: pe.result
+                        }, (ctx, n) => {
+                            if(this.inuse.apply) ctx.writeLine(`$runtime.bindText($cd, ${n.el}, () => ${n.exp});`);
+                            else ctx.writeLine(`${n.el}.textContent = ${n.exp};`);
+                        }));
+                    }
                 } else {
                     tpl.push(n.value);
                 }

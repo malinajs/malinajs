@@ -415,7 +415,7 @@ export const makeExternalProperty = ($component, name, getter, setter) => {
 export const attachSlotBase = ($context, $cd, slotName, label, props, placeholder) => {
     let $slot = $cd.$$.$option.slots?.[slotName];
     if($slot) $slot($cd, label, $context, props);
-    else placeholder && placeholder();
+    else placeholder?.();
 };
 
 
@@ -438,7 +438,7 @@ export const attachSlot = ($context, $cd, slotName, label, props, placeholder, c
             }
         }
         push = $slot($cd, label, $context, resultProps);
-    } else placeholder && placeholder();
+    } else placeholder?.();
 };
 
 
@@ -466,7 +466,7 @@ export const makeFragmentSlot = (parentCD, fn) => {
         let $cd = parentCD.new();
         cd_onDestroy(callerCD, () => $cd.destroy());
         insertAfter(label, fn($cd));
-        $cd.$$.apply();
+        $cd.$$.apply?.();
     }
 }
 
@@ -475,7 +475,7 @@ export const eachDefaultKey = (item, index, array) => typeof array[0] === 'objec
 
 
 export const attachAnchor = ($option, $cd, name, el) => {
-    let fn = $option.anchor && $option.anchor[name];
+    let fn = $option.anchor?.[name];
     if(fn) cd_onDestroy($cd, fn(el));
 }
 
