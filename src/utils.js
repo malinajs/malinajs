@@ -573,7 +573,9 @@ xNode.init = {
             convert = '$$htmlToFragment';
             template = template.replace(/<!---->/g, '<>');
         }
-        if(node.inline) {
+        if(node.raw) {
+            ctx.write(ctx._ctx.Q(template));
+        } else if(node.inline) {
             ctx.write(`${convert}(\`${ctx._ctx.Q(template)}\`)`);
         } else {
             assert(node.name);

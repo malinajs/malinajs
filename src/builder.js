@@ -80,7 +80,7 @@ export function buildBlock(data, option={}) {
             if(n.type == 'comment' && !this.config.preserveComments) return false;
             if(n.type == 'fragment' || n.type == 'export') {
                 try {
-                    let f = this.makeFragment(n);
+                    let f = n.type == 'fragment' ? this.makeFragment(n) : this.makeExportedFragment(n);
                     f && binds.push(f);
                 } catch (e) {
                     wrapException(e, n);
@@ -147,7 +147,7 @@ export function buildBlock(data, option={}) {
                     } else {
                         let el = xNode('node:comment', {label: true, value: `exported ${n.elArg}`});
                         tpl.push(el);
-                        let b = this.attachFragment(n, el, n.name);
+                        let b = this.attchExportedFragment(n, el, n.name);
                         b && binds.push(b);
                     }
                     return;
@@ -166,11 +166,15 @@ export function buildBlock(data, option={}) {
                         let b = this.attachFragment(n, el);
                         b && binds.push(b);
                     } else {
-                        let el = xNode('node:comment', {label: true, value: 'fragment'});
+                        let el = xNode('node:comment', {label: true, value: 'fragment-slot'});
                         tpl.push(el);
-                        binds.push(this.attachFragmentSlot(el, n));
+                        binds.push(this.attachFragmentSlot(el, false));
                     }
                     return;
+                } else if(n.name == 'inherit') {
+                    let el = xNode('node:comment', {label: true, value: 'exported-slot'});
+                    tpl.push(el);
+                    binds.push(this.attachFragmentSlot(el, true));
                 }
 
                 let el = xNode('node', {name: n.name});

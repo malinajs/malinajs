@@ -3,14 +3,7 @@ import { assert, isSimpleName, unwrapExp, detectExpressionType, xNode, toCamelCa
 
 
 export function makeFragment(node) {
-    let rx, exported = false;
-    if(node.type == 'export') {
-        this.require('$component');
-        exported = true;
-        rx = node.value.match(/#export\:(\S+)(.*)$/);
-    } else {
-        rx = node.value.match(/#fragment\:(\S+)(.*)$/);
-    }
+    let rx = node.value.match(/#fragment\:(\S+)(.*)$/);
     assert(rx);
     let name = rx[1];
     assert(isSimpleName(name));
@@ -29,7 +22,6 @@ export function makeFragment(node) {
     return xNode('fragment', {
         name,
         props,
-        exported,
         source: block.source,
         template: xNode('template', {
             name: '$parentElement',
@@ -37,9 +29,7 @@ export function makeFragment(node) {
             svg: block.svg
         })
     }, (ctx, n) => {
-        ctx.write(true);
-        if(n.exported) ctx.write(`$component.exported.${n.name} = `);
-        ctx.write(`function $fragment_${n.name}($cd, label, $option={}) {\n`);
+        ctx.write(true, `function $fragment_${n.name}($cd, label, $option={}) {\n`);
         ctx.indent++;
 
         if(n.props) {
@@ -62,7 +52,7 @@ export function makeFragment(node) {
 }
 
 
-export function attachFragment(node, element, componentName) {
+export function attachFragment(node, element) {
     let name = node.elArg;
     assert(isSimpleName(name));
 
@@ -167,16 +157,13 @@ export function attachFragment(node, element, componentName) {
         forwardAllEvents,
         el: element.bindName(),
         name,
-        parentComponent: componentName,
         events,
         props,
         slot
     }, (ctx, n) => {
-        if(n.parentComponent) ctx.write(true, `$instance_${componentName}.$$.exported.${name}?.($instance_${componentName}, ${n.el}`);
-        else ctx.write(true, `$fragment_${n.name}($cd, ${n.el}`);
+        ctx.write(true, `$fragment_${n.name}($cd, ${n.el}`);
         if(n.props.length || n.events.length || n.slot) {
-            if(n.parentComponent) ctx.write(`, {\n`);
-            else ctx.write(`, {...$option,\n`);
+            ctx.write(`, {...$option,\n`);
             ctx.indent++;
             let comma;
 
@@ -208,47 +195,106 @@ export function attachFragment(node, element, componentName) {
             }
             if(n.slot) {
                 if(comma) ctx.write(',\n');
-                if(n.parentComponent) {
-                    if(n.slot.template.inline) {
-                        ctx.write(true, `fragment: $runtime.makeSlotStatic(() => `);
-                        ctx.build(n.slot.template);
-                        ctx.write(`)`);
-                    } else {
-                        ctx.writeLine(`fragment: $runtime.makeFragmentSlot($cd, ($cd) => {`);
-                        ctx.goIndent(() => {
-                            ctx.build(n.slot.template);
-                            ctx.build(n.slot.source);
-                            ctx.writeLine(`return $parentElement;`);
-                        });
-                        ctx.writeLine(`})`);
-                    }
-                } else {
-                    ctx.writeLine(`fragment: ($cd, label, $option) => {`);
-                    ctx.goIndent(() => {
-                        ctx.build(n.slot.template);
-                        ctx.build(n.slot.source);
-                        ctx.writeLine(`$runtime.insertAfter(label, $parentElement);`);
-                    });
-                    ctx.write(true, `}`);
-                }
+                ctx.writeLine(`fragment: ($cd, label, $option) => {`);
+                ctx.goIndent(() => {
+                    ctx.build(n.slot.template);
+                    ctx.build(n.slot.source);
+                    ctx.writeLine(`$runtime.insertAfter(label, $parentElement);`);
+                });
+                ctx.write(true, `}`);
             }
             ctx.write('\n');
             ctx.indent--;
             ctx.writeLine(`});`);
         } else {
-            if(n.parentComponent) ctx.write(`);\n`);
-            else ctx.write(`, $option);\n`);
+            ctx.write(`, $option);\n`);
         }
     });
 };
 
 
-export function attachFragmentSlot(label, node) {
+export function attachFragmentSlot(label, exported) {
     this.require('$cd');
 
     return xNode('fragment-slot', {
-        el: label.bindName()
+        el: label.bindName(),
+        exported
     }, (ctx, n) => {
-        ctx.writeLine(`$option.fragment?.($cd, ${n.el});`);
+        if(exported) ctx.writeLine(`$$inheritContent?.($cd, ${n.el});`)
+        else ctx.writeLine(`$option.fragment?.($cd, ${n.el});`);
     });
 };
+
+
+export function makeExportedFragment(node) {
+    assert(node.type == 'export');
+
+    this.require('$component');
+    let rx = node.value.match(/#export\:(\w+)\s*$/);
+    assert(rx);
+    let name = rx[1];
+    assert(isSimpleName(name));
+
+    let block = this.buildBlock({body: trimEmptyNodes(node.body)}, {inline: true});
+    assert(!block.svg, 'SVG is not supported for exported fragment');
+
+    return xNode('exported-fragment', {
+        name,
+        source: block.source,
+        template: xNode('template', {
+            raw: true,
+            body: block.tpl
+        })
+    }, (ctx, n) => {
+        ctx.write(true, `$runtime.makeExportedFragment($component, '${n.name}', \``);
+        ctx.build(n.template);
+        if(n.source) {
+            ctx.write(`\`, ($cd, $parentElement, $$inheritContent) => {\n`);
+            ctx.indent++;
+            ctx.build(n.source);
+            ctx.indent--;
+            ctx.writeLine(`});`);
+        } else {
+            ctx.write(`\`);\n`);
+        }
+    })
+}
+
+
+export function attchExportedFragment(node, label, componentName) {
+    this.require('$cd');
+
+    let data = {
+        name: node.elArg,
+        componentName,
+        label: label.bindName(),
+    };
+
+    let body = trimEmptyNodes(node.body || []);
+    if(body.length) {
+        let block = this.buildBlock({body}, {inline: true});
+        assert(!block.svg, 'SVG is not supported for exported fragment');
+        data.source = block.source;
+        data.template = xNode('template', {
+            raw: true,
+            body: block.tpl
+        });
+    }
+
+    return xNode('attach-exported-fragment', data, (ctx, n) => {
+        ctx.write(true, `$runtime.attchExportedFragment($cd, $instance_${n.componentName}, '${n.name}', ${n.label}`);
+        if(n.template) {
+            ctx.write(`, \``);
+            ctx.build(n.template);
+            if(n.source) {
+                ctx.write(`\`, ($cd, $parentElement) => {\n`);
+                ctx.indent++;
+                ctx.build(n.source);
+                ctx.indent--;
+                ctx.writeLine(`});`);
+            } else {
+                ctx.write(`\`);\n`);
+            }
+        } else ctx.write(');\n');
+    });
+}

@@ -461,16 +461,6 @@ export const makeSlotStatic = (fn) => {
 }
 
 
-export const makeFragmentSlot = (parentCD, fn) => {
-    return (callerCD, label) => {
-        let $cd = parentCD.new();
-        cd_onDestroy(callerCD, () => $cd.destroy());
-        insertAfter(label, fn($cd));
-        $cd.$$.apply?.();
-    }
-}
-
-
 export const eachDefaultKey = (item, index, array) => typeof array[0] === 'object' ? item : index;
 
 
@@ -508,3 +498,39 @@ export const spreadAttributes = (cd, el, fn) => {
         return 0;
     }})
 }
+
+
+export const attchExportedFragment = ($parentCD, $childCD, name, label, template, innerFn) => {
+    let fn = $childCD.$$.exported[name];
+    if(fn) {
+        let inner;
+        if(template) {
+            inner = (childCD, label) => {
+                const $parentElement = $$htmlToFragment(template);
+                if(innerFn) {
+                    let $cd = $parentCD.new();
+                    cd_onDestroy(childCD, () => $cd.destroy());
+                    innerFn($cd, $parentElement);
+                    $cd.$$.apply?.();
+                }
+                insertAfter(label, $parentElement);
+            }
+        }
+
+        fn($parentCD, $childCD, label, inner);
+    }
+};
+
+
+export const makeExportedFragment = ($component, name, template, fn) => {
+    $component.exported[name] = ($parentCD, $childCD, label, inner) => {
+        const $parentElement = $$htmlToFragment(template);
+        if(fn) {
+            let $cd = $childCD.new();
+            cd_onDestroy($parentCD, () => $cd.destroy());
+            fn($cd, $parentElement, inner);
+            $cd.$$.apply?.();
+        }
+        insertAfter(label, $parentElement);
+    }
+};

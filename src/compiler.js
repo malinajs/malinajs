@@ -14,7 +14,7 @@ import { makeEachBlock } from './parts/each.js'
 import { makeHtmlBlock } from './parts/html.js'
 import { makeAwaitBlock } from './parts/await.js'
 import { attachSlot } from './parts/slot.js'
-import { makeFragment, attachFragment, attachFragmentSlot } from './parts/fragment.js'
+import { makeFragment, attachFragment, attachFragmentSlot, makeExportedFragment, attchExportedFragment } from './parts/fragment.js'
 import { attachHead } from './parts/head.js'
 
 
@@ -58,6 +58,8 @@ export async function compile(source, config = {}) {
         makeFragment,
         attachFragmentSlot,
         attachFragment,
+        makeExportedFragment,
+        attchExportedFragment,
         attachHead,
         checkRootName: utils.checkRootName,
 
