@@ -391,6 +391,7 @@ export function parseText(source) {
     let q;
     let len = source.length;
     let parts = [];
+    let depth = 0;
     while(i < len) {
         let a = source[i++];
         if(step == 1) {
@@ -404,20 +405,25 @@ export function parseText(source) {
                 exp += a;
                 continue;
             }
-            if(a === '}') {
-                step = 0;
-                let js = exp[0] == '*';
-                if(js) exp = exp.substring(1);
-                exp = exp.trim();
-                if(!exp) throw 'Wrong expression';
-                parts.push({value: exp, type: js ? 'js' : 'exp'});
-                exp = '';
-                continue;
+            if(a === '{') depth++;
+            else if(a === '}') {
+                depth--;
+                if(!depth) {
+                    step = 0;
+                    let js = exp[0] == '*';
+                    if(js) exp = exp.substring(1);
+                    exp = exp.trim();
+                    if(!exp) throw 'Wrong expression';
+                    parts.push({value: exp, type: js ? 'js' : 'exp'});
+                    exp = '';
+                    continue;
+                }
             }
             exp += a;
             continue;
         }
         if(a === '{') {
+            depth++;
             if(text) {
                 parts.push({value: text, type: 'text'});
                 text = '';
