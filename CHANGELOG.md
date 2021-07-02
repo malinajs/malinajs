@@ -30,6 +30,7 @@
 * option: passClass
 * option: immutable
 * event modifiers: prevent, stop, ctrl, alt, shift, meta. key-events: enter, tab, esc, space, up, down, left, right, delete
+* inline actions for text-node and elements
 
 ## 0.5.x
 

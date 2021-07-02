@@ -18,7 +18,7 @@ import { makeFragment, attachFragment, attachFragmentSlot, makeExportedFragment,
 import { attachHead } from './parts/head.js'
 
 
-export const version = '0.6.32';
+export const version = '0.6.33';
 
 
 export async function compile(source, config = {}) {

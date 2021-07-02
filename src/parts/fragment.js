@@ -143,8 +143,7 @@ export function attachFragment(node, element) {
         let template = xNode('template', {
             name: '$parentElement',
             body: slotBlock.tpl,
-            svg: slotBlock.svg,
-            inline: !slotBlock.source
+            svg: slotBlock.svg
         });
 
         slot = {

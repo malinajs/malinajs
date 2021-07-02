@@ -193,7 +193,7 @@ export function makeComponent(node, element) {
         let value = prop.value;
         if(name[0] == '#') {
             assert(!value, 'Wrong ref');
-            let name = name.substring(1);
+            name = name.substring(1);
             assert(isSimpleName(name), name);
             this.checkRootName(name);
             reference = name;
