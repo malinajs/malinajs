@@ -218,7 +218,7 @@ export function transform() {
             } else throw 'Error';
             assertExpression(ex.right);
             const exp = source.substring(ex.right.start, ex.right.end);
-            result.watchers.push(`$cd.prefix.push(() => {${target} = ${exp};});`);
+            result.watchers.push(`$runtime.prefixPush($cd, () => {${target} = ${exp};});`);
         } else if(n.body.expression.type == 'SequenceExpression') {
             const ex = n.body.expression.expressions;
             const handler = ex[ex.length - 1];

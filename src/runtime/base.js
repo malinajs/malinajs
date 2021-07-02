@@ -534,3 +534,9 @@ export const makeExportedFragment = ($component, name, template, fn) => {
         insertAfter(label, $parentElement);
     }
 };
+
+
+export const prefixPush = ($cd, fn) => {
+    $cd.prefix.push(fn);
+    fn();
+}

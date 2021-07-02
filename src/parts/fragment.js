@@ -11,7 +11,7 @@ export function makeFragment(node) {
     if(props) props = props.split(/\s*,\s*/);
 
     let block;
-    if(node.body && node.body.length) block = this.buildBlock({body: trimEmptyNodes(node.body)}, {inline: true});
+    if(node.body && node.body.length) block = this.buildBlock({body: trimEmptyNodes(node.body)}, {inline: true, context: 'fragment'});
     else {
         this.warning(`Empty fragment: '${node.value}'`);
         return xNode('empty-fragment', {name}, (ctx, n) => {
@@ -35,7 +35,7 @@ export function makeFragment(node) {
         if(n.props) {
             if(ctx.inuse.apply) {
                 ctx.writeLine('let ' + n.props.join(', ') + ';');
-                ctx.writeLine(`$option.props && $cd.prefix.push(() => ({${n.props.join(', ')}} = $option.props()));`);
+                ctx.writeLine(`$option.props && $runtime.prefixPush($cd, () => ({${n.props.join(', ')}} = $option.props()));`);
             } else {
                 ctx.writeLine('let ' + n.props.join(', ') + ';');
                 ctx.writeLine(`$option.props && ({${n.props.join(', ')}} = $option.props());`);
@@ -219,7 +219,7 @@ export function attachFragmentSlot(label, exported) {
         el: label.bindName(),
         exported
     }, (ctx, n) => {
-        if(exported) ctx.writeLine(`$$inheritContent?.($cd, ${n.el});`)
+        if(exported) ctx.writeLine(`$$fragmentSlot?.($cd, ${n.el});`)
         else ctx.writeLine(`$option.fragment?.($cd, ${n.el});`);
     });
 };
@@ -234,7 +234,7 @@ export function makeExportedFragment(node) {
     let name = rx[1];
     assert(isSimpleName(name));
 
-    let block = this.buildBlock({body: trimEmptyNodes(node.body)}, {inline: true});
+    let block = this.buildBlock({body: trimEmptyNodes(node.body)}, {inline: true, context: 'exported_fragment'});
     assert(!block.svg, 'SVG is not supported for exported fragment');
 
     return xNode('exported-fragment', {
@@ -248,7 +248,7 @@ export function makeExportedFragment(node) {
         ctx.write(true, `$runtime.makeExportedFragment($component, '${n.name}', \``);
         ctx.build(n.template);
         if(n.source) {
-            ctx.write(`\`, ($cd, $parentElement, $$inheritContent) => {\n`);
+            ctx.write(`\`, ($cd, $parentElement, $$fragmentSlot) => {\n`);
             ctx.indent++;
             ctx.build(n.source);
             ctx.indent--;

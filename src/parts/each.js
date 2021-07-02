@@ -47,9 +47,7 @@ export function makeEachBlock(data, option) {
             keywords
         }, (ctx, n) => {
             ctx.writeLine(`let ${n.keywords.join(', ')};`);
-            ctx.writeLine(`const $$_up = () => (${n.exp} = $$item);`);
-            ctx.writeLine(`$ctx.cd.prefix.push($$_up);`);
-            ctx.writeLine(`$$_up();`);
+            ctx.writeLine(`$runtime.prefixPush($ctx.cd, () => (${n.exp} = $$item));`);
         });
     } else {
         rx = right.trim().split(/\s*\,\s*/);

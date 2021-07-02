@@ -1,5 +1,5 @@
 
-import {svgElements, xNode, last, replaceElementKeyword} from './utils.js'
+import {svgElements, xNode, last, replaceElementKeyword, assert} from './utils.js'
 
 
 export function buildRuntime() {
@@ -158,28 +158,32 @@ export function buildBlock(data, option={}) {
                     return;
                 }
                 if(n.name == 'slot') {
-                    let slotName = n.elArg || 'default';
+                    let slotName = n.elArg;
+                    if(!slotName) {
+                        if(option.context == 'fragment') {
+                            let el = xNode('node:comment', {label: true, value: 'fragment-slot'});
+                            tpl.push(el);
+                            binds.push(this.attachFragmentSlot(el, false));
+                            return;
+                        } else if(option.context == 'exported_fragment') {
+                            let el = xNode('node:comment', {label: true, value: 'exported-slot'});
+                            tpl.push(el);
+                            binds.push(this.attachFragmentSlot(el, true));
+                            return;
+                        } else slotName = 'default';
+                    }
                     let el = xNode('node:comment', {label: true, value: slotName});
                     tpl.push(el);
                     binds.push(this.attachSlot(slotName, el, n));
                     return;
                 }
                 if(n.name == 'fragment') {
-                    if(n.elArg) {
-                        let el = xNode('node:comment', {label: true, value: `fragment ${n.elArg}`});
-                        tpl.push(el);
-                        let b = this.attachFragment(n, el);
-                        b && binds.push(b);
-                    } else {
-                        let el = xNode('node:comment', {label: true, value: 'fragment-slot'});
-                        tpl.push(el);
-                        binds.push(this.attachFragmentSlot(el, false));
-                    }
-                    return;
-                } else if(n.name == 'inherit') {
-                    let el = xNode('node:comment', {label: true, value: 'exported-slot'});
+                    assert(n.elArg, 'Fragment name is required');
+                    let el = xNode('node:comment', {label: true, value: `fragment ${n.elArg}`});
                     tpl.push(el);
-                    binds.push(this.attachFragmentSlot(el, true));
+                    let b = this.attachFragment(n, el);
+                    b && binds.push(b);
+                    return;
                 }
 
                 let el = xNode('node', {name: n.name});
