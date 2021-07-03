@@ -500,12 +500,12 @@ export const spreadAttributes = (cd, el, fn) => {
 }
 
 
-export const attchExportedFragment = ($parentCD, $childCD, name, label, template, innerFn) => {
+export const attchExportedFragment = ($parentCD, $childCD, name, label, props, events, template, innerFn) => {
     let fn = $childCD.$$.exported[name];
     if(fn) {
-        let inner;
+        let slot;
         if(template) {
-            inner = (childCD, label) => {
+            slot = (childCD, label) => {
                 const $parentElement = $$htmlToFragment(template);
                 if(innerFn) {
                     let $cd = $parentCD.new();
@@ -517,26 +517,43 @@ export const attchExportedFragment = ($parentCD, $childCD, name, label, template
             }
         }
 
-        fn($parentCD, $childCD, label, inner);
+        if(isFunction(props)) props = props($parentCD, $childCD);
+        fn($parentCD, $childCD, label, props, events, slot);
     }
 };
 
 
-export const makeExportedFragment = ($component, name, template, fn) => {
-    $component.exported[name] = ($parentCD, $childCD, label, inner) => {
-        const $parentElement = $$htmlToFragment(template);
-        if(fn) {
-            let $cd = $childCD.new();
-            cd_onDestroy($parentCD, () => $cd.destroy());
-            fn($cd, $parentElement, inner);
-            $cd.$$.apply?.();
-        }
-        insertAfter(label, $parentElement);
-    }
+export const exportFragment = ($component, name, fn) => {
+    $component.exported[name] = ($parentCD, $childCD, label, props, events, slot) => {
+      let $cd = $childCD.new();
+      cd_onDestroy($parentCD, () => $cd.destroy());
+      fn($cd, label, props, events, slot);
+      $component.apply();
+    };
 };
 
 
 export const prefixPush = ($cd, fn) => {
     $cd.prefix.push(fn);
     fn();
+}
+
+
+export const observeProps = (cmp, fn) => {
+    return (cd, target) => {
+        let result;
+        fire($watch(cd, fn, value => {
+            result = value;
+            target.$$.apply();
+        }, {ro: true, value: {}, cmp}));
+        return () => result;
+    }
+}
+
+
+export const unwrapProps = (cd, props, fn) => {
+    if(props) {
+        if(isFunction(props)) prefixPush(cd, () => fn(props()));
+        else fn(props)
+    }
 }

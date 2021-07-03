@@ -78,9 +78,9 @@ export function buildBlock(data, option={}) {
         let body = data.body.filter(n => {
             if(n.type == 'script' || n.type == 'style' || n.type == 'slot') return false;
             if(n.type == 'comment' && !this.config.preserveComments) return false;
-            if(n.type == 'fragment' || n.type == 'export') {
+            if(n.type == 'fragment') {
                 try {
-                    let f = n.type == 'fragment' ? this.makeFragment(n) : this.makeExportedFragment(n);
+                    let f = this.makeFragment(n);
                     f && binds.push(f);
                 } catch (e) {
                     wrapException(e, n);
@@ -163,12 +163,7 @@ export function buildBlock(data, option={}) {
                         if(option.context == 'fragment') {
                             let el = xNode('node:comment', {label: true, value: 'fragment-slot'});
                             tpl.push(el);
-                            binds.push(this.attachFragmentSlot(el, false));
-                            return;
-                        } else if(option.context == 'exported_fragment') {
-                            let el = xNode('node:comment', {label: true, value: 'exported-slot'});
-                            tpl.push(el);
-                            binds.push(this.attachFragmentSlot(el, true));
+                            binds.push(this.attachFragmentSlot(el));
                             return;
                         } else slotName = 'default';
                     }

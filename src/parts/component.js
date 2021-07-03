@@ -24,7 +24,8 @@ export function makeComponent(node, element) {
 
     head.push(xNode('events', ctx => {
         if(forwardAllEvents) {
-            ctx.writeLine('let events = {...$option.events};');
+            this.require('$events');
+            ctx.writeLine('let events = {...$events};');
         } else if(passOption.events) {
             ctx.writeLine('let events = {};');
         }
@@ -241,11 +242,12 @@ export function makeComponent(node, element) {
                 assert(!value);
                 passOption.events = true;
                 boundEvent(event);
+                this.require('$events');
                 head.push(xNode('forwardEvent', {
                     event
                 }, (ctx, data) => {
-                    if(_boundEvents[data.event] > 1) ctx.writeLine(`$runtime.$$addEventForComponent(events, '${data.event}', $option.events.${data.event});`);
-                    else ctx.writeLine(`events.${data.event} = $option.events.${data.event};`);
+                    if(_boundEvents[data.event] > 1) ctx.writeLine(`$runtime.$$addEventForComponent(events, '${data.event}', $events.${data.event});`);
+                    else ctx.writeLine(`events.${data.event} = $events.${data.event};`);
                 }))
                 return;
             }

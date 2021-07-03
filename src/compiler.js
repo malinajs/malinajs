@@ -14,8 +14,9 @@ import { makeEachBlock } from './parts/each.js'
 import { makeHtmlBlock } from './parts/html.js'
 import { makeAwaitBlock } from './parts/await.js'
 import { attachSlot } from './parts/slot.js'
-import { makeFragment, attachFragment, attachFragmentSlot, makeExportedFragment, attchExportedFragment } from './parts/fragment.js'
+import { makeFragment, attachFragment, attachFragmentSlot, attchExportedFragment } from './parts/fragment.js'
 import { attachHead } from './parts/head.js'
+import { inspectProp } from './code-utils.js';
 
 
 export const version = '0.6.33';
@@ -58,9 +59,9 @@ export async function compile(source, config = {}) {
         makeFragment,
         attachFragmentSlot,
         attachFragment,
-        makeExportedFragment,
         attchExportedFragment,
         attachHead,
+        inspectProp,
         checkRootName: utils.checkRootName,
 
         inuse: {},

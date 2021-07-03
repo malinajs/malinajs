@@ -1,6 +1,5 @@
 
 import { assert, detectExpressionType, isSimpleName, unwrapExp, xNode, last, toCamelCase, replaceElementKeyword } from '../utils.js'
-import { parseText } from '../parser.js'
 
 
 export function bindProp(prop, node, element) {
@@ -25,7 +24,7 @@ export function bindProp(prop, node, element) {
         }
     }
     if(prop.content.startsWith('{*')) {
-        const pe = parseText(prop.content);
+        const pe = this.parseText(prop.content);
         assert(pe.parts[0].type == 'js');
         let exp = pe.parts[0].value;
         if(!exp.endsWith(';')) exp += ';';
@@ -70,14 +69,14 @@ export function bindProp(prop, node, element) {
         return {bind: `${target}=${element.bindName()};`};
     } else if(name == 'on') {
         if(arg == '@') {
-            this.require('$cd');
+            this.require('$cd', '$events');
             assert(!prop.value);
             const bind = xNode('forwardAllEvents', {
                 el: element.bindName()
             }, (ctx, data) => {
-                ctx.writeLine(`for(let event in $option.events)`);
+                ctx.writeLine(`for(let event in $events)`);
                 ctx.goIndent(() => {
-                    ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, event, $option.events[event]);`);
+                    ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, event, $events[event]);`);
                 });
             });
             return {bind};
@@ -89,12 +88,12 @@ export function bindProp(prop, node, element) {
         if(event[0] == '@') {  // forwarding
             event = event.substring(1);
             assert(!prop.value);
-            this.require('$cd');
+            this.require('$cd', '$events');
             return {bind: xNode('forwardEvent', {
                 event,
                 el: element.bindName()
             }, (ctx, n) => {
-                ctx.writeLine(`$option.events?.${n.event} && $runtime.addEvent($cd, ${n.el}, '${n.event}', $option.events.${n.event});`);
+                ctx.writeLine(`$events.${n.event} && $runtime.addEvent($cd, ${n.el}, '${n.event}', $events.${n.event});`);
             })};
         }
 

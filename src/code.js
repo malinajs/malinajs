@@ -295,6 +295,10 @@ export function transform() {
         if(this.inuse.$component) return 'const $component = $runtime.current_component;';
     }));
 
+    header.push(rawNode(() => {
+        if(this.inuse.$events) return 'const $events = $option.events || {};';
+    }));
+
     if(lastPropIndex != null) {
         header.push(rawNode(() => {
             if(this.inuse.$props) return 'let $props = $option.props || {};';

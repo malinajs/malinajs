@@ -254,7 +254,7 @@ function makeDom(data) {
 
     function build(parent, list) {
         list.forEach(e => {
-            if(e.type == 'each' || e.type == 'fragment' || e.type == 'export' || e.type == 'slot') {
+            if(e.type == 'each' || e.type == 'fragment' || e.type == 'slot') {
                 if(e.body && e.body.length) build(parent, e.body);
                 return;
             } else if(e.type == 'if') {
