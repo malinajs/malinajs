@@ -43,7 +43,7 @@ export function makeFragment(node) {
                 ctx.writeLine(`$runtime.unwrapProps($cd, $props, ($$) => ({${n.props.join(', ')}} = $$));`);
             } else {
                 ctx.writeLine('let ' + n.props.join(', ') + ';');
-                ctx.writeLine(`$props && ({${n.props.join(', ')}} = (isFunction($props) ? $props() : props));`);
+                ctx.writeLine(`$props && ({${n.props.join(', ')}} = ($runtime.isFunction($props) ? $props() : $props));`);
             }
         }
 
