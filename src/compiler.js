@@ -19,7 +19,7 @@ import { attachHead } from './parts/head.js'
 import { inspectProp } from './code-utils.js';
 
 
-export const version = '0.6.33';
+export const version = '0.6.34';
 
 
 export async function compile(source, config = {}) {
