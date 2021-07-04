@@ -90,6 +90,16 @@ export function buildBlock(data, option={}) {
             return true;
         });
 
+        {
+            let i = 1;
+            while(body[i]) {
+                if(body[i].type == 'text' && body[i-1].type == 'text') {
+                    body[i-1].value += body[i].value;
+                    body.splice(i, 1);
+                } else i++;
+            }
+        }
+
         if(isRoot) {
             let svg = false, other = false;
             body.some(node => {
