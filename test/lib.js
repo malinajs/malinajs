@@ -33,13 +33,14 @@ async function build(name, option={}) {
     });
 
     const code = output[0].code;
-    const dom = new jsdom.JSDOM(`<body><script>${code}</script></body>`, { runScripts: "dangerously" });
+    const {window} = new jsdom.JSDOM(``, { runScripts: "dangerously" });
+    window.eval(code);
 
     return {
         code,
-        dom,
-        document: dom.window.document,
-        app: dom.window.app
+        window,
+        document: window.document,
+        app: window.app
     };
 };
 

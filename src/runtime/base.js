@@ -144,10 +144,9 @@ export const $onMount = fn => current_component._m.push(fn);
 
 
 export const $insertElementByOption = ($label, $option, $element) => {
-    if ($option.afterElement) {
+    if ($option.$l) {
         insertAfter($label, $element);
     } else {
-        $label.innerHTML = '';
         $label.appendChild($element);
     }
 };
@@ -238,7 +237,7 @@ export const makeComponent = (init, $base) => {
 
 
 export const callComponent = (cd, context, component, label, option, propFn, cmp, setter, classFn) => {
-    option.afterElement = true;
+    option.$l = 1;
     option.context = {...context};
     let $component, parentWatch, childWatch;
 
