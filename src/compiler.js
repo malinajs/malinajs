@@ -17,9 +17,10 @@ import { attachSlot } from './parts/slot.js'
 import { makeFragment, attachFragment, attachFragmentSlot, attchExportedFragment } from './parts/fragment.js'
 import { attachHead } from './parts/head.js'
 import { inspectProp } from './code-utils.js';
+import { attachPortal } from './parts/portal.js';
 
 
-export const version = '0.6.35';
+export const version = '0.6.36';
 
 
 export async function compile(source, config = {}) {
@@ -62,6 +63,7 @@ export async function compile(source, config = {}) {
         attchExportedFragment,
         attachHead,
         inspectProp,
+        attachPortal,
         checkRootName: utils.checkRootName,
 
         inuse: {},

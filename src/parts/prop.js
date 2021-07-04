@@ -442,7 +442,7 @@ export function bindProp(prop, node, element) {
                     }));
                 }
             });
-            return {bind};
+            return {bind: bind.body.length ? bind : null};
         }
     } else if(name[0] == '^') {
         this.require('$cd');

@@ -138,7 +138,9 @@ export function buildBlock(data, option={}) {
                 tpl.push('</template>');
             } else if(n.type === 'node') {
                 if(n.name == 'malina' && !option.malinaElement) {
-                    let b = this.attachHead(n);
+                    let b;
+                    if(n.elArg == 'portal') b = this.attachPortal(n);
+                    else b = this.attachHead(n);
                     b && binds.push(b);
                     return;
                 }
