@@ -308,7 +308,7 @@ export const replaceElementKeyword = (exp, fn) => {
     let changed = false;
     let r = parseJS(exp, (n, pk) => {
         if(n.type != 'Identifier') return;
-        if(pk == 'property') return;
+        if(pk == 'property' || pk == 'params') return;
         if(n.name != '$element') return;
         n.name = fn();
         changed = true;
@@ -331,7 +331,7 @@ export const parseJS = (exp, fn) => {
         for(let k in n) {
             if(k == '_parent') continue;
             let v = n[k];
-            if(typeof(v) != 'object') continue;
+            if(v == null || typeof(v) != 'object') continue;
             if(Array.isArray(v)) {
                 v.forEach(i => {
                     i._parent = self || n._parent;

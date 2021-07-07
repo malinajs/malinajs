@@ -4,10 +4,7 @@ import { assert, detectExpressionType, isSimpleName, unwrapExp, xNode, last, toC
 
 export function bindProp(prop, node, element) {
     let name, arg;
-    if(prop.name[0] == '@') {
-        arg = prop.name.substring(1);
-        name = 'on';
-    }
+    if(prop.name[0] == '@' || prop.name.startsWith('on:')) name = 'event';
     if(!name && prop.name[0] == ':') {
         name = 'bind';
         arg = prop.name.substring(1);
@@ -67,160 +64,42 @@ export function bindProp(prop, node, element) {
         assert(isSimpleName(target), target);
         this.checkRootName(target);
         return {bind: `${target}=${element.bindName()};`};
-    } else if(name == 'on') {
-        if(arg == '@') {
-            this.require('$cd', '$events');
+    } else if(name == 'event') {
+        if(prop.name.startsWith('@@')) {
             assert(!prop.value);
-            const bind = xNode('forwardAllEvents', {
-                el: element.bindName()
-            }, (ctx, data) => {
-                ctx.writeLine(`for(let event in $events)`);
-                ctx.goIndent(() => {
-                    ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, event, $events[event]);`);
-                });
-            });
-            return {bind};
-        }
-        let opts = arg.split(/[\|:]/);
-        let event = opts.shift();
-        let exp, handler, funcName;
+            this.require('$cd', '$events');
+            if(prop.name == '@@') {
+                return {bind: xNode('forwardAllEvents', {
+                    el: element.bindName()
+                }, (ctx, data) => {
+                    ctx.writeLine(`for(let event in $events)`);
+                    ctx.goIndent(() => {
+                        ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, event, $events[event]);`);
+                    });
+                })};
+            }
 
-        if(event[0] == '@') {  // forwarding
-            event = event.substring(1);
-            assert(!prop.value);
-            this.require('$cd', '$events');
             return {bind: xNode('forwardEvent', {
-                event,
+                event: prop.name.substring(2),
                 el: element.bindName()
             }, (ctx, n) => {
                 ctx.writeLine(`$events.${n.event} && $runtime.addEvent($cd, ${n.el}, '${n.event}', $events.${n.event});`);
             })};
         }
 
-        if(prop.value) {
-            exp = getExpression();
-        } else {
-            if(opts.length) handler = opts.pop();
-            else handler = event;
-        };
-        assert(event, prop.content);
-        assert(!handler ^ !exp, prop.content);
+        let {event, fn} = this.makeEventProp(prop, () => element.bindName());
 
-        let keyEvent = ['keydown', 'keypress', 'keyup'].includes(event);
-        let keyCodes = {
-            enter: 'Enter',
-            tab: 'Tab',
-            esc: 'Escape',
-            space: ' ',
-            up: 'ArrowUp',
-            down: 'ArrowDown',
-            left: 'ArrowLeft',
-            right: 'ArrowRight'
-        };
+        this.require('$cd');
 
-        let mod = [];
-        let needPrevent, preventInserted;
-        opts.forEach(opt => {
-            if(opt == 'preventDefault' || opt == 'prevent') {
-                if(preventInserted) return;
-                mod.push('$event.preventDefault();');
-                preventInserted = true;
-                return;
-            } else if(opt == 'stopPropagation' || opt == 'stop') {
-                mod.push('$event.stopPropagation();');
-                return;
-            };
-
-            if(keyEvent) {
-                if(opt === 'delete') {
-                    mod.push(`if($event.key != 'Backspace' && $event.key != 'Delete') return;`);
-                    needPrevent = true;
-                    return;
-                }
-                let keyCode = keyCodes[opt];
-                if(keyCode) {
-                    mod.push(`if($event.key != '${keyCode}') return;`);
-                    needPrevent = true;
-                    return;
-                }
-            }
-
-            if(opt == 'ctrl') {mod.push(`if(!$event.ctrlKey) return;`); return;}
-            if(opt == 'alt') {mod.push(`if(!$event.altKey) return;`); return;}
-            if(opt == 'shift') {mod.push(`if(!$event.shiftKey) return;`); return;}
-            if(opt == 'meta') {mod.push(`if(!$event.metaKey) return;`); return;}
-
-            throw 'Wrong modificator: ' + opt;
-        });
-        if(needPrevent && !preventInserted) mod.push('$event.preventDefault();');
-        mod = mod.join(' ');
-        if(mod) mod += ' ';
-
-        this.detectDependency(exp || handler);
-
-        if(exp) {
-            let type = detectExpressionType(exp);
-            if(type == 'identifier') {
-                handler = exp;
-                exp = null;
-            } else if(type == 'function') {
-                funcName = 'fn' + (this.uniqIndex++);
-            };
-        }
-
-        if(funcName) {
-            this.require('$cd');
-            if(!this.script.readOnly) this.require('apply');
-            let bind = xNode('bindEvent', {
-                event,
-                mod,
-                funcName,
-                exp,
-                el: element.bindName(),
-                $element: exp.includes('$element')
-            }, (ctx, n) => {
-                if(n.$element) {
-                    ctx.writeLine('{');
-                    ctx.indent++;
-                    ctx.writeLine(`let $element=${n.el};`)
-                }
-                ctx.writeLine(`const ${n.funcName} = ${n.exp};`);
-                let apply = ctx.inuse.apply ? ' $$apply();' : '';
-                ctx.writeLine(`$runtime.addEvent($cd, ${n.el}, '${n.event}', ($event) => { ${n.mod}${n.funcName}($event);${apply} });`);
-                if(n.$element) {
-                    ctx.indent--;
-                    ctx.writeLine('}');
-                }
-            });
-            return {bind};
-        } else {
-            this.require('$cd');
-            if(!this.script.readOnly) this.require('apply');
-            const bind = xNode('bindEvent', {
-                el: element.bindName(),
-                event,
-                mod
-            }, (ctx, data) => {
-                let l = data.$element ? `let $element=${data.el}; ` : '';
-                if(data.handlerName && !ctx.inuse.apply && !data.mod) {
-                    ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, '${data.event}', ${data.handlerName});`);
-                } else {
-                    let exp = data.handlerName ? `${data.handlerName}($event)` : data.exp;
-                    let apply = ctx.inuse.apply ? ' $$apply();' : '';
-                    ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, '${data.event}', ($event) => { ${l}${data.mod}${exp};${apply} });`);
-                }
-            });
-
-            if(handler) {
-                this.checkRootName(handler);
-                bind.handlerName = handler;
-            } else {
-                bind.exp = exp;
-                bind.$element = exp.includes('$element');
-            }
-
-            return {bind};
-        }
+        return {bind: xNode('bindEvent', {
+            event,
+            fn,
+            el: element.bindName()
+        }, (ctx, n) => {
+            ctx.write(true, `$runtime.addEvent($cd, ${n.el}, '${n.event}', `);
+            ctx.build(n.fn);
+            ctx.write(`);\n`);
+        })};
     } else if(name == 'bind') {
         if(this.script.readOnly) {
             this.warning('script read-only conflicts with bind: ' + node.openTag);

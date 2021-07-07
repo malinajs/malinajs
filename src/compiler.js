@@ -18,6 +18,7 @@ import { makeFragment, attachFragment, attachFragmentSlot, attchExportedFragment
 import { attachHead } from './parts/head.js'
 import { inspectProp } from './code-utils.js';
 import { attachPortal } from './parts/portal.js';
+import { makeEventProp } from './event-prop.js';
 
 
 export const version = '0.6.36';
@@ -64,6 +65,7 @@ export async function compile(source, config = {}) {
         attachHead,
         inspectProp,
         attachPortal,
+        makeEventProp,
         checkRootName: utils.checkRootName,
 
         inuse: {},
