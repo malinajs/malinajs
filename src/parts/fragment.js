@@ -6,13 +6,17 @@ export function makeFragment(node) {
     let rx = node.value.match(/#fragment\:(\S+)(.*)$/);
     assert(rx);
     let name = rx[1], external = false;
-    if(name.startsWith('external:')) {
-        external = true;
-        name = name.substring(9);
-    }
     assert(isSimpleName(name));
     let props = rx[2] ? rx[2].trim() : null;
-    if(props) props = props.split(/\s*,\s*/);
+    if(props) {
+        props = props.split(/[\s,]+/).filter(p => {
+            if(p == 'export') {
+                external = true;
+                return false;
+            }
+            return true;
+        });
+    }
 
     let block;
     if(node.body && node.body.length) block = this.buildBlock({body: trimEmptyNodes(node.body)}, {inline: true, context: 'fragment'});
