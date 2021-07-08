@@ -74,7 +74,7 @@ export function transform() {
     }
 
     const applyBlock = () => {
-        this.require('apply', '$cd');
+        this.require('apply');
         return {
             _apply: true,
             type: 'ExpressionStatement',
@@ -89,7 +89,7 @@ export function transform() {
     }
 
     const returnApplyBlock = (a) => {
-        this.require('apply', '$cd');
+        this.require('apply');
         return {
             _apply: true,
             callee: {
@@ -126,15 +126,8 @@ export function transform() {
             }
         } else if(node.type == 'ArrowFunctionExpression') {
             if(node._parent.type == 'CallExpression' && node._parent.callee.name == '$onDestroy') return 'stop';
-            if(node.body.type != 'BlockStatement' && !isInLoop(node)) {
-                node.body = {
-                    type: 'BlockStatement',
-                    body: [{
-                        type: 'ReturnStatement',
-                        argument: node.body
-                    }]
-                };
-                transformNode(node);
+            if(node.body.type != 'BlockStatement' && node.body.type != 'ArrowFunctionExpression' && !isInLoop(node)) {
+                node.body = returnApplyBlock(node.body);
             }
         } else if(node.type == 'AwaitExpression') {
             let n = node, p;
