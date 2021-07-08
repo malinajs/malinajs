@@ -14,7 +14,8 @@ async function main() {
         'css4',
         'pass-css',
         'css-global',
-        'parser1'
+        'parser1',
+        'event'
     ];
 
     for(let i=0; i<tests.length; i++) {

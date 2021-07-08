@@ -34,6 +34,7 @@ async function build(name, option={}) {
 
     const code = output[0].code;
     const {window} = new jsdom.JSDOM(``, { runScripts: "dangerously" });
+    window.$$option = {context: option.context};
     window.eval(code);
 
     return {
