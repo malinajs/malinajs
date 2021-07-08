@@ -72,58 +72,21 @@ function parseAttibutes(attributes) {
         let name = prop.name;
 
         if(name[0] == '@' || name.startsWith('on:')) {
-            if(name[0] == '@') name = name.substring(1);
-            else name = name.substring(3);
-
-            if(name == '@') {
+            if(name.startsWith('@@')) {
                 this.require('$events');
-                forwardAllEvents = true;
+                if(name == '@@') forwardAllEvents = true;
+                else {
+                    name = name.substring(2);
+                    events.push({
+                        name,
+                        callback: `$events?.${name}`
+                    });
+                }
                 return;
             }
 
-            if(name[0] == '@') {
-                name = name.substring(1);
-                this.require('$events');
-                return events.push({
-                    name,
-                    callback: `$events?.${name}`
-                });
-            }
-
-            let args = name.split(':');
-            name = args.shift();
-            assert(isSimpleName(name));
-
-            let exp, handler, isFunc;
-            let value = prop.value;
-            if(value) exp = unwrapExp(value);
-            else {
-                if(args.length) handler = args.pop();
-                else handler = name;
-            }
-            assert(!handler ^ !exp, prop.content);
-            this.detectDependency(exp || handler);
-
-            if(exp) {
-                let type = detectExpressionType(exp);
-                if(type == 'identifier') {
-                    handler = exp;
-                    exp = null;
-                } else {
-                    isFunc = (type == 'function');
-                }
-            }
-
-            let callback;
-            if(isFunc) {
-                callback = exp;
-            } else if(handler) {
-                this.checkRootName(handler);
-                callback = handler;
-            } else {
-                callback = `($event) => {${this.Q(exp)}}`;
-            }
-            events.push({name, callback});
+            let {event, fn} = this.makeEventProp(prop);
+            events.push({name: event, fn});
         } else {
             let ip = this.inspectProp(prop);
             props.push(ip);
@@ -194,10 +157,18 @@ export function attachFragment(node, element) {
         } else if(n.events.length) {
             ctx.write(missed, ',\n', true, '{');
             missed = '';
-            ctx.write(n.events.map(e => {
-                if(e.name == e.callback) return e.name;
-                return `${e.name}: ${e.callback}`;
-            }).join(', '));
+
+            n.events.forEach((e, i) => {
+                if(i) ctx.write(', ');
+                if(e.callback) {
+                    if(e.name == e.callback) ctx.write(e.name);
+                    ctx.write(`${e.name}: ${e.callback}`);
+                } else {
+                    assert(e.fn);
+                    ctx.write(`${e.name}: `);
+                    ctx.build(e.fn);
+                }
+            });
             ctx.write('}');
         } else missed += ', 0';
 
@@ -292,10 +263,18 @@ export function attchExportedFragment(node, label, componentName) {
         } else if(n.events.length) {
             ctx.write(missed, ',\n', true, '{');
             missed = '';
-            ctx.write(n.events.map(e => {
-                if(e.name == e.callback) return e.name;
-                return `${e.name}: ${e.callback}`;
-            }).join(', '));
+
+            n.events.forEach((e, i) => {
+                if(i) ctx.write(', ');
+                if(e.callback) {
+                    if(e.name == e.callback) ctx.write(e.name);
+                    ctx.write(`${e.name}: ${e.callback}`);
+                } else {
+                    assert(e.fn);
+                    ctx.write(`${e.name}: `);
+                    ctx.build(e.fn);
+                }
+            });
             ctx.write('}');
         } else missed += ', 0';
 

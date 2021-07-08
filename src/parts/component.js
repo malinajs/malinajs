@@ -231,14 +231,8 @@ export function makeComponent(node, element) {
             };
             assert(detectExpressionType(name) == 'identifier', 'Wrong prop');
         } else if(name[0] == '@' || name.startsWith('on:')) {
-            if(name[0] == '@') name = name.substring(1);
-            else name = name.substring(3);
-            let arg = name.split(/[\|:]/);
-            let exp, handler, isFunc, event = arg.shift();
-            assert(event);
-
-            if(event[0] == '@') {  // forwarding
-                event = event.substring(1);
+            if(name.startsWith('@@')) {
+                let event = name.substring(2);
                 assert(!value);
                 passOption.events = true;
                 boundEvent(event);
@@ -252,43 +246,23 @@ export function makeComponent(node, element) {
                 return;
             }
 
-            if(value) exp = unwrapExp(value);
-            else {
-                if(arg.length) handler = arg.pop();
-                else handler = event;
-            }
-            assert(arg.length == 0);
-            assert(!handler ^ !exp);
-
-            if(exp) {
-                let type = detectExpressionType(exp);
-                if(type == 'identifier') {
-                    handler = exp;
-                    exp = null;
-                } else isFunc = type == 'function';
-            }
-
-            this.detectDependency(exp || handler);
-
-            let callback;
-            if(isFunc) {
-                callback = exp;
-            } else if(handler) {
-                this.checkRootName(handler);
-                callback = handler;
-            } else {
-                this.require('apply');
-                callback = `($event) => {${this.Q(exp)}; $$apply();}`;
-            }
+            let {event, fn} = this.makeEventProp(prop);
 
             passOption.events = true;
             boundEvent(event);
             head.push(xNode('passEvent', {
                 event,
-                callback
-            }, (ctx, data) => {
-                if(_boundEvents[data.event] > 1) ctx.writeLine(`$runtime.$$addEventForComponent(events, '${data.event}', ${data.callback});`);
-                else ctx.writeLine(`events.${data.event} = ${data.callback};`);
+                fn
+            }, (ctx, n) => {
+                if(_boundEvents[n.event] > 1) {
+                    ctx.write(true, `$runtime.$$addEventForComponent(events, '${n.event}', `);
+                    ctx.build(n.fn);
+                    ctx.write(`);\n`);
+                } else {
+                    ctx.write(true, `events.${n.event} = `);
+                    ctx.build(n.fn);
+                    ctx.write(`;\n`);
+                }
             }));
             return;
         } else if(this.config.passClass && (name == 'class' || name.startsWith('class:'))) {
