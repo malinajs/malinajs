@@ -32,6 +32,7 @@
 * event modifiers: prevent, stop, ctrl, alt, shift, meta. key-events: enter, tab, esc, space, up, down, left, right, delete
 * inline actions for text-node and elements
 * portals: <malina:portal>
+* autoimport
 
 ## 0.5.x
 

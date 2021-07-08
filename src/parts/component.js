@@ -17,6 +17,15 @@ export function makeComponent(node, element) {
     if(componentName == 'component') {
         assert(node.elArg);
         dynamicComponent = node.elArg[0] == '{' ? unwrapExp(node.elArg) : node.elArg;
+    } else if(this.config.autoimport) {
+        let imported = this.script.importedNames.includes(componentName)
+            || this.script.rootVariables[componentName] ||
+            this.script.rootFunctions[componentName];
+
+        if(!imported) {
+            let r = this.config.autoimport(componentName, this.config.path, this);
+            r && this.script.autoimport.push(r);
+        }
     }
 
     let passOption = {};
