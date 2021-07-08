@@ -15,7 +15,7 @@ export function parse() {
         rootVariables: {},
         rootFunctions: {},
         readOnly: false,
-        autoimport: []
+        autoimport: {}
     };
     if(source) {
         this.script.readOnly = this.scriptNodes.some(n => n.attributes.some(a => a.name == 'read-only'));
@@ -383,7 +383,7 @@ export function transform() {
     this.script.rootLevel = resultBody;
 
     this.module.top.push(xNode('autoimport', (ctx) => {
-        this.script.autoimport.forEach(l => ctx.writeLine(l));
+        Object.values(this.script.autoimport).forEach(l => ctx.writeLine(l));
     }));
 
     this.module.top.push(xNode('ast', {body: imports}));
