@@ -41,7 +41,7 @@ export function makeFragment(node) {
         ctx.write(true, `function $fragment_${n.name}($cd, label, $props, $events, $$fragmentSlot) {\n`);
         ctx.indent++;
 
-        if(n.props) {
+        if(n.props?.length) {
             if(ctx.inuse.apply) {
                 ctx.writeLine('let ' + n.props.join(', ') + ';');
                 ctx.writeLine(`$runtime.unwrapProps($cd, $props, ($$) => ({${n.props.join(', ')}} = $$));`);
