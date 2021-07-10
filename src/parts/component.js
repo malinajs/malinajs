@@ -293,36 +293,10 @@ export function makeComponent(node, element) {
             return;
         }
 
-        const staticProp = (name, value) => {
-            if(typeof value == 'number') value = '' + value;
-            else if(value === true || value === false || value === null) value = '' + value;
-            else if(value === void 0) value = 'true'
-            else value = '`' + this.Q(value) + '`';
-            propsFn.push(`${name}: ${value}`);
-        }
-
-        if(name == 'class') name = '_class';
-
-        assert(name.match(/^([\w\$_][\w\d\$_\.\-]*)$/), `Wrong property: '${name}'`);
-        name = toCamelCase(name);
-        if(value && value.indexOf('{') >= 0) {
-            const pe = this.parseText(value);
-            this.detectDependency(pe);
-            if(pe.parts.length == 1 && isNumber(pe.parts[0].value)) {
-                staticProp(name, Number(pe.parts[0].value));
-            } else if(pe.parts.length == 1 && (pe.parts[0].value === 'true' || pe.parts[0].value === 'false')) {
-                staticProp(name, pe.parts[0].value === 'true');
-            } else if(pe.parts.length == 1 && pe.parts[0].value === 'null') {
-                staticProp(name, null);
-            } else {
-                staticProps = false;
-                let exp = pe.result;
-                if(name == exp) propsFn.push(`${name}`);
-                else propsFn.push(`${name}: ${exp}`);
-            }
-        } else {
-            staticProp(name, value);
-        }
+        let ip = this.inspectProp(prop);
+        if(ip.name == ip.value) propsFn.push(`${ip.name}`);
+        else propsFn.push(`${ip.name}: ${ip.value}`);
+        if(!ip.static) staticProps = false;
     });
 
 
@@ -336,6 +310,7 @@ export function makeComponent(node, element) {
         head,
         options,
         $cd: '$cd',
+        staticProps,
         props: propsFn,
         propsSetter,
         reference,
@@ -349,7 +324,7 @@ export function makeComponent(node, element) {
             n.requireScope = true;
         }
 
-        if(n.props.length && staticProps) {
+        if(n.props.length && n.staticProps) {
             n.options.push(`props: {${n.props.join(', ')}}`);
             n.props = [];
         }

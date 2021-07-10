@@ -21,7 +21,7 @@ import { attachPortal } from './parts/portal.js';
 import { makeEventProp } from './event-prop.js';
 
 
-export const version = '0.6.38';
+export const version = '0.6.39';
 
 
 export async function compile(source, config = {}) {
@@ -165,7 +165,6 @@ export async function compile(source, config = {}) {
     } else {
         result.push(`import { $$htmlToFragment } from 'malinajs/runtime.js';`);
     }
-    if(config.injectRuntime) result.push(config.injectRuntime);
     result.push(ctx.module.top);
 
     result.push(xNode('block', {
