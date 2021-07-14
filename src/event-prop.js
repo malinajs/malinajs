@@ -96,7 +96,6 @@ export function makeEventProp(prop, requireElement) {
             let keyCode = keyCodes[opt];
             if(keyCode) {
                 mods.push(`if($event.key != '${keyCode}') return;`);
-                if(opt == 'enter' || opt == 'tab') needPrevent = true;
                 return;
             }
         }
@@ -108,7 +107,6 @@ export function makeEventProp(prop, requireElement) {
 
         throw 'Wrong modificator: ' + opt;
     });
-    if(event == 'click') needPrevent = true;
     if(needPrevent && !preventInserted) mods.push('$event.preventDefault();');
     mods = mods.join(' ');
 
