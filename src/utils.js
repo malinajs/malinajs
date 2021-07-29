@@ -175,16 +175,22 @@ export function compactDOM() {
             }
         }
 
+        const isTable = n => ['thead', 'tbody', 'tfoot', 'tr', 'td', 'th'].includes(n.name);
+
         i = 0;
         while(i < body.length) {
             let node = body[i];
             if(node.type == 'text' && !node.value.trim()) {
+                if(parentNode && (parentNode.name == 'table' || isTable(parentNode)) && (i == 0 || i == body.length -1)) {
+                    body.splice(i, 1);
+                    continue;
+                }
+
                 let prev = getPrev();
                 let next = getNext();
                 if(prev && next) {
                     if(prev.type == 'node' && next.type == 'node') {
-                        if(prev.name == 'td' && next.name == 'td' ||
-                            prev.name == 'tr' && next.name == 'tr' ||
+                        if(isTable(prev) && isTable(next) ||
                             prev.name == 'li' && next.name == 'li' ||
                             prev.name == 'div' && next.name == 'div') {
                                 body.splice(i, 1);
