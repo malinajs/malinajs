@@ -90,6 +90,24 @@ export function buildBlock(data, option={}) {
             return true;
         });
 
+        if(tpl.name == 'table') {
+            let result = [], tbody = null;
+            body.forEach(n => {
+                if(n.type == 'node' && ['thead', 'tbody', 'tfoot'].includes(n.name)) {
+                    result.push(n);
+                    tbody = null;
+                    return;
+                }
+
+                if(!tbody) {
+                    tbody = {type: 'node', name: 'tbody', body: [], attributes: [], classes: new Set()};
+                    result.push(tbody);
+                }
+                tbody.body.push(n);
+            });
+            body = result;
+        }
+
         {
             let i = 1;
             while(body[i]) {
