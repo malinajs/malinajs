@@ -374,8 +374,8 @@ export const makeClassResolver = ($option, classMap, metaClass, mainName) => {
     if(!$option.$class) $option.$class = {};
     if(!mainName && metaClass.main) mainName = 'main';
     return (line, defaults) => {
-        let result = [];
-        if(defaults) result.push(defaults);
+        let result = {};
+        if(defaults) result[defaults] = 1;
         line.trim().split(/\s+/).forEach(name => {
             let meta;
             if(name[0] == '$') {
@@ -386,19 +386,21 @@ export const makeClassResolver = ($option, classMap, metaClass, mainName) => {
             if(h) {
                 let className = ($option.$class[name === mainName ? '$$main' : name] || '').trim();
                 if(className) {
-                    result.push(className);
+                    result[className] = 1;
                 } else if(h !== true) {
-                    result.push(name, h);
+                    result[name] = 1;
+                    result[h] = 1;
                 }
             }
             let h2 = classMap[name];
             if(h2) {
-                result.push(name, h2);
+                result[name] = 1;
+                result[h2] = 1;
             } else if(!h) {
-                result.push(name);
+                result[name] = 1;
             }
         });
-        return result.join(' ');
+        return Object.keys(result).join(' ');
     }
 };
 

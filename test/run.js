@@ -13,6 +13,7 @@ async function main() {
         'css3',
         'css4',
         'pass-css',
+        'pass-css2',
         'css-global',
         'parser1',
         'event'

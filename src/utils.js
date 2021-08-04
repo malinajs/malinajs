@@ -585,7 +585,12 @@ xNode.init = {
                     })
                 }
 
-                let className = Array.from(node.class).join(' ');
+                let className = {};
+                node.class.forEach(sel => {
+                    if(sel.$selector) sel = ctx._ctx.css.resolve(sel);
+                    className[sel] = true;
+                });
+                className = Object.keys(className).join(' ');
                 if(className) ctx.write(` class="${className}"`);
 
                 if(node.children.length) {

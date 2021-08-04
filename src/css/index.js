@@ -139,7 +139,8 @@ export function processCSS() {
                             cleanSelector,
                             isSimple,
                             source: [],
-                            fullyGlobal: origin.every(i => i.global)
+                            fullyGlobal: origin.every(i => i.global),
+                            hashedSelectors: []
                         };
                     }
 
@@ -147,17 +148,18 @@ export function processCSS() {
                         assert(sobj.isSimple);
                         if(!sobj.external) sobj.external = emptyBlock ? true : genId();
                     } else if(!sobj.local) {
-                        if(sobj.isSimple) sobj.local = genId();
-                        else sobj.local = self.id;
+                        sobj.local = true;
                     }
 
-                    let hash = external ? sobj.external : sobj.local;
                     if(emptyBlock) fullSelector.emptyBlock = true;
                     sobj.source.push(fullSelector);
 
                     let hashed = origin.slice();
+                    hashed._external = external;
+                    sobj.hashedSelectors.push(hashed);
+
                     const insert = (i) => {
-                        hashed.splice(i, 0, {type: "ClassSelector", loc: null, name: hash, __hash: true});
+                        hashed.splice(i, 0, {type: "ClassSelector", loc: null, name: null, __hash: true});
                     }
 
                     for(let i=hashed.length-1;i>=0;i--) {
@@ -186,6 +188,7 @@ export function processCSS() {
     self.markAsExternal = (name) => {
         let sobj = selectors['.' + name];
         if(!sobj) selectors['.' + name] = sobj = {isSimple: true, cleanSelector: '.' + name};
+        assert(!sobj.resolved);
         if(!sobj.external) sobj.external = true;
         active = true;
     }
@@ -199,7 +202,37 @@ export function processCSS() {
         });
     }
 
+    let _hashesResolved = false;
+    const resolveHashes = () => {
+        if(_hashesResolved) return;
+        _hashesResolved = true;
+        Object.values(selectors).forEach(sel => {
+            if(!sel.hashedSelectors) return;
+            if(sel.resolved) return;
+            sel.resolved = true;
+            if(sel.external) {
+                if(sel.local === true) {
+                    if(self.passingClass) sel.local = genId();
+                    else sel.local = self.id;
+                };
+            } else {
+                assert(sel.local === true);
+                if(self.passingClass) sel.local = genId();
+                else sel.local = self.id;
+            }
+            sel.hashedSelectors.forEach(hashed => {
+                let hash = hashed._external ? sel.external : sel.local;
+                assert(hash);
+                hashed.forEach(n => {
+                    if(!n.__hash) return;
+                    n.name = hash;
+                })
+            });
+        });
+    };
+
     self.getClassMap = () => {
+        resolveHashes();
         let classMap = {};
         let metaClass = {};
         Object.values(selectors).forEach(sel => {
@@ -224,6 +257,7 @@ export function processCSS() {
         });
 
         Object.values(selectors).forEach(sel => {
+            sel.$selector = true;
             if(sel.fullyGlobal || !sel.local) return;
             let selected;
             try {
@@ -234,17 +268,30 @@ export function processCSS() {
                 throw e;
             }
             selected.forEach(s => {
-                s.node.__node.classes.add(sel.local);
-                s.lvl.forEach(l => l.__node.classes.add(sel.local));
+                s.node.__node.classes.add(sel);
+                s.lvl.forEach(l => l.__node.classes.add(sel));
             })
         });
     };
+
+    self.resolve = sel => {
+        resolveHashes();
+        assert(sel.resolved);
+        if(sel.external) {
+            assert(sel.external !== true);
+            return sel.external;
+        }
+        assert(sel.local && sel.local !== true);
+        return sel.local;
+    }
 
     self.getContent = function() {
         removeBlocks.forEach(node => {
             let i = node.parent.children.indexOf(node);
             if(i>=0) node.parent.children.splice(i, 1);
         });
+        resolveHashes();
+
         return astList.map(ast => csstree.generate(ast)).join('');
     }
 }

@@ -283,6 +283,7 @@ export function makeComponent(node, element) {
                 assert(metaClass);
             }
             assert(value);
+            this.css.passingClass = true;
 
             const parsed = this.parseText(prop.value);
             this.detectDependency(parsed);

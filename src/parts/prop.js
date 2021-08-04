@@ -249,8 +249,7 @@ export function bindProp(prop, node, element) {
         });
 
         if(compound) {
-            let defaultHash = '';
-            if(node.classes.has(this.css.id)) defaultHash = this.css.id;
+            let classes = Array.from(node.classes);
             node.classes.clear();
             if(this.config.passClass) this.require('resolveClass');
             let exp = props.map(prop => {
@@ -267,17 +266,29 @@ export function bindProp(prop, node, element) {
             const bind = xNode('compound-class', {
                 el: element.bindName(),
                 exp,
-                defaultHash
+                classes
             }, (ctx, n) => {
+                let base = '';
+                if(n.classes.length) {
+                    if(this.css.passingClass) {
+                        base = [];
+                        n.classes.forEach(c => {
+                            if(c.local) base.push(this.css.resolve(c));
+                        });
+                        base = base.join(' ');
+                        if(base) base = `, '${base}'`;
+                    } else {
+                        if(n.classes.some(c => c.local)) base = `,'${this.css.id}'`;
+                    }
+                }
+
                 if(ctx.inuse.resolveClass) {
-                    let base = n.defaultHash ? `,'${n.defaultHash}'` : '';
                     if(ctx.inuse.apply) {
                         ctx.writeLine(`$watchReadOnly($cd, () => $$resolveClass((${n.exp})${base}), value => $runtime.setClassToElement(${n.el}, value));`);
                     } else {
                         ctx.writeLine(`$runtime.setClassToElement(${n.el}, $$resolveClass((${n.exp})${base}));`);
                     }
                 } else {
-                    let base = n.defaultHash ? ` + ' ${n.defaultHash}'` : '';
                     if(ctx.inuse.apply) {
                         ctx.writeLine(`$watchReadOnly($cd, () => ${n.exp}${base}, value => $runtime.setClassToElement(${n.el}, value));`);
                     } else {
