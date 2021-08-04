@@ -203,7 +203,7 @@ export const $base = {
         $component.push = apply;
     },
     b: ($component) => {
-        $component.apply();
+        safeCall(() => $digest($component.$cd))
     }
 };
 
