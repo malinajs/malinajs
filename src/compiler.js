@@ -1,5 +1,6 @@
 
-import { assert, compactDOM, xNode, xWriter } from './utils.js'
+import { assert, xNode, xWriter } from './utils.js';
+import { compactDOM } from './compact.js';
 import { parse as parseHTML } from './parser';
 import * as codelib from './code';
 import { buildRuntime, buildBlock } from './builder';
