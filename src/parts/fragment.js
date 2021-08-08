@@ -1,5 +1,6 @@
 
-import { assert, isSimpleName, unwrapExp, detectExpressionType, xNode, trimEmptyNodes } from "../utils";
+import { assert, isSimpleName, trimEmptyNodes } from "../utils";
+import { xNode } from '../xnode.js'
 
 
 export function makeFragment(node) {

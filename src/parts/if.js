@@ -1,5 +1,6 @@
 
-import { assert, xNode } from '../utils.js'
+import { assert } from '../utils.js'
+import { xNode } from '../xnode.js'
 
 
 export function makeifBlock(data, element) {

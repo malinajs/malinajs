@@ -1,7 +1,8 @@
 
 import acorn from 'acorn';
 import astring from 'astring';
-import { assert, detectExpressionType, xNode } from './utils.js'
+import { assert, detectExpressionType } from './utils.js'
+import { xNode } from './xnode.js'
 
 
 export function parse() {

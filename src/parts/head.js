@@ -1,5 +1,6 @@
 
-import {xNode, assert} from '../utils';
+import { assert } from '../utils.js';
+import { xNode } from '../xnode.js'
 
 
 export function attachHead(n) {

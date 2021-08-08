@@ -1,6 +1,7 @@
 
 import acorn from 'acorn';
-import { assert, isSimpleName, detectExpressionType, xNode, trimEmptyNodes } from '../utils.js'
+import { assert, isSimpleName, detectExpressionType, trimEmptyNodes } from '../utils.js'
+import { xNode } from '../xnode.js'
 
 
 export function makeEachBlock(data, option) {

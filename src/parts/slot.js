@@ -1,5 +1,6 @@
 
-import { unwrapExp, assert, isSimpleName, xNode } from '../utils';
+import { unwrapExp, assert, isSimpleName } from '../utils.js';
+import { xNode } from '../xnode.js'
 
 
 export function attachSlot(slotName, label, node) {

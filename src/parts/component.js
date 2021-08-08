@@ -1,5 +1,6 @@
 
-import { assert, detectExpressionType, isSimpleName, unwrapExp, xNode, trimEmptyNodes, toCamelCase, isNumber } from '../utils'
+import { assert, detectExpressionType, isSimpleName, unwrapExp, trimEmptyNodes } from '../utils'
+import { xNode } from '../xnode.js'
 
 
 export function makeComponent(node, element) {

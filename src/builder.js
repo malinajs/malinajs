@@ -1,5 +1,6 @@
 
-import {svgElements, xNode, last, replaceElementKeyword, assert} from './utils.js'
+import {svgElements, last, replaceElementKeyword, assert} from './utils.js'
+import { xNode } from './xnode.js'
 
 
 export function buildRuntime() {

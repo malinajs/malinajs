@@ -1,5 +1,6 @@
 
-import { assert, xNode, xWriter } from './utils.js';
+import { assert } from './utils.js';
+import { xNode, xWriter } from './xnode.js'
 import { compactDOM } from './compact.js';
 import { parse as parseHTML } from './parser';
 import * as codelib from './code';

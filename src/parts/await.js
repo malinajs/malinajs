@@ -1,4 +1,6 @@
-import { isSimpleName, assert, xNode, extractKeywords } from "../utils";
+import { isSimpleName, assert, extractKeywords } from "../utils";
+import { xNode } from '../xnode.js'
+
 
 export function makeAwaitBlock(node, element) {
     let valueForThen, exp;

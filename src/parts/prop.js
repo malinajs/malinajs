@@ -1,5 +1,6 @@
 
-import { assert, detectExpressionType, isSimpleName, unwrapExp, xNode, last, toCamelCase, replaceElementKeyword } from '../utils.js'
+import { assert, detectExpressionType, isSimpleName, unwrapExp, last, toCamelCase, replaceElementKeyword } from '../utils.js'
+import { xNode } from '../xnode.js'
 
 
 export function bindProp(prop, node, element) {

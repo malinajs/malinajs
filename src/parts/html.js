@@ -1,5 +1,5 @@
 
-import {xNode} from '../utils.js';
+import { xNode } from '../xnode.js'
 
 
 export function makeHtmlBlock(exp, label) {

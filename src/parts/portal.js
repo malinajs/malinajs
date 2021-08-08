@@ -1,5 +1,6 @@
 
-import { trimEmptyNodes, xNode, unwrapExp } from '../utils.js';
+import { trimEmptyNodes, unwrapExp } from '../utils.js';
+import { xNode } from '../xnode.js'
 
 
 export function attachPortal(node) {

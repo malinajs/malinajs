@@ -1,5 +1,6 @@
 
-import { unwrapExp, assert as _assert, detectExpressionType, xNode, replaceElementKeyword, last } from './utils.js';
+import { unwrapExp, assert as _assert, detectExpressionType, replaceElementKeyword, last } from './utils.js';
+import { xNode } from './xnode.js'
 
 
 export function makeEventProp(prop, requireElement) {
