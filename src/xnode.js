@@ -195,6 +195,7 @@ xNode.init = {
             node.voidTag = false;
 
             node.bindName = xNode.init.node.bindName;
+            node.getLast = () => last(node.children);
             node.push = function(n) {
                 if(typeof n == 'string') {
                     let p = last(this.children);

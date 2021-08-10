@@ -129,8 +129,26 @@ export function buildBlock(data, option={}) {
             if(svg && !other) result.svg = true;
         }
 
+        let lastStatic;
+
+        const placeLabel = name => {
+            let el;
+            if(lastStatic) {
+                el = lastStatic;
+                el.label = true;
+                lastStatic = null;
+            } else {
+                el = xNode('node:comment', {label: true, value: name});
+                tpl.push(el);
+            }
+            return el;
+        }
+
         const bindNode = (n) => {
             if(n.type === 'text') {
+                let prev = tpl.getLast();
+                if(prev?.type == 'node:text' && prev._boundName) tpl.push(xNode('node:comment', {label: true}));
+
                 if(n.value.indexOf('{') >= 0) {
                     const pe = this.parseText(n.value);
                     this.detectDependency(pe);
@@ -158,10 +176,12 @@ export function buildBlock(data, option={}) {
                         ]}));
                     });
 
+                    lastStatic = textNode;
                 } else {
-                    tpl.push(n.value);
+                    lastStatic = tpl.push(n.value);
                 }
             } else if(n.type === 'template') {
+                lastStatic = null;
                 tpl.push(n.openTag);
                 tpl.push(n.content);
                 tpl.push('</template>');
@@ -176,13 +196,11 @@ export function buildBlock(data, option={}) {
                 if(n.name == 'component' || n.name.match(/^[A-Z]/)) {
                     if(n.name == 'component' || !n.elArg) {
                         // component
-                        let el = xNode('node:comment', {label: true, value: n.name});
-                        tpl.push(el);
+                        let el = placeLabel(n.name);
                         let b = this.makeComponent(n, el);
                         binds.push(b.bind);
                     } else {
-                        let el = xNode('node:comment', {label: true, value: `exported ${n.elArg}`});
-                        tpl.push(el);
+                        let el = placeLabel(`exported ${n.elArg}`);
                         let b = this.attchExportedFragment(n, el, n.name);
                         b && binds.push(b);
                     }
@@ -192,21 +210,18 @@ export function buildBlock(data, option={}) {
                     let slotName = n.elArg;
                     if(!slotName) {
                         if(option.context == 'fragment') {
-                            let el = xNode('node:comment', {label: true, value: 'fragment-slot'});
-                            tpl.push(el);
+                            let el = placeLabel('fragment-slot');
                             binds.push(this.attachFragmentSlot(el));
                             return;
                         } else slotName = 'default';
                     }
-                    let el = xNode('node:comment', {label: true, value: slotName});
-                    tpl.push(el);
+                    let el = placeLabel(slotName);
                     binds.push(this.attachSlot(slotName, el, n));
                     return;
                 }
                 if(n.name == 'fragment') {
                     assert(n.elArg, 'Fragment name is required');
-                    let el = xNode('node:comment', {label: true, value: `fragment ${n.elArg}`});
-                    tpl.push(el);
+                    let el = placeLabel(`fragment ${n.elArg}`);
                     let b = this.attachFragment(n, el);
                     b && binds.push(b);
                     return;
@@ -215,6 +230,7 @@ export function buildBlock(data, option={}) {
                 let el = xNode('node', {name: n.name});
                 if(option.oneElement) el._boundName = option.oneElement;
                 tpl.push(el);
+                lastStatic = el;
 
                 if(n.attributes.some(a => a.name.startsWith('{...'))) {
                     n.spreading = [];
@@ -261,6 +277,7 @@ export function buildBlock(data, option={}) {
                 }
             } else if(n.type === 'each') {
                 if(data.type == 'node' && data.body.length == 1) {
+                    lastStatic = null;
                     let eachBlock = this.makeEachBlock(n, {
                         elName: tpl.bindName(),
                         onlyChild: true
@@ -268,15 +285,13 @@ export function buildBlock(data, option={}) {
                     binds.push(eachBlock.source);
                     return;
                 } else {
-                    let element = xNode('node:comment', {label: true, value: `${n.value}`});
-                    tpl.push(element);
+                    let element = placeLabel(n.value);
                     let eachBlock = this.makeEachBlock(n, {elName: element.bindName()});
                     binds.push(eachBlock.source);
                     return;
                 }
             } else if(n.type === 'if') {
-                let element = xNode('node:comment', {label: true, value: n.value});
-                tpl.push(element);
+                let element = placeLabel(n.value);
                 let ifBlock = this.makeifBlock(n, element);
                 binds.push(ifBlock.source);
                 return;
@@ -286,18 +301,16 @@ export function buildBlock(data, option={}) {
                 let exp = r[2];
 
                 if(name == 'html') {
-                    let el = xNode('node:comment', {label: true, value: 'html'});
-                    tpl.push(el);
+                    let el = placeLabel('html');
                     binds.push(this.makeHtmlBlock(exp, el));
                     return;
                 } else throw 'Wrong tag';
             } else if(n.type === 'await') {
-                let el = xNode('node:comment', {label: true, value: n.value});
-                tpl.push(el);
+                let el = placeLabel(n.value);
                 binds.push(this.makeAwaitBlock(n, el));
                 return;
             } else if(n.type === 'comment') {
-                tpl.push(n.content);
+                lastStatic = tpl.push(n.content);
             }
         }
         body.forEach(node => {
@@ -310,8 +323,8 @@ export function buildBlock(data, option={}) {
     };
     go(data, true, rootTemplate);
     if(option.protectLastTag) {
-        let l = last(rootTemplate.children);
-        if(l && l.type == 'node:comment' && l.label) {
+        let l = rootTemplate.getLast();
+        if(l?.label) {
             rootTemplate.push(xNode('node:comment', {value: ''}));
         }
     }

@@ -71,12 +71,12 @@ export function compactDOM() {
                 let prev = getPrev();
                 let next = getNext();
 
-                if(next?.type == 'node' && next.name == 'br') {
+                if(next?.type == 'node' && ['br', 'div'].includes(next.name)) {
                     body.splice(i, 1);
                     continue;
                 }
 
-                if(prev?.type == 'node' && prev.name == 'br') {
+                if(prev?.type == 'node' && ['br', 'div'].includes(prev.name)) {
                     body.splice(i, 1);
                     continue;
                 }
