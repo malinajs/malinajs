@@ -21,7 +21,7 @@ import { attachPortal } from './parts/portal.js';
 import { makeEventProp } from './event-prop.js';
 
 
-export const version = '0.6.41';
+export const version = '0.6.42';
 
 
 export async function compile(source, config = {}) {
@@ -79,6 +79,7 @@ export async function compile(source, config = {}) {
                 if(!deps) continue;
                 if(name == '$attributes') ctx.require('$props');
                 if(name == '$props' && !ctx.script.readOnly) ctx.require('apply', '$cd');
+                if(name == 'apply' && !ctx.script.readOnly) ctx.require('$cd');
                 if(name == '$cd') ctx.require('$component');
                 if(name == '$onDestroy') ctx.require('$component');
                 if(name == '$onMount') ctx.require('$component');

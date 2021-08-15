@@ -230,7 +230,7 @@ export const makeComponent = (init, $base) => {
             $context = null;
         }
 
-        $component._d.push(...$component._m.map(safeCall));
+        $tick(() => $component._d.push(...$component._m.map(safeCall)));
         return $component;
     };
 };

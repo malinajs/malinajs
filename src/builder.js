@@ -143,7 +143,7 @@ export function buildBlock(data, option={}) {
                             el: textNode.bindName(),
                             exp: pe.result
                         }, (ctx, n) => {
-                            if(this.inuse.apply) ctx.writeLine(`$runtime.bindText($cd, ${n.el}, () => ${n.exp});`);
+                            if(this.inuse.$cd) ctx.writeLine(`$runtime.bindText($cd, ${n.el}, () => ${n.exp});`);
                             else ctx.writeLine(`${n.el}.textContent = ${n.exp};`);
                         }));
                     }
