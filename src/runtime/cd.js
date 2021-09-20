@@ -1,5 +1,5 @@
 
-import { __app_onerror, safeCall } from './utils';
+import { __app_onerror, safeCall, isObject } from './utils';
 
 export function $watch(cd, fn, callback, w) {
     if(!w) w = {};
@@ -83,8 +83,8 @@ export function $$compareArray(w, value) {
 const compareDeep = (a, b, lvl) => {
     if(lvl < 0 || !a || !b) return a !== b;
     if(a === b) return false;
-    let o0 = typeof(a) == 'object';
-    let o1 = typeof(b) == 'object';
+    let o0 = isObject(a);
+    let o1 = isObject(b);
     if(!(o0 && o1)) return a !== b;
 
     let a0 = isArray(a);
@@ -114,7 +114,7 @@ const compareDeep = (a, b, lvl) => {
 export function cloneDeep(d, lvl) {
     if(lvl < 0 || !d) return d;
 
-    if(typeof(d) == 'object') {
+    if(isObject(d)) {
         if(d instanceof Date) return d;
         if(d instanceof Element) return d;
         if(isArray(d)) return d.map(i => cloneDeep(i, lvl-1));

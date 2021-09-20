@@ -1,7 +1,7 @@
 
 import { $watch, $watchReadOnly, $$deepComparator, cloneDeep, $$cloneDeep, $ChangeDetector, $digest,
     $$compareDeep, cd_onDestroy, addEvent, fire, keyComparator } from './cd';
-import { __app_onerror, safeCall, isFunction } from './utils';
+import { __app_onerror, safeCall, isFunction, isObject } from './utils';
 
 let templatecache = {};
 let templatecacheSvg = {};
@@ -334,7 +334,10 @@ export const bindAttributeBase = (element, name, value) => {
 
 
 export const bindAttribute = (cd, element, name, fn) => {
-    $watchReadOnly(cd, () => '' + fn(), value => bindAttributeBase(element, name, value));
+    $watchReadOnly(cd, () => {
+        let v = fn();
+        return v == null ? v : '' + v;
+    }, value => bindAttributeBase(element, name, value));
 };
 
 
@@ -460,7 +463,7 @@ export const makeSlotStatic = (fn) => {
 }
 
 
-export const eachDefaultKey = (item, index, array) => typeof array[0] === 'object' ? item : index;
+export const eachDefaultKey = (item, index, array) => isObject(array[0]) ? item : index;
 
 
 export const attachAnchor = ($option, $cd, name, el) => {
