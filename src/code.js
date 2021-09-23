@@ -454,6 +454,8 @@ xNode.init.ast = (ctx, node) => {
     let code = astring.generate({
         type: 'CustomBlock',
         body: node.body
-    }, {generator, startingIndentLevel: ctx.indent});
-    ctx.write(code);
+    }, {generator, startingIndentLevel: 0});
+    code.split(/\n/).forEach(s => {
+        if(s) ctx.write(true, s);
+    });
 }

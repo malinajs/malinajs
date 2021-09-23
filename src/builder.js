@@ -147,7 +147,7 @@ export function buildBlock(data, option={}) {
         const bindNode = (n) => {
             if(n.type === 'text') {
                 let prev = tpl.getLast();
-                if(prev?.type == 'node:text' && prev._boundName) tpl.push(xNode('node:comment', {label: true}));
+                if(prev?.$type == 'node:text' && prev._boundName) tpl.push(xNode('node:comment', {label: true}));
 
                 if(n.value.indexOf('{') >= 0) {
                     const pe = this.parseText(n.value);
@@ -159,11 +159,13 @@ export function buildBlock(data, option={}) {
                     } else {
                         textNode = tpl.push(' ');
                         binds.push(xNode('bindText', {
+                            $deps: [this.globDeps.apply],
                             el: textNode.bindName(),
                             exp: pe.result
                         }, (ctx, n) => {
-                            if(this.inuse.apply) ctx.writeLine(`$runtime.bindText($cd, ${n.el}, () => ${n.exp});`);
-                            else ctx.writeLine(`${n.el}.textContent = ${n.exp};`);
+                            if(this.globDeps.apply.value) {
+                                ctx.writeLine(`$runtime.bindText($cd, ${n.el}, () => ${n.exp});`);
+                            } else ctx.writeLine(`${n.el}.textContent = ${n.exp};`);
                         }));
                     }
 

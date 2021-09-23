@@ -1,6 +1,6 @@
 
 import { assert } from './utils.js';
-import { xNode, xWriter } from './xnode.js'
+import { xNode, xBuild } from './xnode.js'
 import { compactDOM } from './compact.js';
 import { parse as parseHTML } from './parser';
 import * as codelib from './code';
@@ -71,6 +71,9 @@ export async function compile(source, config = {}) {
         checkRootName: utils.checkRootName,
 
         inuse: {},
+        globDeps: {
+            apply: {$done: false, value: false, $deps: []}
+        },
         require: function() {
             for(let name of arguments) {
                 let deps = true;
@@ -79,6 +82,7 @@ export async function compile(source, config = {}) {
                 if(ctx.inuse[name] == null) ctx.inuse[name] = 0;
                 ctx.inuse[name]++;
                 if(!deps) continue;
+                if(name == 'apply') ctx.globDeps.apply.value = true;
                 if(name == '$attributes') ctx.require('$props');
                 if(name == '$props' && !ctx.script.readOnly) ctx.require('apply', '$cd');
                 if(name == '$cd') ctx.require('$component');
@@ -114,9 +118,7 @@ export async function compile(source, config = {}) {
         },
 
         xBuild: node => {
-            let w = new xWriter(ctx);
-            w.build(node);
-            return w.toString();
+            return xBuild(ctx, node);
         }
     };
 
@@ -170,6 +172,7 @@ export async function compile(source, config = {}) {
     result.push(ctx.module.top);
 
     result.push(xNode('block', {
+        $deps: [ctx.globDeps.apply],
         name: config.name,
         body: [ctx.module.head, ctx.module.code, ctx.module.body]
     }, (ctx, n) => {
@@ -182,9 +185,9 @@ export async function compile(source, config = {}) {
             inline: true,
             arrow: true,
             body: n.body
-        })
+        });
 
-        if(ctx.inuse.apply) {
+        if(ctx._ctx.globDeps.apply.value) {
             ctx.write('$runtime.makeComponent(');
             component.args.push('$$apply');
             ctx.build(component);
@@ -209,7 +212,7 @@ export async function compile(source, config = {}) {
         }
     }));
 
-    ctx.result = ctx.xBuild(result);
+    ctx.result = xBuild(ctx, result, {resolveApply: true});
 
     await hook(ctx, 'build');
     return ctx;

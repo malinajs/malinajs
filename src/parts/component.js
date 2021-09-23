@@ -307,6 +307,8 @@ export function makeComponent(node, element) {
     if(passOption.anchor) options.push('anchor');
 
     let result = xNode('component', {
+        $compile: [head],
+        $deps: [head],
         el: element.bindName(),
         componentName,
         head,
@@ -320,9 +322,8 @@ export function makeComponent(node, element) {
     }, (ctx, n) => {
         const $cd = n.$cd || '$cd';
 
-        let head = ctx.subBuild(n.head);
-        if(head) {
-            ctx.addBlock(head);
+        if(!ctx.isEmpty(n.head)) {
+            ctx.add(n.head);
             n.requireScope = true;
         }
 
@@ -367,17 +368,17 @@ export function makeComponent(node, element) {
 
     if(!dynamicComponent) {
         return {bind: xNode('component-scope', {
+            $compile: [result],
+            $deps: [result],
             component: result
         }, (ctx, n) => {
-            let r = ctx.subBuild(n.component);
-            
             if(n.component.requireScope) {
                 ctx.writeLine('{');
-                ctx.goIndent(() => {
-                    ctx.addBlock(r);
-                })
+                ctx.indent++;
+                ctx.add(n.component);
+                ctx.indent--;
                 ctx.writeLine('}');
-            } else ctx.addBlock(r);
+            } else ctx.add(n.component);
         })};
     } else {
         this.detectDependency(dynamicComponent);

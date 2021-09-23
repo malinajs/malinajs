@@ -6,88 +6,117 @@ function I(value = 0) {
     this.$indent = value;
 }
 
-export function xWriter(ctx) {
+
+function xWriter(ctx, node) {
     this._ctx = ctx;
     this.inuse = ctx.inuse;
-    this.result = [];
-    this.indent = 0;
 
-    this.getIndent = function() {
-        return new I(this.indent);
-    };
-    this.writeIndent = function() {this.write(this.getIndent())};
-    this.goIndent = function(fn) {
+    this.indent = 0;
+    this.write = function(...args) {
+        for(let i of args) {
+            if(i === true) node.$result.push(new I(this.indent));
+            else node.$result.push(i);
+        }
+    }
+    this.writeLine = function(s) {this.write(true, s);};
+    this.writeIndent = function() {this.write(true)};
+    this.goIndent = fn => {
         this.indent++;
         fn();
         this.indent--;
-    };
-    this.write = function(...args) {
-        for(let i of args) {
-            if(i === true) this.result.push(this.getIndent());
-            else this.result.push(i);
-        }
-    };
-    this.writeLine = function(s) {
-        this.write(true, s + '\n');
-    };
-    this._compile = function() {
-        let result = this.result.slice();
-        let dyn, prevDyn = 0, index = 99;
+    }
 
-        for(;index>0;index--) {
-            dyn = 0;
-            let parts = result.slice();
-            result = [];
-            parts.forEach(n => {
-                if(n.node) {
-                    dyn++;
-                    let r = this.subBuild(n.node, n.indent);
-                    if(r?.length) result.push(...r);
-                } else result.push(n);
+    this.add = this.build = function(n) {
+        if(n == null) return;
+        assert(n instanceof xNode);
+        assert(!n.$inserted, 'already inserted');
+        node.$result.push({node: n, indent: this.indent});
+        n.$inserted = true;
+    }
+
+    this.isEmpty = function(n) {
+        assert(n.$done, 'Node is not built');
+        return !n.$result.some(r => {
+            if(typeof(r) == 'string') return true;
+            else if(r.node instanceof xNode) return !this.isEmpty(r.node);
+            else if(r instanceof I) return true;
+            else {
+                console.error('Type', r);
+                throw 'error type';
+            }
+        });
+    }
+};
+
+
+export function xBuild(ctx, node, option={}) {
+    if(option.resolveApply) {
+        assert(ctx.globDeps.apply.$deps.length == 0, 'apply has dependecies');
+        ctx.globDeps.apply.$done = true;
+    }
+
+    let pending = 0;
+    const resolve = n => {
+        n.$compile?.forEach(c => {
+            resolve(c);
+        });
+        if(!n.$done) {
+            let ready = true;
+            if(n.$deps?.length) {
+                if(n.$deps.some(i => !i.$done)) {
+                    pending++;
+                    ready = false;
+                }
+            }
+            if(ready) {
+                let w = new xWriter(ctx, n);
+                n.$handler(w, n);
+                n.$done = true;
+            }
+        }
+
+        if(n.$done) {
+            n.$result.forEach(r => {
+                if(r?.node instanceof xNode) resolve(r.node);
             });
-            if(dyn == 0) break;
-            if(dyn == prevDyn) throw 'Compile error: circular dependencies';
-            prevDyn = dyn;
-        }
-        if(index <= 0) throw 'Compile error: circular dependencies';
+        } else pending++;
+    }
+    let depth;
+    for(depth=10;depth > 0;depth--) {
+        pending = 0;
+        resolve(node);
+        if(!pending) break;
+    }
+    if(!depth) throw new Error('xNode: Circular dependency');
 
-        return result;
-    };
-    this.toString = function() {
-        let result = this._compile();
-        return result.map(i => {
-            if(i instanceof I) {
-                let r = '', l = i.$indent;
-                while(l--) r += '  ';
-                return r;
-            }
-            return i;
-        }).join('');
-    }
-    this.build = function(node) {
-        if(node == null) return;
-        if(node.$deps?.length) {
-            if(node.$deps.some(n => !n.$done)) {
-                this.result.push({node, indent: this.indent});
-                return;
-            }
+    let result = [];
+
+    const asm = (n, baseIndent) => {
+        if(!n.$done) {
+            console.log('not done', n);
+            throw 'node is not done';
         }
-        node.handler(this, node);
-        node.$done = true;
-    }
-    this.subBuild = function(node, indent=0) {
-        let w = new xWriter(this._ctx);
-        w.indent = indent;
-        w.build(node);
-        let r = w._compile();
-        return r.length ? r : null;
-    }
-    this.addBlock = function(b) {
-        b && b.forEach(i => {
-            if(i instanceof I) i.$indent += this.indent;
-            this.result.push(i);
+        n.$result.forEach(r => {
+            if(typeof(r) == 'string') result.push(r);
+            else if(r.node instanceof xNode) {
+                asm(r.node, r.indent + baseIndent);
+            }
+            else if(r instanceof I) {
+                let s = '\n';
+                let i = r.$indent + baseIndent;
+                while(i--) {
+                    s += '  ';
+                }
+                result.push(s);
+            } else {
+                console.error('Type', r);
+                throw 'error type';
+            }
         })
     }
+    asm(node, 0);
+
+    return result.join('');
 }
 
 export function xNode(_type, _data, _handler) {
@@ -128,8 +157,11 @@ export function xNode(_type, _data, _handler) {
         assert(handler);
     }
 
-    this.type = type;
-    this.handler = handler;
+    this.$type = type;
+    this.$handler = handler;
+    this.$done = false;
+    this.$inserted = false;
+    this.$result = [];
     return this;
 }
 
@@ -199,7 +231,7 @@ xNode.init = {
             node.push = function(n) {
                 if(typeof n == 'string') {
                     let p = last(this.children);
-                    if(p && p.type == 'node:text') {
+                    if(p && p.$type == 'node:text') {
                         p.value += n;
                         return p;
                     }
