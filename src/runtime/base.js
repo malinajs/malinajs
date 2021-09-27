@@ -307,10 +307,7 @@ export const bindClass = (cd, element, fn, className) => {
 }
 
 
-export const setClassToElement = (element, value) => {
-    if(typeof element.className == 'string') element.className = value;
-    else element.className.baseVal = value;
-}
+export const setClassToElement = (element, value) => bindAttributeBase(element, 'class', value);
 
 
 export const bindText = (cd, element, fn) => {

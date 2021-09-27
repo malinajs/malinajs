@@ -93,7 +93,7 @@ export function buildBlock(data, option={}) {
         if(tpl.name == 'table') {
             let result = [], tbody = null;
             body.forEach(n => {
-                if(n.type == 'node' && ['thead', 'tbody', 'tfoot'].includes(n.name)) {
+                if(n.type == 'node' && ['thead', 'tbody', 'tfoot', 'colgroup'].includes(n.name)) {
                     result.push(n);
                     tbody = null;
                     return;

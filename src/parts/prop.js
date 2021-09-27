@@ -348,7 +348,6 @@ export function bindProp(prop, node, element) {
                 selected: true,
                 innerHTML: true,
                 innerText: true,
-                placeholder: true,
                 src: true,
                 readonly: 'readOnly'
             }

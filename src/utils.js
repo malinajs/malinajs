@@ -175,7 +175,7 @@ export function compactDOM() {
             }
         }
 
-        const isTable = n => ['thead', 'tbody', 'tfoot', 'tr', 'td', 'th'].includes(n.name);
+        const isTable = n => ['thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'colgroup', 'col'].includes(n.name);
 
         i = 0;
         while(i < body.length) {
