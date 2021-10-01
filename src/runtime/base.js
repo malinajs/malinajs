@@ -201,10 +201,9 @@ export const $base = {
         $component.$cd = $cd;
         $component.apply = apply;
         $component.push = apply;
+        apply();
     },
-    b: ($component) => {
-        $component.apply();
-    }
+    b: noop
 };
 
 
