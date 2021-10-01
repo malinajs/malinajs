@@ -114,7 +114,7 @@ export function processCSS() {
                             }
                         } else cleanSelectorItems.push(s);
                     }
-                    while(cleanSelectorItems.length && last(cleanSelectorItems).type == 'WhiteSpace') cleanSelectorItems.pop();
+                    while(cleanSelectorItems.length && ['WhiteSpace', 'Combinator'].includes(last(cleanSelectorItems).type)) cleanSelectorItems.pop();
                     if(!cleanSelectorItems.length || globalBlock) {  // fully global?
                         assert(origin.length);
                         fullSelector.children = origin;
