@@ -624,8 +624,10 @@ xNode.init = {
         let template = ctx._ctx.xBuild(node.body);
         let convert;
         if(node.svg) convert = '$runtime.svgToFragment';
-        else if(!template.match(/[<>]/)) convert = '$runtime.createTextNode';
-        else {
+        else if(!template.match(/[<>]/)) {
+            convert = '$runtime.createTextNode';
+            if(!node.raw) template = htmlEntitiesToText(template);
+        } else {
             convert = '$$htmlToFragment';
             template = template.replace(/<!---->/g, '<>');
         }
@@ -639,3 +641,23 @@ xNode.init = {
         }
     }
 };
+
+
+const htmlEntitiesToText = (text) => {
+    let entities = [
+        [/&amp;/g, '&'],
+        [/&apos;/g, '\''],
+        [/&#x27;/g, '\''],
+        [/&#x2F;/g, '/'],
+        [/&#39;/g, '\''],
+        [/&#47;/g, '/'],
+        [/&lt;/g, '<'],
+        [/&gt;/g, '>'],
+        [/&nbsp;/g, ' '],
+        [/&quot;/g, '"']
+    ];
+    entities.forEach(([k, v]) => {
+        text = text.replace(k, v);
+    });
+    return text;
+}
