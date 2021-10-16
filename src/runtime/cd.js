@@ -30,7 +30,7 @@ export function $$removeItem(array, item) {
     if(i>=0) array.splice(i, 1);
 };
 
-export function $ChangeDetector(parent) {
+function $ChangeDetector(parent) {
     this.parent = parent;
     this.children = [];
     this.watchers = [];
@@ -46,15 +46,28 @@ $ChangeDetector.prototype.new = function() {
 };
 
 $ChangeDetector.prototype.destroy = function(option) {
-    if(option !== false && this.parent) $$removeItem(this.parent.children, this);
-    this.watchers.length = 0;
-    this.prefix.length = 0;
-    this._d.map(safeCall);
-    this._d.length = 0;
-    this.children.map(cd => cd.destroy(false));
-    this.children.length = 0;
+    cd_destroy(this, option);
 };
 
+export const cd_new = () => new $ChangeDetector();
+
+export const cd_attach = (parent, cd) => {
+    if(cd) {
+        cd.parent = parent;
+        cd.$$ = parent.$$;
+        parent.children.push(cd);
+    }
+}
+
+export const cd_destroy = (cd, option) => {
+    if(option !== false && cd.parent) $$removeItem(cd.parent.children, cd);
+    cd.watchers.length = 0;
+    cd.prefix.length = 0;
+    cd._d.map(safeCall);
+    cd._d.length = 0;
+    cd.children.map(cd => cd.destroy(false));
+    cd.children.length = 0;
+}
 
 export const isArray = (a) => Array.isArray(a);
 

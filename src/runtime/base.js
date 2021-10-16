@@ -1,5 +1,5 @@
 
-import { $watch, $watchReadOnly, $$deepComparator, cloneDeep, $$cloneDeep, $ChangeDetector, $digest,
+import { $watch, $watchReadOnly, $$deepComparator, cloneDeep, $$cloneDeep, cd_new, $digest,
     $$compareDeep, cd_onDestroy, addEvent, fire, keyComparator } from './cd';
 import { __app_onerror, safeCall, isFunction } from './utils';
 
@@ -179,7 +179,7 @@ export const $readOnlyBase = {
 
 export const $base = {
     a: ($component) => {
-        let $cd = new $ChangeDetector();
+        let $cd = cd_new();
         $cd.$$ = $component;
         $onDestroy(() => $cd.destroy());
 
