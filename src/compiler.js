@@ -172,49 +172,9 @@ export async function compile(source, config = {}) {
         result.push(`import { $$htmlToFragment } from 'malinajs/runtime.js';`);
     }
     result.push(ctx.module.top);
+    result.push(makeComponentFn.call(ctx));
 
-    result.push(xNode('block', {
-        $deps: [ctx.globDeps.apply],
-        name: config.name,
-        body: [ctx.module.head, ctx.module.code, ctx.module.body]
-    }, (ctx, n) => {
-        ctx.writeIndent();
-        if(config.exportDefault) ctx.write('export default ');
-        else ctx.write(`const ${n.name} = `);
-
-        let component = xNode('function', {
-            args: ['$option'],
-            inline: true,
-            arrow: true,
-            body: n.body
-        });
-
-        if(ctx._ctx.globDeps.apply.value) {
-            ctx.write('$runtime.makeComponent(');
-            component.args.push('$$apply');
-            ctx.build(component);
-            ctx.write(', $runtime.$base);\n');
-        } else if(ctx.inuse.$cd || ctx.inuse.$component || ctx.inuse.$context || ctx.inuse.blankApply) {
-            if(ctx.inuse.blankApply) {
-                component.body[0].body.unshift(xNode('block', (ctx) => {
-                    ctx.writeLine('let $$apply = $runtime.noop;')
-                }));
-            }
-
-            ctx.write('$runtime.makeComponent(');
-            ctx.build(component);
-            ctx.write(', $runtime.$readOnlyBase);\n');
-        } else {
-            ctx.write('($element, $option={}) => {\n');
-            ctx.goIndent(() => {
-                ctx.inuse.$insertElementByOption = true;
-                ctx.build(xNode('block', {body: n.body}));
-            });
-            ctx.write('}');
-        }
-    }));
-
-    ctx.result = xBuild(ctx, result, {resolveApply: true});
+    ctx.result = xBuild(ctx, result);
 
     await hook(ctx, 'build');
     return ctx;
@@ -271,4 +231,55 @@ function loadConfig(filename, option) {
     if(!result.name) result.name = filename.match(/([^/\\]+)\.\w+$/)[1];
 
     return result;
+}
+
+
+function makeComponentFn() {
+    let componentFn = xNode('componentFn', {
+        $deps: [this.globDeps.apply],
+        body: [this.module.head, this.module.code, this.module.body],
+    }, (ctx, n) => {
+        let component = xNode('function', {
+            args: ['$option'],
+            inline: true,
+            arrow: true,
+            body: n.body
+        });
+
+        if(this.globDeps.apply.active) {
+            ctx.write('$runtime.makeComponent(');
+            component.args.push('$$apply');
+            ctx.build(component);
+            ctx.write(', $runtime.$base);\n');
+        } else if(ctx.inuse.$cd || ctx.inuse.$component || ctx.inuse.$context || ctx.inuse.blankApply) {
+            if(ctx.inuse.blankApply) {
+                component.body[0].body.unshift(xNode('block', (ctx) => {
+                    ctx.writeLine('let $$apply = $runtime.noop;')
+                }));
+            }
+
+            ctx.write('$runtime.makeComponent(');
+            ctx.build(component);
+            ctx.write(', $runtime.$readOnlyBase);\n');
+        } else {
+            ctx.write('($option={}) => {\n');
+            ctx.goIndent(() => {
+                ctx.inuse.$insertElementByOption = true;
+                ctx.build(xNode('block', {body: n.body}));
+            });
+            ctx.write('}');
+        }
+    });
+
+    return xNode('block', {
+        $compile: [this.module.head, this.module.code, this.module.body],
+        name: this.config.name,
+        componentFn
+    }, (ctx, n) => {
+        ctx.writeIndent();
+        if(this.config.exportDefault) ctx.write('export default ');
+        else ctx.write(`const ${n.name} = `);
+        ctx.add(this.globDeps.apply);
+        ctx.add(n.componentFn);
+    });
 }
