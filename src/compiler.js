@@ -72,17 +72,19 @@ export async function compile(source, config = {}) {
 
         inuse: {},
         globDeps: {
-            apply: {$done: false, value: false, $deps: []}
+            apply: xNode('apply', () => {}),
+            component: xNode('$component', () => {})
         },
-        require: function() {
-            for(let name of arguments) {
+        require: function(...args) {
+            for(let name of args) {
                 let deps = true;
                 if(name == '$props:no-deps') {name = '$props'; deps = false;};
                 if(name == 'apply' && ctx.script.readOnly) name = 'blankApply';
                 if(ctx.inuse[name] == null) ctx.inuse[name] = 0;
                 ctx.inuse[name]++;
                 if(!deps) continue;
-                if(name == 'apply') ctx.globDeps.apply.value = true;
+                if(name == 'apply') ctx.globDeps.apply.$active();
+                if(name == '$component') ctx.globDeps.component.$active();
                 if(name == '$attributes') ctx.require('$props');
                 if(name == '$props' && !ctx.script.readOnly) ctx.require('apply', '$cd');
                 if(name == '$cd') ctx.require('$component');

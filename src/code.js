@@ -285,11 +285,12 @@ export function transform() {
         resultBody.push(n);
     });
 
-    let header = [];
-    header.push(rawNode(() => {
-        if(this.inuse.$component) return 'const $component = $runtime.current_component;';
-    }));
+    this.globDeps.component.$handler = (ctx, n) => {
+        if(this.inuse.$component || n.active) ctx.writeLine('const $component = $runtime.current_component;');
+    };
+    this.module.head.push(this.globDeps.component);
 
+    let header = [];
     header.push(rawNode(() => {
         if(this.inuse.$events) return 'const $events = $option.events || {};';
     }));

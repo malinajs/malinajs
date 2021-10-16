@@ -35,6 +35,7 @@ function xWriter(ctx, node) {
     }
 
     this.isEmpty = function(n) {
+        if(n == null) return true;
         assert(n.$done, 'Node is not built');
         return !n.$result.some(r => {
             if(typeof(r) == 'string') return true;
@@ -49,21 +50,16 @@ function xWriter(ctx, node) {
 };
 
 
-export function xBuild(ctx, node, option={}) {
-    if(option.resolveApply) {
-        assert(ctx.globDeps.apply.$deps.length == 0, 'apply has dependecies');
-        ctx.globDeps.apply.$done = true;
-    }
-
+export function xBuild(ctx, node) {
     let pending = 0;
     const resolve = n => {
         n.$compile?.forEach(c => {
-            resolve(c);
+            c != null && resolve(c);
         });
         if(!n.$done) {
             let ready = true;
             if(n.$deps?.length) {
-                if(n.$deps.some(i => !i.$done)) {
+                if(n.$deps.some(i => i != null && !i.$done)) {
                     pending++;
                     ready = false;
                 }
@@ -162,6 +158,15 @@ export function xNode(_type, _data, _handler) {
     this.$done = false;
     this.$inserted = false;
     this.$result = [];
+    this.$depends = function(n) {
+        assert(!this.$done, 'Attempt to add dependecy, but node is already resolved');
+        if(!this.$deps) this.$deps = [];
+        this.$deps.push(n);
+    }
+    this.$active = function() {
+        assert(!this.$done, 'Attempt to set active, depends node is already resolved');
+        this.active = true;
+    }
     return this;
 }
 
