@@ -278,7 +278,7 @@ export const callComponent = (cd, context, component, label, option, propFn, cmp
 
 export const autoSubscribe = (...list) => {
     list.forEach(i => {
-        if(i.subscribe) {
+        if(isFunction(i.subscribe)) {
             let unsub = i.subscribe(current_component.apply);
             if(isFunction(unsub)) cd_onDestroy(current_component, unsub);
         }
