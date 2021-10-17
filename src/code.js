@@ -286,7 +286,7 @@ export function transform() {
     });
 
     this.globDeps.component.$handler = (ctx, n) => {
-        if(this.inuse.$component || n.active) ctx.writeLine('const $component = $runtime.current_component;');
+        if(this.inuse.$component || n.value) ctx.writeLine('const $component = $runtime.current_component;');
     };
     this.module.head.push(this.globDeps.component);
 

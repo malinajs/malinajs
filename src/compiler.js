@@ -73,7 +73,8 @@ export async function compile(source, config = {}) {
         inuse: {},
         globDeps: {
             apply: xNode('apply', () => {}),
-            component: xNode('$component', () => {})
+            component: xNode('$component', () => {}),
+            componentFn: xNode('componentFn', () => {})
         },
         require: function(...args) {
             for(let name of args) {
@@ -83,8 +84,8 @@ export async function compile(source, config = {}) {
                 if(ctx.inuse[name] == null) ctx.inuse[name] = 0;
                 ctx.inuse[name]++;
                 if(!deps) continue;
-                if(name == 'apply') ctx.globDeps.apply.$active();
-                if(name == '$component') ctx.globDeps.component.$active();
+                if(name == 'apply') ctx.globDeps.apply.$value(true);
+                if(name == '$component') ctx.globDeps.component.$value(true);
                 if(name == '$attributes') ctx.require('$props');
                 if(name == '$props' && !ctx.script.readOnly) ctx.require('apply', '$cd');
                 if(name == '$cd') ctx.require('$component');
@@ -246,12 +247,14 @@ function makeComponentFn() {
             body: n.body
         });
 
-        if(this.globDeps.apply.active) {
+        if(this.globDeps.apply.value) {
+            ctx.add(this.globDeps.componentFn);
             ctx.write('$runtime.makeComponent(');
             component.args.push('$$apply');
-            ctx.build(component);
-            ctx.write(', $runtime.$base);\n');
+            ctx.add(component);
+            ctx.write(', $runtime.$base);', true);
         } else if(ctx.inuse.$cd || ctx.inuse.$component || ctx.inuse.$context || ctx.inuse.blankApply) {
+            ctx.add(this.globDeps.componentFn);
             if(ctx.inuse.blankApply) {
                 component.body[0].body.unshift(xNode('block', (ctx) => {
                     ctx.writeLine('let $$apply = $runtime.noop;')
@@ -259,15 +262,16 @@ function makeComponentFn() {
             }
 
             ctx.write('$runtime.makeComponent(');
-            ctx.build(component);
-            ctx.write(', $runtime.$readOnlyBase);\n');
+            ctx.add(component);
+            ctx.write(', $runtime.$readOnlyBase);', true);
         } else {
-            ctx.write('($option={}) => {\n');
+            this.globDeps.componentFn.$value('thin');
+            ctx.add(this.globDeps.componentFn);
+            ctx.write('($option={}) => {', true);
             ctx.goIndent(() => {
-                ctx.inuse.$insertElementByOption = true;
-                ctx.build(xNode('block', {body: n.body}));
+                ctx.add(xNode('block', {body: n.body}));
             });
-            ctx.write('}');
+            ctx.write('}', true);
         }
     });
 

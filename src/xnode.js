@@ -89,8 +89,8 @@ export function xBuild(ctx, node) {
 
     const asm = (n, baseIndent) => {
         if(!n.$done) {
-            console.log('not done', n);
-            throw 'node is not done';
+            console.log('not resolved', n);
+            throw 'node is not resolved';
         }
         n.$result.forEach(r => {
             if(typeof(r) == 'string') result.push(r);
@@ -98,12 +98,8 @@ export function xBuild(ctx, node) {
                 asm(r.node, r.indent + baseIndent);
             }
             else if(r instanceof I) {
-                let s = '\n';
-                let i = r.$indent + baseIndent;
-                while(i--) {
-                    s += '  ';
-                }
-                result.push(s);
+                r.$indent += baseIndent;
+                result.push(r);
             } else {
                 console.error('Type', r);
                 throw 'error type';
@@ -111,6 +107,25 @@ export function xBuild(ctx, node) {
         })
     }
     asm(node, 0);
+
+    for(let i = 0; i < result.length; i++) {
+        let r = result[i];
+        let next = result[i+1];
+
+        if(r instanceof I) {
+            if(next instanceof I) {
+                if(next.$indent < r.$indent) next.$indent = r.$indent;
+                result[i] = '';
+            } else {
+                let s = '\n';
+                let j = r.$indent;
+                while(j--) {
+                    s += '  ';
+                }
+                result[i] = s;
+            }
+        }
+    }
 
     return result.join('');
 }
@@ -163,9 +178,9 @@ export function xNode(_type, _data, _handler) {
         if(!this.$deps) this.$deps = [];
         this.$deps.push(n);
     }
-    this.$active = function() {
+    this.$value = function(value) {
         assert(!this.$done, 'Attempt to set active, depends node is already resolved');
-        this.active = true;
+        this.value = value || true;
     }
     return this;
 }
@@ -206,7 +221,7 @@ xNode.init = {
             xNode.init.block.init(node);
         },
         handler: (ctx, node) => {
-            if(!node.inline) ctx.writeIndent();
+            if(!node.inline) ctx.write(true);
 
             if(node.arrow) {
                 if(node.name) ctx.write(`let ${node.name} = `);
@@ -216,7 +231,7 @@ xNode.init = {
             }
             ctx.write(`(${node.args.join(', ')}) `);
             if(node.arrow) ctx.write('=> ');
-            ctx.write(`{\n`);
+            ctx.write(`{`, true);
             ctx.indent++;
             xNode.init.block.handler(ctx, node);
             ctx.indent--;
