@@ -285,10 +285,10 @@ export function transform() {
         resultBody.push(n);
     });
 
-    this.globDeps.component.$handler = (ctx, n) => {
+    this.glob.component.$handler = (ctx, n) => {
         if(this.inuse.$component || n.value) ctx.writeLine('const $component = $runtime.current_component;');
     };
-    this.module.head.push(this.globDeps.component);
+    this.module.head.push(this.glob.component);
 
     let header = [];
     header.push(rawNode(() => {

@@ -71,10 +71,11 @@ export async function compile(source, config = {}) {
         checkRootName: utils.checkRootName,
 
         inuse: {},
-        globDeps: {
-            apply: xNode('apply', () => {}),
-            component: xNode('$component', () => {}),
-            componentFn: xNode('componentFn', () => {})
+        glob: {
+            apply: xNode('apply', false),
+            component: xNode('$component', false),
+            componentFn: xNode('componentFn', false),
+            rootCD: xNode('root-cd', false)
         },
         require: function(...args) {
             for(let name of args) {
@@ -84,8 +85,8 @@ export async function compile(source, config = {}) {
                 if(ctx.inuse[name] == null) ctx.inuse[name] = 0;
                 ctx.inuse[name]++;
                 if(!deps) continue;
-                if(name == 'apply') ctx.globDeps.apply.$value(true);
-                if(name == '$component') ctx.globDeps.component.$value(true);
+                if(name == 'apply') ctx.glob.apply.$value(true);
+                if(name == '$component') ctx.glob.component.$value(true);
                 if(name == '$attributes') ctx.require('$props');
                 if(name == '$props' && !ctx.script.readOnly) ctx.require('apply', '$cd');
                 if(name == '$cd') ctx.require('$component');
@@ -237,7 +238,7 @@ function loadConfig(filename, option) {
 
 function makeComponentFn() {
     let componentFn = xNode('componentFn', {
-        $deps: [this.globDeps.apply],
+        $deps: [this.glob.apply, this.glob.rootCD],
         body: [this.module.head, this.module.code, this.module.body],
     }, (ctx, n) => {
         let component = xNode('function', {
@@ -247,14 +248,14 @@ function makeComponentFn() {
             body: n.body
         });
 
-        if(this.globDeps.apply.value) {
-            ctx.add(this.globDeps.componentFn);
+        if(this.glob.apply.value) {
+            ctx.add(this.glob.componentFn);
             ctx.write('$runtime.makeComponent(');
             component.args.push('$$apply');
             ctx.add(component);
             ctx.write(', $runtime.$base);', true);
-        } else if(ctx.inuse.$cd || ctx.inuse.$component || ctx.inuse.$context || ctx.inuse.blankApply) {
-            ctx.add(this.globDeps.componentFn);
+        } else if(this.glob.rootCD.value || ctx.inuse.$cd || ctx.inuse.$component || ctx.inuse.$context || ctx.inuse.blankApply) {
+            ctx.add(this.glob.componentFn);
             if(ctx.inuse.blankApply) {
                 component.body[0].body.unshift(xNode('block', (ctx) => {
                     ctx.writeLine('let $$apply = $runtime.noop;')
@@ -265,8 +266,8 @@ function makeComponentFn() {
             ctx.add(component);
             ctx.write(', $runtime.$readOnlyBase);', true);
         } else {
-            this.globDeps.componentFn.$value('thin');
-            ctx.add(this.globDeps.componentFn);
+            this.glob.componentFn.$value('thin');
+            ctx.add(this.glob.componentFn);
             ctx.write('($option={}) => {', true);
             ctx.goIndent(() => {
                 ctx.add(xNode('block', {body: n.body}));
@@ -283,7 +284,7 @@ function makeComponentFn() {
         ctx.writeIndent();
         if(this.config.exportDefault) ctx.write('export default ');
         else ctx.write(`const ${n.name} = `);
-        ctx.add(this.globDeps.apply);
+        ctx.add(this.glob.apply);
         ctx.add(n.componentFn);
     });
 }

@@ -143,15 +143,6 @@ export const $onDestroy = fn => current_component._d.push(fn);
 export const $onMount = fn => current_component._m.push(fn);
 
 
-export const $insertElementByOption = ($label, $option, $element) => {
-    if ($option.$l) {
-        insertAfter($label, $element);
-    } else {
-        $label.appendChild($element);
-    }
-};
-
-
 export const $readOnlyBase = {
     a: ($component) => {
         $component.$cd = {
@@ -223,7 +214,7 @@ export const makeComponent = (init, $base) => {
         $base.a($component);
 
         try {
-            $insertElementByOption($element, $option, init($option, $component.apply));
+            $component.$dom = init($option, $component.apply);
             $base.b($component);
         } finally {
             current_component = prev;
@@ -556,5 +547,23 @@ export const unwrapProps = (cd, props, fn) => {
     if(props) {
         if(isFunction(props)) prefixPush(cd, () => fn(props()));
         else fn(props)
+    }
+}
+
+
+export const makeBlock = (fr, fn) => {
+    return () => {
+        let $dom = fr.cloneNode(true), $cd = cd_new();
+        fn($cd, $dom);
+        return {$cd, $dom};
+    }
+}
+
+
+export const makeStaticBlock = (fr, fn) => {
+    return () => {
+        let $dom = fr.cloneNode(true);
+        fn?.($dom);
+        return {$dom};
     }
 }

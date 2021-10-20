@@ -1,4 +1,6 @@
 
 import App from 'main.xht';
 
-window.app = App(document.body, window.$$option);
+let app = window.app = App(window.$$option);
+document.body.innerHTML = '';
+document.body.appendChild(app.$dom);

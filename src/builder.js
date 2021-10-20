@@ -5,17 +5,27 @@ import { xNode } from './xnode.js'
 
 export function buildRuntime() {
     let runtime = xNode('block', {scope: true});
-    runtime.push(xNode((ctx) => {
-        if(this.inuse.$cd) ctx.writeLine('let $cd = $component.$cd;');
-    }));
+
+    let rootCD = this.glob.rootCD;
+    rootCD.$handler = (ctx, n) => {
+        n.$value(!!n.$deps[0].value);
+        if(n.value) {
+            ctx.writeLine('let $cd = $component.$cd;');
+            this.glob.component.$value(true);
+        }
+    };
+    runtime.push(rootCD);
+    this.glob.component.$depends(rootCD);
 
     let bb = this.buildBlock(this.DOM, {inline: true});
+    rootCD.$depends(bb.requireCD);
     runtime.push(xNode('template', {
         name: '$parentElement',
         body: bb.tpl,
         svg: bb.svg
     }));
     runtime.push(bb.source);
+    runtime.push(bb.requireCD);
 
     if(this.script.onMount) runtime.push(`$runtime.$onMount(onMount);`);
     if(this.script.onDestroy) runtime.push(`$runtime.$onDestroy(onDestroy);`);
@@ -36,8 +46,10 @@ export function buildRuntime() {
         }
     }));
 
-    runtime.push(xNode('bind-component-element', (ctx) => {
-        if(ctx.inuse.$insertElementByOption) ctx.writeLine('$runtime.$insertElementByOption($element, $option, $parentElement);');
+    runtime.push(xNode('bind-component-element', {
+        $deps: [this.glob.componentFn]
+    }, (ctx) => {
+        if(this.glob.componentFn.value == 'thin') ctx.writeLine(`return {$dom: $parentElement};`);
         else ctx.writeLine('return $parentElement;');
     }));
 
@@ -73,7 +85,10 @@ export function buildBlock(data, option={}) {
     let rootTemplate = xNode('node', {inline: true, _ctx: this});
     let binds = xNode('block');
     let result = {};
+    let requireCD = result.requireCD = xNode('require-cd', false);
     let inuse = Object.assign({}, this.inuse);
+
+    if(option.each?.blockPrefix) binds.push(option.each.blockPrefix);
 
     const go = (data, isRoot, tpl) => {
         let body = data.body.filter(n => {
@@ -158,15 +173,18 @@ export function buildBlock(data, option={}) {
                         textNode = tpl.push(pe.staticText);
                     } else {
                         textNode = tpl.push(' ');
-                        binds.push(xNode('bindText', {
-                            $deps: [this.globDeps.apply],
+                        let bindText = xNode('bindText', {
+                            $deps: [this.glob.apply],
                             el: textNode.bindName(),
                             exp: pe.result
                         }, (ctx, n) => {
-                            if(this.globDeps.apply.value) {
+                            if(this.glob.apply.value) {
+                                requireCD.$value(true);
                                 ctx.writeLine(`$runtime.bindText($cd, ${n.el}, () => ${n.exp});`);
                             } else ctx.writeLine(`${n.el}.textContent = ${n.exp};`);
-                        }));
+                        });
+                        binds.push(bindText);
+                        requireCD.$depends(bindText);
                     }
 
                     pe.parts.forEach(p => {
@@ -278,6 +296,7 @@ export function buildBlock(data, option={}) {
                     go(n, false, el);
                 }
             } else if(n.type === 'each') {
+                requireCD.$value(true);
                 if(data.type == 'node' && data.body.length == 1) {
                     lastStatic = null;
                     let eachBlock = this.makeEachBlock(n, {
@@ -293,6 +312,7 @@ export function buildBlock(data, option={}) {
                     return;
                 }
             } else if(n.type === 'if') {
+                requireCD.$value(true);
                 let element = placeLabel(n.value);
                 let ifBlock = this.makeifBlock(n, element);
                 binds.push(ifBlock.source);
@@ -333,8 +353,9 @@ export function buildBlock(data, option={}) {
 
     result.tpl = rootTemplate;
 
+    let innerBlock = null;
     if(binds.body.length) {
-        const innerBlock = xNode('block');
+        innerBlock = xNode('block');
         if(!option.oneElement) {
             innerBlock.push(xNode('bindNodes', ctx => {
     
@@ -364,18 +385,56 @@ export function buildBlock(data, option={}) {
                 args: ['$cd', '$parentElement'].concat(option.args || []),
                 body: [innerBlock]
             });
-        } else {
-            result.name = '$$build' + (this.uniqIndex++);
-            result.source = xNode('function', {
-                name: result.name,
-                args: ['$cd', '$parentElement'].concat(option.args || []),
-                body: [innerBlock]
-            });
         }
     } else {
         result.name = '$runtime.noop';
         result.source = null;
     }
+
+    if(!option.inline && !option.inlineFunction) {
+        result.block = xNode('block', {
+            $compile: [innerBlock, requireCD],
+            $deps: [requireCD],
+            requireCD,
+            innerBlock,
+            tpl: xNode('template', {
+                inline: true,
+                body: rootTemplate,
+                svg: result.svg
+            }),
+            each: option.each
+        }, (ctx, n) => {
+            ctx.write(true);
+            if(n.each && !ctx.isEmpty(n.innerBlock)) {
+                if(n.requireCD.value) ctx.write(`$runtime.makeEachBlock(`);
+                else ctx.write(`$runtime.makeStaticEachBlock(`);
+            } else {
+                if(n.requireCD.value) ctx.write(`$runtime.makeBlock(`);
+                else ctx.write(`$runtime.makeStaticBlock(`);
+            }
+            ctx.add(n.tpl);
+            if(!ctx.isEmpty(n.innerBlock)) {
+                if(n.each) {
+                    if(n.requireCD.value) ctx.write(`, ($cd, $parentElement, ${n.each.itemName}, ${n.each.indexName}) => {`, true);
+                    else ctx.write(`, ($parentElement, ${n.each.itemName}, ${n.each.indexName}) => {`, true);
+                } else {
+                    if(n.requireCD.value) ctx.write(`, ($cd, $parentElement) => {`, true);
+                    else ctx.write(`, ($parentElement) => {`, true);
+                }
+                ctx.indent++;
+                ctx.add(n.innerBlock)
+                if(n.each?.rebind) {
+                    ctx.write(true, `return `);
+                    ctx.add(n.each.rebind);
+                    ctx.write(`;`, true);
+                };
+                ctx.indent--;
+                ctx.write(true, `}`);
+            }
+            ctx.write(`)`);
+        });
+    }
+
     result.inuse = {};
     for(let k in this.inuse) {
         result.inuse[k] = this.inuse[k] - (inuse[k] || 0);

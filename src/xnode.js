@@ -114,7 +114,6 @@ export function xBuild(ctx, node) {
 
         if(r instanceof I) {
             if(next instanceof I) {
-                if(next.$indent < r.$indent) next.$indent = r.$indent;
                 result[i] = '';
             } else {
                 let s = '\n';
@@ -130,6 +129,10 @@ export function xBuild(ctx, node) {
     return result.join('');
 }
 
+
+const noop = () => {};
+
+
 export function xNode(_type, _data, _handler) {
     /*
         xNode(type, data, handler)
@@ -142,7 +145,10 @@ export function xNode(_type, _data, _handler) {
     let type, data, handler;
     if(typeof _type == 'string') {
         type = _type;
-        if(typeof _data == 'function') {
+        if(_data === false && !_handler) {
+            handler = noop;
+            data = null;
+        } else if(typeof _data == 'function') {
             assert(!_handler);
             handler = _data;
         } else {
@@ -180,7 +186,7 @@ export function xNode(_type, _data, _handler) {
     }
     this.$value = function(value) {
         assert(!this.$done, 'Attempt to set active, depends node is already resolved');
-        this.value = value || true;
+        this.value = value === undefined ? true : value;
     }
     return this;
 }
