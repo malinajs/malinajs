@@ -200,7 +200,7 @@ export function transform() {
 
     const makeWatch = (n) => {
         function assertExpression(n) {
-            if(n.type == 'Identifier') return;
+            if(['Identifier', 'TemplateLiteral', 'Literal'].includes(n.type)) return;
             if(n.type.endsWith('Expression')) return;
             throw 'Wrong expression';
         };
