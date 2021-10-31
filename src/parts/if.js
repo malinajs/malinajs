@@ -10,67 +10,31 @@ export function makeifBlock(data, element) {
     this.detectDependency(exp);
     this.require('$cd');
 
-    let mainBlock, elseBlock, mainTpl, elseTpl;
+    let mainBlock, elseBlock;
 
     if(data.bodyMain) {
-        mainBlock = this.buildBlock({body: data.bodyMain}, {protectLastTag: true, inline: true});
-        elseBlock = this.buildBlock(data, {protectLastTag: true, inline: true});
-
-        elseTpl = xNode('template', {
-            inline: true,
-            body: elseBlock.tpl,
-            svg: elseBlock.svg
-        });
+        mainBlock = this.buildBlock({body: data.bodyMain}, {protectLastTag: true});
+        elseBlock = this.buildBlock(data, {protectLastTag: true});
     } else {
-        mainBlock = this.buildBlock(data, {protectLastTag: true, inline: true});
+        mainBlock = this.buildBlock(data, {protectLastTag: true});
     }
-
-    mainTpl = xNode('template', {
-        inline: true,
-        body: mainBlock.tpl,
-        svg: mainBlock.svg
-    });
 
     const source = xNode('if:bind', {
         el: element.bindName(),
         exp,
-        mainTpl,
-        mainBlock: mainBlock.source,
-        elseTpl,
-        elseBlock: elseBlock && elseBlock.source
-    },
-    (ctx, data) => {
-        ctx.writeLine(`$runtime.$$ifBlock($cd, ${data.el}, () => !!(${data.exp}),`);
+        mainBlock: mainBlock.block,
+        elseBlock: elseBlock && elseBlock.block
+    }, (ctx, n) => {
+        ctx.write(true, `$runtime.$$ifBlock($cd, ${n.el}, () => !!(${n.exp}),`);
         ctx.indent++;
-        ctx.writeIndent();
-        ctx.build(data.mainTpl);
-        ctx.write(',\n');
-        ctx.writeIndent();
-        if(data.mainBlock) {
-            ctx.build(xNode('function', {
-                inline: true,
-                arrow: true,
-                args: ['$cd', '$parentElement'],
-                body: [data.mainBlock]
-            }));
-        } else ctx.write('$runtime.noop');
-        if(data.elseTpl) {
-            ctx.write(',\n');
-            ctx.writeIndent();
-            ctx.build(data.elseTpl);
-            ctx.write(',\n');
-            ctx.writeIndent();
-            if(data.elseBlock) {
-                ctx.build(xNode('function', {
-                    inline: true,
-                    arrow: true,
-                    args: ['$cd', '$parentElement'],
-                    body: [data.elseBlock]
-                }));
-            } else ctx.write('$runtime.noop');
+        ctx.write(true);
+        ctx.add(n.mainBlock);
+        if(n.elseBlock) {
+            ctx.write(',');
+            ctx.add(n.elseBlock);
         }
         ctx.indent--;
-        ctx.write(');\n');
+        ctx.write(true, ');', true);
     });
 
     return {source};

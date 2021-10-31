@@ -1,35 +1,39 @@
 
 import { $$removeElements, firstChild, insertAfter } from '../runtime/base';
-import { $watch } from '../runtime/cd';
+import { $watch, cd_onDestroy, cd_attach, cd_destroy } from '../runtime/cd';
 
-export function $$ifBlock($cd, $parentElement, fn, tpl, build, tplElse, buildElse) {
-    let childCD;
-    let first, last;
+export function $$ifBlock(parentCD, label, fn, build, buildElse) {
+    let first, last, $cd, destroy;
+    cd_onDestroy(parentCD, () => destroy?.());
 
-    function create(fr, builder) {
-        childCD = $cd.new();
-        let tpl = fr.cloneNode(true);
-        builder(childCD, tpl);
-        first = tpl[firstChild];
-        last = tpl.lastChild;
-        insertAfter($parentElement, tpl);
+    function createBlock(builder) {
+        let $dom;
+        ({$cd, destroy, $dom} = builder());
+        cd_attach(parentCD, $cd);
+        first = $dom[firstChild];
+        last = $dom.lastChild;
+        insertAfter(label, $dom);
     };
 
-    function destroy() {
-        if(!childCD) return;
-        childCD.destroy();
-        childCD = null;
+    function destroyBlock() {
+        if(!first) return;
+        destroy?.();
+        destroy = null;
+        if($cd) {
+            cd_destroy($cd);
+            $cd = null;
+        }
         $$removeElements(first, last);
         first = last = null;
     };
 
-    $watch($cd, fn, (value) => {
+    $watch(parentCD, fn, (value) => {
         if(value) {
-            destroy();
-            create(tpl, build);
+            destroyBlock();
+            createBlock(build);
         } else {
-            destroy();
-            if(buildElse) create(tplElse, buildElse);
+            destroyBlock();
+            if(buildElse) createBlock(buildElse);
         }
     });
 };
