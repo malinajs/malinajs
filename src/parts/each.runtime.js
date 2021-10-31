@@ -1,15 +1,34 @@
 
 import { $$removeElements, childNodes, firstChild } from '../runtime/base';
-import { $watch, $$compareArray, isArray } from '../runtime/cd';
+import { $watch, $$compareArray, isArray, cd_attach, cd_new } from '../runtime/cd';
 
-export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, itemTemplate, bind) {
-    let $cd = $parentCD.new();
+
+export const makeEachBlock = (fr, fn) => {
+    return (item, index) => {
+        let $dom = fr.cloneNode(true), $cd = cd_new();
+        let rebind = fn($cd, $dom, item, index);
+        return {$cd, $dom, rebind};
+    }
+};
+
+
+export const makeStaticEachBlock = (fr, fn) => {
+    return (item, index) => {
+        let $dom = fr.cloneNode(true);
+        let rebind = fn($dom, item, index);
+        return {$dom, rebind};
+    }
+};
+
+
+export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, bind) {
+    let eachCD = cd_new();
+    cd_attach($parentCD, eachCD);
 
     let mapping = new Map();
     let lastNode;
-    let tplLength = itemTemplate[childNodes].length;
 
-    $watch($cd, fn, (array) => {
+    $watch(eachCD, fn, (array) => {
         if(!array) array = [];
         if(typeof(array) == 'number') array = [...Array(array)].map((_,i) => i + 1);
         else if(!isArray(array)) array = [];
@@ -37,19 +56,19 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, itemTemplat
             if(!count && lastNode) {
                 if(onlyChild) label.textContent = '';
                 else $$removeElements(label.nextSibling, lastNode);
-                $cd.children.forEach(cd => cd.destroy(false));
-                $cd.children.length = 0;
+                eachCD.children.forEach(cd => cd.destroy(false));
+                eachCD.children.length = 0;
                 mapping.clear();
             } else {
-                $cd.children = [];
+                eachCD.children = [];
                 mapping.forEach(ctx => {
                     if(ctx.a) {
                         ctx.a = false;
-                        $cd.children.push(ctx.cd);
+                        eachCD.children.push(ctx.$cd);
                         return;
                     }
                     $$removeElements(ctx.first, ctx.last);
-                    ctx.cd.destroy(false);
+                    ctx.$cd.destroy(false);
                 });
             }
         }
@@ -66,7 +85,7 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, itemTemplat
                 if(nextEl != ctx.first) {
                     let insert = true;
 
-                    if(tplLength == 1 && (i + 1 < array.length) && prevNode?.nextSibling) {
+                    if(ctx.first == ctx.last && (i + 1 < array.length) && prevNode?.nextSibling) {
                         next_ctx = mapping.get(getKey(array[i + 1], i + 1, array));
                         if(next_ctx && prevNode.nextSibling.nextSibling === next_ctx.first) {
                             parentNode.replaceChild(ctx.first, prevNode.nextSibling);
@@ -85,15 +104,14 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, itemTemplat
                         }
                     }
                 }
-                ctx.rebind(i, item);
+                ctx.rebind?.(i, item);
             } else {
-                let tpl = itemTemplate.cloneNode(true);
-                let childCD = $cd.new();
-                ctx = {cd: childCD};
-                bind(ctx, tpl, item, i);
-                ctx.first = tpl[firstChild];
-                ctx.last = tpl.lastChild;
-                parentNode.insertBefore(tpl, prevNode?.nextSibling);
+                let $dom;
+                ({$dom, ...ctx} = bind(item, i));
+                cd_attach(eachCD, ctx.$cd);
+                ctx.first = $dom[firstChild];
+                ctx.last = $dom.lastChild;
+                parentNode.insertBefore($dom, prevNode?.nextSibling);
             }
             prevNode = ctx.last;
             newMapping.set(getKey(item, i, array), ctx);

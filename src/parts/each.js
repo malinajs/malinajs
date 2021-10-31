@@ -6,11 +6,6 @@ import { xNode } from '../xnode.js'
 
 export function makeEachBlock(data, option) {
 
-    let nodeItems = trimEmptyNodes(data.body);
-    if(!nodeItems.length) nodeItems = [data.body[0]];
-
-    let itemData = this.buildBlock({body: nodeItems}, {protectLastTag: true, inline: true});
-
     // #each items as item, index (key)
     let rx = data.value.match(/^#each\s+(.+)\s+as\s+(.+)$/);
     assert(rx, `Wrong #each expression '${data.value}'`);
@@ -26,7 +21,7 @@ export function makeEachBlock(data, option) {
     }
     right = right.trim();
 
-    let itemName, indexName, bind0 = null;
+    let itemName, indexName, blockPrefix = null;
     if(right[0] == '{') {
         rx = right.match(/^(\{[^}]+\})(.*)$/);
         assert(rx, `Wrong #each expression '${data.value}'`);
@@ -43,12 +38,15 @@ export function makeEachBlock(data, option) {
         if(indexName[0] == ',') indexName = indexName.substring(1).trim();
         indexName = indexName || '$index';
 
-        bind0 = xNode('each:unwrap', {
+        blockPrefix = xNode('each:unwrap', {
             exp,
             keywords
         }, (ctx, n) => {
-            ctx.writeLine(`let ${n.keywords.join(', ')};`);
-            ctx.writeLine(`$runtime.prefixPush($ctx.cd, () => (${n.exp} = $$item));`);
+            if(this.script.readOnly) ctx.writeLine(`let ${n.exp} = $$item;`);
+            else {
+                ctx.writeLine(`let ${n.keywords.join(', ')};`);
+                ctx.writeLine(`$runtime.prefixPush($cd, () => (${n.exp} = $$item));`);
+            }
         });
     } else {
         rx = right.trim().split(/\s*\,\s*/);
@@ -82,61 +80,43 @@ export function makeEachBlock(data, option) {
         });
     };
 
-    let bind;
-    if(itemData.source) {
-        bind = xNode('function', {
-            inline: true,
-            arrow: true,
-            args: ['$ctx', '$parentElement', itemName, indexName],
-            body: [
-                `let $cd = $ctx.cd;`,
-                bind0,
-                itemData.source,
-                xNode(ctx => {
-                    ctx.writeLine(`$ctx.rebind = function(_${indexName}, _${itemName}) {`);
-                    ctx.indent++;
-                    ctx.writeLine(`${indexName} = _${indexName};`);
-                    ctx.writeLine(`${itemName} = _${itemName};`);
-                    ctx.indent--;
-                    ctx.writeLine(`};`);
-                })
-            ]
-        });
-    } else {
-        bind = xNode('function', {
-            inline: true,
-            arrow: true,
-            args: ['$ctx'],
-            body: [`$ctx.rebind = $runtime.noop;`]
+    let rebind;
+    if(!this.script.readOnly) {
+        rebind = xNode('block', {
+            itemName,
+            indexName
+        }, (ctx, n) => {
+            ctx.write(`(_${n.indexName}, _${n.itemName}) => {${n.indexName}=_${n.indexName}; ${n.itemName}=_${n.itemName};}`);
         });
     }
 
-    const template = xNode('template', {
-        inline: true,
-        body: itemData.tpl,
-        svg: itemData.svg
+    let nodeItems = trimEmptyNodes(data.body);
+    if(!nodeItems.length) nodeItems = [data.body[0]];
+
+    let block = this.buildBlock({body: nodeItems}, {
+        protectLastTag: true,
+        each: {
+            blockPrefix,
+            rebind,
+            itemName,
+            indexName
+        }
     });
 
-    this.require('$cd');
     const source = xNode('each', {
         keyFunction,
-        template,
-        bind
-    }, (ctx, data) => {
+        block: block.block,
+    }, (ctx, n) => {
         ctx.writeLine(`$runtime.$$eachBlock($cd, ${option.elName}, ${option.onlyChild?1:0}, () => (${arrayName}),`);
         ctx.indent++;
-        ctx.writeIndent();
-        if(data.keyFunction === 'noop') ctx.write('$runtime.noop');
-        else if(data.keyFunction) ctx.build(data.keyFunction);
+        ctx.write(true);
+        if(n.keyFunction === 'noop') ctx.write('$runtime.noop');
+        else if(n.keyFunction) ctx.add(n.keyFunction);
         else ctx.write('$runtime.eachDefaultKey');
-        ctx.write(`,\n`);
-        ctx.writeIndent();
-        ctx.build(data.template);
-        ctx.write(`,\n`);
-        ctx.writeIndent();
-        ctx.build(data.bind);
-        ctx.write(`);\n`);
+        ctx.write(`,`);
+        ctx.add(n.block);
         ctx.indent--;
+        ctx.write(true, `);`, true);
     });
     this.detectDependency(arrayName);
 
