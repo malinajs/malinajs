@@ -3,7 +3,7 @@ import { assert, isSimpleName, unwrapExp, detectExpressionType, xNode, trimEmpty
 
 
 export function makeFragment(node) {
-    let rx = node.value.match(/#fragment\:(\S+)(.*)$/);
+    let rx = node.value.match(/#fragment\:(\S+)(.*)$/s);
     assert(rx);
     let name = rx[1], external = false;
     assert(isSimpleName(name));

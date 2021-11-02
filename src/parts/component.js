@@ -81,7 +81,7 @@ export function makeComponent(node, element) {
             passOption.slots = true;
 
             let props;
-            let rx = slot.value && slot.value.match(/^#slot\S*\s+(.*)$/);
+            let rx = slot.value && slot.value.match(/^#slot\S*\s+(.*)$/s);
             if(rx) {
                 props = rx[1].trim().split(/\s*,\s*/);
                 assert(props.length);

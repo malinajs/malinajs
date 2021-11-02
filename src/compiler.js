@@ -21,7 +21,7 @@ import { attachPortal } from './parts/portal.js';
 import { makeEventProp } from './event-prop.js';
 
 
-export const version = '0.6.47';
+export const version = '0.6.48';
 
 
 export async function compile(source, config = {}) {
@@ -259,7 +259,8 @@ function loadConfig(filename, option) {
 
     if(localConfig) {
         const confFn = require(localConfig);
-        result = confFn(result, filename);
+        if(typeof(confFn) == 'function') result = confFn(result, filename);
+        else result = confFn;
     }
     if(!result.path) result.path = filename;
     if(!result.name) result.name = filename.match(/([^/\\]+)\.\w+$/)[1];

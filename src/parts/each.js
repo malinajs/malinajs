@@ -11,14 +11,14 @@ export function makeEachBlock(data, option) {
     let itemData = this.buildBlock({body: nodeItems}, {protectLastTag: true, inline: true});
 
     // #each items as item, index (key)
-    let rx = data.value.match(/^#each\s+(.+)\s+as\s+(.+)$/);
+    let rx = data.value.match(/^#each\s+(.+)\s+as\s+(.+)$/s);
     assert(rx, `Wrong #each expression '${data.value}'`);
     let arrayName = rx[1];
     let right = rx[2];
     let keyName;
 
     // get keyName
-    rx = right.match(/^(.*)\s*\(\s*([^\(\)]+)\s*\)\s*$/);
+    rx = right.match(/^(.*)\s*\(\s*([^\(\)]+)\s*\)\s*$/s);
     if(rx) {
         right = rx[1];
         keyName = rx[2];
@@ -27,7 +27,7 @@ export function makeEachBlock(data, option) {
 
     let itemName, indexName, bind0 = null;
     if(right[0] == '{') {
-        rx = right.match(/^(\{[^}]+\})(.*)$/);
+        rx = right.match(/^(\{[^}]+\})(.*)$/s);
         assert(rx, `Wrong #each expression '${data.value}'`);
         let exp = rx[1], keywords;
 

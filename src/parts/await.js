@@ -3,7 +3,7 @@ import { isSimpleName, assert, xNode, extractKeywords } from "../utils";
 export function makeAwaitBlock(node, element) {
     let valueForThen, exp;
 
-    let rx = node.value.match(/^#await\s+(.+)\s+then\s+(\S+)\s*$/);
+    let rx = node.value.match(/^#await\s+(.+)\s+then\s+(\S+)\s*$/s);
     if(rx) {
         assert(!node.parts.then);
         node.parts.then = node.parts.main;
@@ -11,7 +11,7 @@ export function makeAwaitBlock(node, element) {
         exp = rx[1];
         valueForThen = rx[2];
     } else {
-        rx = node.value.match(/^#await\s+(.+)\s*$/);
+        rx = node.value.match(/^#await\s+(.+)\s*$/s);
         assert(rx);
         exp = rx[1].trim();
     }
@@ -28,7 +28,7 @@ export function makeAwaitBlock(node, element) {
             assert(isSimpleName(valueForThen));
             args.push(valueForThen);
         } else {
-            let rx = node.parts.thenValue.match(/^[^ ]+\s+(.*)$/);
+            let rx = node.parts.thenValue.match(/^[^ ]+\s+(.*)$/s);
             if(rx) {
                 assert(isSimpleName(rx[1]));
                 args.push(rx[1]);
@@ -38,7 +38,7 @@ export function makeAwaitBlock(node, element) {
     }
     if(node.parts.catch && node.parts.catch.length) {
         let args = [];
-        let rx = node.parts.catchValue.match(/^[^ ]+\s+(.*)$/);
+        let rx = node.parts.catchValue.match(/^[^ ]+\s+(.*)$/s);
         if(rx) {
             assert(isSimpleName(rx[1]));
             args.push(rx[1]);

@@ -3,7 +3,7 @@ import { assert, xNode } from '../utils.js'
 
 
 export function makeifBlock(data, element) {
-    let r = data.value.match(/^#if (.*)$/);
+    let r = data.value.match(/^#if (.*)$/s);
     let exp = r[1];
     assert(exp, 'Wrong binding: ' + data.value);
     this.detectDependency(exp);
