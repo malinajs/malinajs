@@ -29,11 +29,11 @@ export function toCamelCase(name) {
 };
 
 export function Q(s) {
-    return s.replace(/`/g, '\\`').replace(/\\/g, '\\\\');
+    return s.replace(/\\/g, '\\\\').replace(/`/g, '\\`');
 };
 
 export function Q2(s) {
-    return s.replace(/`/g, '\\`').replace(/\\/g, '\\\\').replace(/\n/g, '\\n');
+    return s.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\n/g, '\\n');
 };
 
 export function unwrapExp(e) {
