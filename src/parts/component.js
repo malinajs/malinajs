@@ -189,6 +189,7 @@ export function makeComponent(node, element) {
         let value = prop.value;
         if(name == '@@') {
             forwardAllEvents = true;
+            this.require('$events');
             return false;
         } else if(name == 'this') {
             dynamicComponent = unwrapExp(value);
