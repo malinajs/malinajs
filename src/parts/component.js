@@ -3,22 +3,19 @@ import { assert, detectExpressionType, isSimpleName, unwrapExp, trimEmptyNodes }
 import { xNode } from '../xnode.js'
 
 
-export function makeComponent(node, element) {
+export function makeComponent(node, requireCD) {
     let propList = node.attributes;
-    let forwardAllEvents = false;
 
-    this.require('$context', '$cd');
+    this.require('$context');
+    requireCD.$value(true);  // FIX
 
-    let options = [];
-    let dynamicComponent;
     let reference = null;
     let propsFn = [], propsSetter = [], $class=[], staticProps = true;
+    let slotBlocks = [];
+    let anchorBlocks = [];
 
     let componentName = node.name;
-    if(componentName == 'component') {
-        assert(node.elArg);
-        dynamicComponent = node.elArg[0] == '{' ? unwrapExp(node.elArg) : node.elArg;
-    } else if(this.config.autoimport) {
+    if(componentName != 'component' && this.config.autoimport) {
         let imported = this.script.autoimport[componentName] || this.script.importedNames.includes(componentName)
             || this.script.rootVariables[componentName] || this.script.rootFunctions[componentName];
 
@@ -28,30 +25,12 @@ export function makeComponent(node, element) {
         }
     }
 
-    let passOption = {};
-    let head = xNode('block');
-
-    head.push(xNode('events', ctx => {
-        if(forwardAllEvents) {
-            this.require('$events');
-            ctx.writeLine('let events = {...$events};');
-        } else if(passOption.events) {
-            ctx.writeLine('let events = {};');
-        }
-    }));
-
-    head.push(xNode('slots', ctx => {
-        if(passOption.slots) ctx.writeLine('let slots = {};');
-    }));
-
-    head.push(xNode('anchor', ctx => {
-        if(passOption.anchor) ctx.writeLine('let anchor = {};');
-    }));
-
-    let _boundEvents = {};
-    const boundEvent = (name) => {
-        if(!_boundEvents[name]) _boundEvents[name] = forwardAllEvents ? 1 : 0;
-        _boundEvents[name]++;
+    // events
+    let forwardAllEvents = false;
+    let events = {};
+    const passEvent = (name, bind) => {
+        if(!events[name]) events[name] = [];
+        events[name].push(bind);
     }
 
     if(node.body && node.body.length) {
@@ -79,12 +58,11 @@ export function makeComponent(node, element) {
         Object.values(slots).forEach(slot => {
             if(!slot.body.length) return;
             assert(isSimpleName(slot.name));
-            passOption.slots = true;
 
             let props;
             let rx = slot.value && slot.value.match(/^#slot\S*\s+(.*)$/);
             if(rx) {
-                props = rx[1].trim().split(/\s*,\s*/);
+                props = rx[1].trim().split(/[\s,]+/);
                 assert(props.length);
                 props.forEach(n => {
                     assert(isSimpleName(n), 'Wrong prop for slot');
@@ -95,7 +73,7 @@ export function makeComponent(node, element) {
             if(contentNodes.length == 1 && contentNodes[0].type == 'node' && contentNodes[0].name == 'slot') {
                 let parentSlot = contentNodes[0];
                 if(!parentSlot.body || !parentSlot.body.length) {
-                    head.push(xNode('empty-slot', {
+                    slotBlocks.push(xNode('empty-slot', {
                         childName: slot.name,
                         parentName: parentSlot.elArg || 'default'
                     }, (ctx, n) => {
@@ -106,7 +84,7 @@ export function makeComponent(node, element) {
             }
 
             if(props) this.require('apply');
-            this.require('$cd');
+            requireCD.$value(true);  // FIXME
 
             let block = this.buildBlock(slot, {inline: true});
 
@@ -116,7 +94,8 @@ export function makeComponent(node, element) {
                 inline: true
             });
 
-            head.push(xNode('slot', {
+            slotBlocks.push(xNode('slot', {
+                $deps: [this.glob.apply],
                 name: slot.name,
                 template,
                 bind: block.source,
@@ -124,75 +103,55 @@ export function makeComponent(node, element) {
                 props
             }, (ctx, n) => {
                 if(n.bind) {
-                    ctx.write(true, `slots.${n.name} = $runtime.makeSlot($cd, ($cd, $context, $instance_${n.componentName}`);
-                    if(n.props) ctx.write(`, props`);
-                    ctx.write(`) => {\n`);
-                    ctx.goIndent(() => {
-                        if(n.bind) {
-                            let push = n.props && ctx.inuse.apply;
-                            ctx.write(true, `let $parentElement = `);
-                            ctx.build(n.template);
-                            ctx.write(`;\n`);
-                            if(n.props) {
-                                ctx.writeLine(`let {${n.props.join(', ')}} = props;`);
-                                if(push) ctx.writeLine(`let push = () => ({${n.props.join(', ')}} = props, $$apply());`)
-                            }
-                            ctx.build(n.bind);
-                            if(push) ctx.writeLine(`return {push, el: $parentElement};`);
-                            else ctx.writeLine(`return $parentElement;`);
-                        } else {
-                            ctx.write(true, `return `);
-                            ctx.build(n.template);
-                            ctx.write(`;\n`);
-                        }
-                    });
-                    ctx.writeLine(`});`);
+                    ctx.write(true, `${n.name}: $runtime.makeSlot($cd, `);
+                    ctx.add(n.template);
+                    ctx.write(`, ($cd, $parentElement, $context, $instance_${n.componentName}`);
+                    if(n.props) ctx.write(`, $localProps`);
+                    ctx.write(`) => {`, true);
+                    ctx.indent++;
+                    if(n.props) ctx.write(true, `let {${n.props.join(', ')}} = $localProps;`);
+                    ctx.add(n.bind);
+
+                    if(n.props && this.glob.apply.value) ctx.write(true, `return ($localProps) => ({${n.props.join(', ')}} = $localProps, $$apply());`);
+                    ctx.indent--;
+                    ctx.writeLine(`})`);
                 } else {
-                    ctx.write(true, `slots.${n.name} = $runtime.makeSlotStatic(() => `);
-                    ctx.build(n.template);
-                    ctx.write(`);\n`);
+                    ctx.write(true, `${n.name}: $runtime.makeStaticBlock(`);
+                    ctx.add(n.template);
+                    ctx.write(')');
                 }
             }));
         });
 
         anchors.forEach(n => {
-            passOption.anchor = true;
-            let block = this.buildBlock({body: [n]}, {inline: true, oneElement: 'el', bindAttributes: true});
+            let bb = this.buildBlock({body: [n]}, {inline: true, oneElement: 'el', bindAttributes: true});
+            let block = bb.source;
             let name = n.name.slice(1) || 'default';
             assert(isSimpleName(name));
-            head.push(xNode('anchor', {
+
+            anchorBlocks.push(xNode('anchor', {
+                $compile: [block, bb.requireCD],
+                $deps: [bb.requireCD],
                 name,
-                source: block.source,
-                $cd: block.inuse.$cd
+                block
             }, (ctx, n) => {
-                ctx.writeLine(`anchor.${n.name} = (el) => {`);
-                ctx.goIndent(() => {
-                    if(n.$cd) {
-                        ctx.writeLine(`let $childCD = $cd.new();`);
-                        ctx.writeLine(`{`);
-                        ctx.goIndent(() => {
-                            ctx.writeLine(`let $cd = $childCD;`);
-                            ctx.build(n.source);
-                        });
-                        ctx.writeLine(`}`);
-                        ctx.writeLine(`return () => {$childCD.destroy();}`);
-                    } else {
-                        ctx.build(n.source);
-                    }
-                });
-                ctx.writeLine(`}`);
+                let useCD = n.$deps[0].value;
+                if(useCD) ctx.write(`${n.name}: {$: ($cd, el) => {`);
+                else ctx.write(`${n.name}: (el) => {`);
+                ctx.indent++;
+                ctx.build(n.block);
+                ctx.indent--;
+                if(useCD) ctx.write(true, `}}`);
+                else ctx.write(true, `}`);
             }));
         });
     }
 
-    propList = propList.filter(prop => {
-        let name = prop.name;
-        let value = prop.value;
+    propList = propList.filter(({name}) => {
         if(name == '@@') {
             forwardAllEvents = true;
             return false;
         } else if(name == 'this') {
-            dynamicComponent = unwrapExp(value);
             return false;
         }
         return true;
@@ -243,35 +202,21 @@ export function makeComponent(node, element) {
             if(name.startsWith('@@')) {
                 let event = name.substring(2);
                 assert(!value);
-                passOption.events = true;
-                boundEvent(event);
                 this.require('$events');
-                head.push(xNode('forwardEvent', {
+                passEvent(event, xNode('forwardEvent', {
                     event
-                }, (ctx, data) => {
-                    if(_boundEvents[data.event] > 1) ctx.writeLine(`$runtime.$$addEventForComponent(events, '${data.event}', $events.${data.event});`);
-                    else ctx.writeLine(`events.${data.event} = $events.${data.event};`);
-                }))
+                }, (ctx, n) => {
+                    ctx.write(`$events.${n.event}`);
+                }));
                 return;
             }
 
             let {event, fn} = this.makeEventProp(prop);
 
-            passOption.events = true;
-            boundEvent(event);
-            head.push(xNode('passEvent', {
-                event,
+            passEvent(event, xNode('passEvent', {
                 fn
             }, (ctx, n) => {
-                if(_boundEvents[n.event] > 1) {
-                    ctx.write(true, `$runtime.$$addEventForComponent(events, '${n.event}', `);
-                    ctx.build(n.fn);
-                    ctx.write(`);\n`);
-                } else {
-                    ctx.write(true, `events.${n.event} = `);
-                    ctx.build(n.fn);
-                    ctx.write(`;\n`);
-                }
+                ctx.add(n.fn);
             }));
             return;
         } else if(this.config.passClass && (name == 'class' || name.startsWith('class:'))) {
@@ -302,42 +247,87 @@ export function makeComponent(node, element) {
     });
 
 
-    if(forwardAllEvents || passOption.events) options.push('events');
-    if(passOption.slots) options.push('slots');
-    if(passOption.anchor) options.push('anchor');
+    if(Object.keys(events).length == 0) events = null;
 
     let result = xNode('component', {
-        $compile: [head],
-        $deps: [head],
-        el: element.bindName(),
         componentName,
-        head,
-        options,
-        $cd: '$cd',
         staticProps,
         props: propsFn,
         propsSetter,
         reference,
-        $class
+        $class,
+        forwardAllEvents,
+        events,
+        slots: slotBlocks.length ? slotBlocks : null,
+        anchors: anchorBlocks.length ? anchorBlocks : null
     }, (ctx, n) => {
-        const $cd = n.$cd || '$cd';
-
-        if(!ctx.isEmpty(n.head)) {
-            ctx.add(n.head);
-            n.requireScope = true;
-        }
+        if(n.reference) throw 'not implemented';  // FIXME
+        let comma = false;
+        ctx.write(`$runtime.callComponent($context, ${n.componentName}, {`);
 
         if(n.props.length && n.staticProps) {
-            n.options.push(`props: {${n.props.join(', ')}}`);
+            ctx.write(`props: {${n.props.join(', ')}}`);
+            comma = true;
             n.props = [];
         }
-
-        ctx.write(true);
-        if(n.reference) ctx.write(`${n.reference} = `);
-        ctx.write(`$runtime.callComponent(${$cd}, $context, ${n.componentName}, ${n.el}, {${n.options.join(', ')}}`);
+        ctx.indent++;
+        if(n.forwardAllEvents && !n.events) {
+            if(comma) ctx.write(', ');
+            comma = true;
+            ctx.write('events: $events');
+        } else if(n.events && !n.forwardAllEvents) {
+            if(comma) ctx.write(',', true);
+            comma = true;
+            ctx.write('events: {');
+            ctx.indent++;
+            ctx.write(true);
+            Object.entries(n.events).forEach(([event, list], index) => {
+                if(index) ctx.write(',', true);
+                ctx.write(event + ': ');
+                if(list.length == 1) ctx.add(list[0]);
+                else {
+                    ctx.write('$runtime.mergeEvents(');
+                    list.forEach((b, i) => {
+                        if(i) ctx.write(', ');
+                        ctx.add(b);
+                    });
+                    ctx.write(')');
+                }
+            });
+            ctx.indent--;
+            ctx.write(true, '}');
+        } else if(n.events && n.forwardAllEvents) {
+            throw 'not implemented';  // FIXME
+        }
+        if(n.slots) {
+            if(comma) ctx.write(', ');
+            comma = true;
+            ctx.write('slots: {');
+            ctx.indent++;
+            n.slots.forEach((slot, i) => {
+                if(i) ctx.write(',');
+                ctx.write(true);
+                ctx.add(slot);
+            })
+            ctx.indent--;
+            ctx.write(true, '}');
+        }
+        if(n.anchors) {
+            if(comma) ctx.write(', ');
+            comma = true;
+            ctx.write('anchor: {');
+            ctx.indent++;
+            n.anchors.forEach((anchor, i) => {
+                if(i) ctx.write(',');
+                ctx.write(true);
+                ctx.add(anchor);
+            });
+            ctx.indent--;
+            ctx.write(true, '}');
+        }
+        ctx.write('}');
 
         let other = '';
-        ctx.indent++;
         if(n.props.length) ctx.write(`,\n`, true, `() => ({${n.props.join(', ')}})`);
         else other = ', null';
 
@@ -363,65 +353,40 @@ export function makeComponent(node, element) {
         } else other += ', null';
 
         ctx.indent--;
-        ctx.write(`);\n`);
+        ctx.write(true, `)`);
     });
 
-    if(!dynamicComponent) {
-        return {bind: xNode('component-scope', {
-            $compile: [result],
-            $deps: [result],
-            component: result
-        }, (ctx, n) => {
-            if(n.component.requireScope) {
-                ctx.writeLine('{');
-                ctx.indent++;
-                ctx.add(n.component);
-                ctx.indent--;
-                ctx.writeLine('}');
-            } else ctx.add(n.component);
-        })};
-    } else {
-        this.detectDependency(dynamicComponent);
-
-        result.componentName = '$ComponentConstructor';
-        result.$cd = 'childCD';
-        return {bind: xNode('dyn-component', {
-            el: element.bindName(),
-            exp: dynamicComponent,
-            component: result
-        }, (ctx, n) => {
-            ctx.writeLine('{');
-            ctx.goIndent(() => {
-                if(ctx.inuse.apply) {
-                    ctx.writeLine(`let childCD, finalLabel = $runtime.getFinalLabel(${n.el});`);
-                    ctx.writeLine(`$watch($cd, () => (${n.exp}), ($ComponentConstructor) => {`);
-                    ctx.goIndent(() => {
-                        ctx.writeLine(`if(childCD) {`);
-                        ctx.goIndent(() => {
-                            ctx.writeLine(`childCD.destroy();`);
-                            ctx.writeLine(`$runtime.removeElementsBetween(${n.el}, finalLabel);`);
-                        });
-                        ctx.writeLine(`}`);
-                        ctx.writeLine(`childCD = null;`);
-                        ctx.writeLine(`if($ComponentConstructor) {`);
-                        ctx.goIndent(() => {
-                            ctx.writeLine(`childCD = $cd.new();`);
-                            ctx.build(n.component);
-                        });
-                        ctx.writeLine(`}`);
-                    });
-                    ctx.writeLine(`});`);
-                } else {
-                    ctx.writeLine(`let $ComponentConstructor = ${n.exp};`);
-                    ctx.writeLine(`if($ComponentConstructor) {`);
-                    ctx.goIndent(() => {
-                        ctx.writeLine(`let childCD = $cd;`);
-                        ctx.build(n.component);
-                    });
-                    ctx.writeLine(`}`);
-                }
-            });
-            ctx.writeLine('}');
-        })};
-    }
+    return {bind: result};
 };
+
+export function makeComponentDyn(node, requireCD, element) {
+    let dynamicComponent;
+
+    if(node.elArg) {
+        dynamicComponent = node.elArg[0] == '{' ? unwrapExp(node.elArg) : node.elArg;
+    } else {
+        node.props.some(({name, value}) => {
+            if(name == 'this') {
+                dynamicComponent = unwrapExp(value);
+                return true;
+            }
+        })
+    }
+
+    assert(dynamicComponent);
+    this.detectDependency(dynamicComponent);
+    requireCD.$value(true);
+
+    let component = this.makeComponent(node, requireCD).bind;
+
+    component.componentName = '$ComponentConstructor';
+    return xNode('dyn-component', {
+        el: element.bindName(),
+        exp: dynamicComponent,
+        component
+    }, (ctx, n) => {
+        ctx.write(true, `$runtime.attachDynComponent($cd, ${n.el}, () => ${n.exp}, ($ComponentConstructor) => `);
+        ctx.add(n.component);
+        ctx.write(')');
+    });
+}

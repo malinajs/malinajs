@@ -217,8 +217,21 @@ export function buildBlock(data, option={}) {
                     if(n.name == 'component' || !n.elArg) {
                         // component
                         let el = placeLabel(n.name);
-                        let b = this.makeComponent(n, el);
-                        binds.push(b.bind);
+
+                        if(n.name == 'component') {
+                            // dyn-component
+                            binds.push(this.makeComponentDyn(n, requireCD, el));
+                        } else {
+                            let component = this.makeComponent(n, requireCD);
+                            binds.push(xNode('attach-component', {
+                                component: component.bind,
+                                el: el.bindName()
+                            }, (ctx, n) => {
+                                ctx.write(true, `$runtime.attachBlock($cd, ${n.el}, `);
+                                ctx.add(n.component);
+                                ctx.write(')');
+                            }));
+                        }
                     } else {
                         let el = placeLabel(`exported ${n.elArg}`);
                         let b = this.attchExportedFragment(n, el, n.name);
@@ -235,8 +248,22 @@ export function buildBlock(data, option={}) {
                             return;
                         } else slotName = 'default';
                     }
+
                     let el = placeLabel(slotName);
-                    binds.push(this.attachSlot(slotName, el, n));
+                    let slot = this.attachSlot(slotName, n, requireCD);
+
+                    binds.push(xNode('attach-slot', {
+                        $deps: [requireCD],
+                        $compile: [slot],
+                        el: el.bindName(),
+                        slot,
+                        requireCD
+                    }, (ctx, n) => {
+                        if(n.requireCD.value) ctx.write(true, `$runtime.attachBlock($cd, ${n.el}, `);
+                        else ctx.write(true, `$runtime.attachBlock($component, ${n.el}, `);
+                        ctx.add(n.slot);
+                        ctx.write(');', true);
+                    }));
                     return;
                 }
                 if(n.name == 'fragment') {

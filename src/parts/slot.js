@@ -1,103 +1,69 @@
 
-import { unwrapExp, assert, isSimpleName } from '../utils.js';
 import { xNode } from '../xnode.js'
 
 
-export function attachSlot(slotName, label, node) {
-    let props = [];
+export function attachSlot(slotName, node, requireCD) {
+    let props = [], staticProps = true;
+
     if(node.attributes && node.attributes.length) {
         node.attributes.forEach(prop => {
-            let name = prop.name;
-            let value = prop.value;
-            if(name[0] == '{') {
-                assert(value == null);
-                value = name;
-                name = unwrapExp(name);
-            };
-            assert(value != null);
-            assert(isSimpleName(name));
-            if(value[0] == '{') {
-                value = unwrapExp(value);
-                this.detectDependency(value);
+            let {name, value, ...ip} = this.inspectProp(prop);
+            if(!ip.static) staticProps = false;
+            props.push(xNode('slot-prop', {
+                name,
+                value
+            }, (ctx, n) => {
+                ctx.write(`${n.name}: ${n.value}`);
+            }));
 
-                props.push(xNode('prop', {
-                    name,
-                    value,
-                    dyn: true
-                }, (ctx, n) => {
-                    if(this.inuse.apply) ctx.write(`${n.name}: () => (${n.value})`);
-                    else ctx.write(`${n.name}: (${n.value})`);
-                }));
-            } else {
-                props.push(xNode('static-prop', {
-                    name,
-                    value
-                }, (ctx, n) => {
-                    ctx.write(`${n.name}: \`${this.Q(n.value)}\``);
-                }));
-            }
         });
     };
 
     let placeholder;
-    if(node.body && node.body.length) {
-        let block = this.buildBlock(node, {inline: true});
+    if(node.body?.length) placeholder = this.buildBlock(node).block;
 
-        const tpl = xNode('template', {
-            name: '$parentElement',
-            body: block.tpl,
-            svg: block.svg
-        });
+    this.require('$context');
+    this.glob.component.$value(true);
 
-        placeholder = xNode('placeholder', {
-            el: label.bindName(),
-            body: block.source,
-            tpl
-        }, (ctx, n) => {
-            ctx.build(n.tpl);
-            ctx.build(n.body);
-            ctx.writeLine(`$runtime.insertAfter(${n.el}, $parentElement);`);
-        });
-    }
-
-    this.require('$component', '$cd', '$context');
-
-    return xNode('slot', {
+    let result = xNode('slot', {
+        $deps: [this.glob.apply],
         name: slotName,
-        el: label.bindName(),
         props,
+        staticProps,
         placeholder
     }, (ctx, n) => {
-        let hasDynProps = n.props.some(p => p.dyn);
-        let base = 'Base';
-        if(hasDynProps && ctx.inuse.apply) {
-            assert(!ctx._ctx.script.readOnly);
-            base = '';
-        }
-        ctx.write(true, `$runtime.attachSlot${base}($context, $cd, '${n.name}', ${n.el}, `);
+        let dynamicProps = this.glob.apply.value && !n.staticProps;
+
+        if(dynamicProps) requireCD.$value(true);
+    
+        let missed = '', slotName = n.name == 'default' ? 'null' : n.name;
+        if(dynamicProps) ctx.write(`$runtime.invokeSlot($component, ${slotName}, $context`);
+        else ctx.write(`$runtime.invokeSlotBase($component, ${slotName}, $context`);
+
         if(n.props.length) {
-            ctx.write(`{\n`);
-            ctx.goIndent(() => {
-                for(let i=0; i < n.props.length; i++) {
-                    let prop = n.props[i];
-                    ctx.writeIndent();
-                    ctx.build(prop)
-                    if(i + 1 < n.props.length) ctx.write(',');
-                    ctx.write('\n');
-                }
+            if(dynamicProps) ctx.write(', () => ({');
+            else ctx.write(', {');
+            n.props.forEach((prop, i) => {
+                if(i) ctx.write(', ');
+                ctx.add(prop);
             });
-            ctx.write(true, `}`);
-        } else {
-            ctx.write(`null`);
-        }
+            ctx.write('}');
+            if(dynamicProps) ctx.write(')');
+        } else missed += ', null';
+
         if(n.placeholder) {
-            ctx.write(', () => {\n');
-            ctx.goIndent(() => {
-                ctx.build(n.placeholder);
-            });
-            ctx.write(true, '}');
-        } else if(hasDynProps && !this.config.immutable) ctx.write(`, 0`)
-        if(hasDynProps && !this.config.immutable) ctx.write(`, $runtime.$$compareDeep`)
-        ctx.write(');\n');
+            ctx.write(missed, ', ');
+            missed = '';
+            ctx.add(n.placeholder);
+        } else missed += ', null';
+
+        if(dynamicProps) {
+            ctx.write(missed, ', ');
+            if(this.config.immutable) ctx.write(`$runtime.keyComparator`)
+            else ctx.write(`$runtime.$$compareDeep`)
+        }
+        ctx.write(')');
     });
+    requireCD.$depends(result);
+    return result;
 };

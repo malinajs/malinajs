@@ -56,6 +56,7 @@ export async function compile(source, config = {}) {
         makeEachBlock,
         makeifBlock,
         makeComponent,
+        makeComponentDyn,
         makeHtmlBlock,
         parseText,
         makeAwaitBlock,

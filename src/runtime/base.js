@@ -227,13 +227,13 @@ export const makeComponent = (init, $base) => {
 };
 
 
-export const callComponent = (cd, context, component, label, option, propFn, cmp, setter, classFn) => {
-    option.$l = 1;
+export const callComponent = (context, component, option={}, propFn, cmp, setter, classFn) => {
     option.context = {...context};
-    let $component, parentWatch, childWatch;
+    let $component, parentWatch, childWatch, cd;
 
     if(propFn) {
         if(cmp) {
+            cd = cd_new();
             parentWatch = $watch(cd, propFn, value => {
                 option.props = value;
                 if($component) {
@@ -247,25 +247,66 @@ export const callComponent = (cd, context, component, label, option, propFn, cmp
     }
 
     if(classFn) {
+        cd = cd || cd_new();
         fire($watch(cd, classFn, value => {
             option.$class = value;
             $component?.apply?.();
         }, {ro: true, value: {}, cmp: keyComparator}));
     }
 
-    $component = safeCall(() => component(label, option));
-    if($component) {
-      cd_onDestroy(cd, $component.destroy);
-
-      if(setter && $component.exportedProps) {
-        childWatch = $watch($component.$cd, $component.exportedProps, value => {
-          setter(value);
-          cd.$$.apply();
-        }, {ro: true, idle: true, value: parentWatch.value, cmp})
-      }
+    let anchors = option.anchor;
+    if(anchors) {
+        for(let name in anchors) {
+            let a = anchors[name];
+            let fn = a.$;
+            if(fn) {
+                cd = cd || cd_new();
+                anchors[name] = el => {
+                    let $cd = cd_new();
+                    cd_attach(cd, $cd);
+                    fn($cd, el);
+                    return () => cd_destroy($cd);
+                }
+            }
+        }
     }
-    return $component;
+
+    $component = safeCall(() => component(option));
+    if(setter && $component?.exportedProps) {
+        childWatch = $watch($component.$cd, $component.exportedProps, value => {
+            setter(value);
+            cd.$$.apply();
+        }, {ro: true, idle: true, value: parentWatch.value, cmp})
+    }
+    return {
+        $cd: cd,
+        $dom: $component.$dom,
+        destroy: $component.destroy,
+        $component
+    };
 };
+
+
+export const attachDynComponent = (parentCD, label, exp, bind) => {
+    let active, $cd, $dom, destroy, finalLabel = getFinalLabel(label);
+    cd_onDestroy(parentCD, () => destroy?.());
+    $watch(parentCD, exp, (component) => {
+        destroy?.();
+        if($cd) cd_destroy($cd);
+        if(active) removeElementsBetween(label, finalLabel);
+
+        if(component) {
+            ({$cd, $dom, destroy} = bind(component));
+            cd_attach(parentCD, $cd);
+            insertAfter(label, $dom);
+            active = true;
+        } else {
+            destroy = null;
+            $cd = null;
+            active = false;
+        }
+    });
+}
 
 
 export const autoSubscribe = (...list) => {
@@ -404,60 +445,11 @@ export const makeExternalProperty = ($component, name, getter, setter) => {
 }
 
 
-export const attachSlotBase = ($context, $cd, slotName, label, props, placeholder) => {
-    let $slot = $cd.$$.$option.slots?.[slotName];
-    if($slot) $slot($cd, label, $context, props);
-    else placeholder?.();
-};
-
-
-export const attachSlot = ($context, $cd, slotName, label, props, placeholder, cmp) => {
-    let $slot = $cd.$$.$option.slots?.[slotName];
-    if($slot) {
-        let resultProps = {}, push;
-        if(props) {
-            let setter = (k) => {
-                return v => {
-                    resultProps[k] = v;
-                    push?.();
-                }
-            }
-            for(let k in props) {
-                let v = props[k];
-                if(isFunction(v)) {
-                    fire($watch($cd, v, setter(k), {ro: true, cmp}));
-                } else resultProps[k] = v;
-            }
-        }
-        push = $slot($cd, label, $context, resultProps);
-    } else placeholder?.();
-};
-
-
-export const makeSlot = (parentCD, fn) => {
-    return (callerCD, label, $context, props) => {
-        let $cd = parentCD.new();
-        cd_onDestroy(callerCD, () => $cd.destroy());
-        let r = fn($cd, $context, callerCD, props || {});
-        insertAfter(label, r.el || r);
-        $cd.$$.apply?.();
-        return r.push;
-    };
-}
-
-
-export const makeSlotStatic = (fn) => {
-    return (callerCD, label) => {
-        insertAfter(label, fn());
-    }
-}
-
-
 export const eachDefaultKey = (item, index, array) => typeof array[0] === 'object' ? item : index;
 
 
-export const attachAnchor = ($option, $cd, name, el) => {
-    let fn = $option.anchor?.[name];
+export const attachAnchor = ($option, $cd, el, name) => {
+    let fn = $option.anchor?.[name || 'default'];
     if(fn) cd_onDestroy($cd, fn(el));
 }
 
@@ -566,4 +558,16 @@ export const makeStaticBlock = (fr, fn) => {
         fn?.($dom);
         return {$dom};
     }
+}
+
+export const attachBlock = (cdo, label, block) => {
+    cd_onDestroy(cdo, block.destroy);
+    cd_attach(cdo, block.$cd);
+    insertAfter(label, block.$dom);
+}
+
+
+export const mergeEvents = (...callbacks) => {
+    callbacks = callbacks.filter(i => i);
+    return (e) => callbacks.forEach(cb => cb(e));
 }
