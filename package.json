@@ -1,6 +1,6 @@
 {
   "name": "malinajs",
-  "version": "0.6.51",
+  "version": "0.6.52",
   "license": "MIT",
   "scripts": {
     "prepare": "npm run build",

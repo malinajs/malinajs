@@ -100,12 +100,12 @@ export function $tick(fn, uniq) {
     _tick_list.push(fn);
     if(_tick_planned.$tick) return;
     _tick_planned.$tick = true;
-    setTimeout(() => {
+    Promise.resolve().then(() => {
         _tick_planned = {};
         let list = _tick_list;
         _tick_list = [];
         list.map(safeCall);
-    }, 0);
+    });
 };
 
 
