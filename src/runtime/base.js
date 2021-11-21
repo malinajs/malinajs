@@ -1,6 +1,6 @@
 
 import { $watch, $watchReadOnly, $$deepComparator, cloneDeep, $$cloneDeep, cd_new, $digest,
-    $$compareDeep, cd_onDestroy, addEvent, fire, keyComparator } from './cd';
+    $$compareDeep, cd_onDestroy, addEvent, fire, keyComparator, cd_attach, cd_destroy } from './cd';
 import { __app_onerror, safeCall, isFunction } from './utils';
 
 let templatecache = {};
@@ -484,35 +484,35 @@ export const spreadAttributes = (cd, el, fn) => {
 }
 
 
-export const attchExportedFragment = ($parentCD, $childCD, name, label, props, events, template, innerFn) => {
-    let fn = $childCD.$$.exported[name];
-    if(fn) {
-        let slot;
-        if(template) {
-            slot = (childCD, label) => {
-                const $parentElement = $$htmlToFragment(template);
-                if(innerFn) {
-                    let $cd = $parentCD.new();
-                    cd_onDestroy(childCD, () => $cd.destroy());
-                    innerFn($cd, $parentElement);
-                    $cd.$$.apply?.();
-                }
-                insertAfter(label, $parentElement);
-            }
-        }
-
-        if(isFunction(props)) props = props($parentCD, $childCD);
-        fn($parentCD, $childCD, label, props, events, slot);
+export const callExportedFragment = (childComponent, name, slot, events, props, cmp) => {
+    let $cd, r;
+    if(cmp) {
+        $cd = cd_new();
+        let fn = props, result;
+        props = () => result;
+        let w = $watch($cd, fn, (props) => {
+            result = props;
+            r?.push();
+        }, {value: {}, cmp});
+        fire(w);
     }
+    let fn = childComponent.exported[name];
+    r = fn(props, events, slot);
+    r.$cd = $cd;
+    return r;
 };
 
 
-export const exportFragment = ($component, name, fn) => {
-    $component.exported[name] = ($parentCD, $childCD, label, props, events, slot) => {
-      let $cd = $childCD.new();
-      cd_onDestroy($parentCD, () => $cd.destroy());
-      fn($cd, label, props, events, slot);
-      $component.apply();
+export const exportFragment = (childCD, name, fn) => {
+    childCD.$$.exported[name] = (props, events, slot) => {
+        let {$cd, $dom} = fn(props, events || {}, slot);
+        cd_attach(childCD, $cd);
+        let apply = childCD.$$.apply;
+        return {
+            $dom,
+            destroy: () => $cd.destroy(),
+            push: () => apply?.()
+        };
     };
 };
 
@@ -520,18 +520,6 @@ export const exportFragment = ($component, name, fn) => {
 export const prefixPush = ($cd, fn) => {
     $cd.prefix.push(fn);
     fn();
-}
-
-
-export const observeProps = (cmp, fn) => {
-    return (cd, target) => {
-        let result;
-        fire($watch(cd, fn, value => {
-            result = value;
-            target.$$.apply();
-        }, {ro: true, value: {}, cmp}));
-        return () => result;
-    }
 }
 
 
@@ -552,6 +540,19 @@ export const makeBlock = (fr, fn) => {
 }
 
 
+export const makeBlockBound = (parentCD, fr, fn) => {
+    return () => {
+        let $dom = fr.cloneNode(true), $cd = cd_new();
+        fn($cd, $dom);
+        cd_attach(parentCD, $cd);
+        return {
+            $dom,
+            destroy: () => cd_destroy($cd)
+        };
+    }
+}
+
+
 export const makeStaticBlock = (fr, fn) => {
     return () => {
         let $dom = fr.cloneNode(true);
@@ -561,6 +562,7 @@ export const makeStaticBlock = (fr, fn) => {
 }
 
 export const attachBlock = (cdo, label, block) => {
+    if(!block) return;
     cd_onDestroy(cdo, block.destroy);
     cd_attach(cdo, block.$cd);
     insertAfter(label, block.$dom);

@@ -96,7 +96,7 @@ export function buildBlock(data, option={}) {
             if(n.type == 'comment' && !this.config.preserveComments) return false;
             if(n.type == 'fragment') {
                 try {
-                    let f = this.makeFragment(n);
+                    let f = this.makeFragment(n, requireCD);
                     f && binds.push(f);
                 } catch (e) {
                     wrapException(e, n);
@@ -234,7 +234,7 @@ export function buildBlock(data, option={}) {
                         }
                     } else {
                         let el = placeLabel(`exported ${n.elArg}`);
-                        let b = this.attchExportedFragment(n, el, n.name);
+                        let b = this.attchExportedFragment(n, el, n.name, requireCD);
                         b && binds.push(b);
                     }
                     return;
@@ -244,7 +244,7 @@ export function buildBlock(data, option={}) {
                     if(!slotName) {
                         if(option.context == 'fragment') {
                             let el = placeLabel('fragment-slot');
-                            binds.push(this.attachFragmentSlot(el));
+                            binds.push(this.attachFragmentSlot(el, requireCD));
                             return;
                         } else slotName = 'default';
                     }
@@ -267,10 +267,17 @@ export function buildBlock(data, option={}) {
                     return;
                 }
                 if(n.name == 'fragment') {
+                    requireCD.$value(true);
                     assert(n.elArg, 'Fragment name is required');
                     let el = placeLabel(`fragment ${n.elArg}`);
-                    let b = this.attachFragment(n, el);
-                    b && binds.push(b);
+                    binds.push(xNode('attach-fragment', {
+                        el: el.bindName(),
+                        fragment: this.attachFragment(n)
+                    }, (ctx, n) => {
+                        ctx.write(true, `$runtime.attachBlock($cd, ${n.el}, `);
+                        ctx.add(n.fragment);
+                        ctx.write(`)`);
+                    }));
                     return;
                 }
 
