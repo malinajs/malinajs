@@ -4,7 +4,7 @@ import { xNode } from './xnode.js'
 
 
 export function buildRuntime() {
-    let runtime = xNode('block', {scope: true});
+    let runtime = xNode('block', {scope: true, $compile: []});
 
     let rootCD = this.glob.rootCD;
     rootCD.$handler = (ctx, n) => {
@@ -18,14 +18,11 @@ export function buildRuntime() {
     this.glob.component.$depends(rootCD);
 
     let bb = this.buildBlock(this.DOM, {inline: true});
-    rootCD.$depends(bb.requireCD);
-    runtime.push(xNode('template', {
-        name: '$parentElement',
-        body: bb.tpl,
-        svg: bb.svg
-    }));
+    bb.requireCD && rootCD.$depends(bb.requireCD);
+    bb.template.inline = false;
+    bb.template.name = '$parentElement';
+    runtime.push(bb.template);
     runtime.push(bb.source);
-    runtime.push(bb.requireCD);
 
     if(this.script.onMount) runtime.push(`$runtime.$onMount(onMount);`);
     if(this.script.onDestroy) runtime.push(`$runtime.$onDestroy(onDestroy);`);
@@ -83,10 +80,13 @@ export function buildRuntime() {
 
 export function buildBlock(data, option={}) {
     let rootTemplate = xNode('node', {inline: true, _ctx: this});
+    let rootSVG = false;
     let binds = xNode('block');
     let result = {};
     let requireCD = result.requireCD = xNode('require-cd', false);
     let inuse = Object.assign({}, this.inuse);
+
+    if(!option.parentElement) option.parentElement = '$parentElement';
 
     if(option.each?.blockPrefix) binds.push(option.each.blockPrefix);
 
@@ -141,7 +141,7 @@ export function buildBlock(data, option={}) {
                 if(svgElements[node.name]) svg = true;
                 else return other = true;
             });
-            if(svg && !other) result.svg = true;
+            if(svg && !other) rootSVG = true;
         }
 
         let lastStatic;
@@ -298,7 +298,7 @@ export function buildBlock(data, option={}) {
                 }
                 let bindTail = [];
                 n.attributes.forEach(p => {
-                    let b = this.bindProp(p, n, el);
+                    let b = this.bindProp(p, n, el, requireCD);
                     if(b) {
                         if(b.bind) binds.push(b.bind);
                         if(b.bindTail) bindTail.push(b.bindTail);
@@ -385,13 +385,14 @@ export function buildBlock(data, option={}) {
         }
     }
 
-    result.tpl = rootTemplate;
-
     let innerBlock = null;
     if(binds.body.length) {
+        binds.push(requireCD);
         innerBlock = xNode('block');
         if(!option.oneElement) {
-            innerBlock.push(xNode('bindNodes', ctx => {
+            innerBlock.push(xNode('bindNodes', {
+               root: option.parentElement
+            }, (ctx, n) => {
     
                 const gen = (parent, parentName) => {
                     for(let i=0; i < parent.children.length; i++) {
@@ -405,7 +406,7 @@ export function buildBlock(data, option={}) {
                         })
                     }
                 }
-                gen(rootTemplate, () => '$parentElement');
+                gen(rootTemplate, () => n.root);
             }))
         }
         innerBlock.push(binds);
@@ -416,11 +417,12 @@ export function buildBlock(data, option={}) {
             result.source = xNode('function', {
                 inline: true,
                 arrow: true,
-                args: ['$cd', '$parentElement'].concat(option.args || []),
+                args: ['$cd', option.parentElement].concat(option.args || []),
                 body: [innerBlock]
             });
         }
     } else {
+        result.requireCD.$done = true;
         result.name = '$runtime.noop';
         result.source = null;
     }
@@ -434,11 +436,11 @@ export function buildBlock(data, option={}) {
             tpl: xNode('template', {
                 inline: true,
                 body: rootTemplate,
-                svg: result.svg
+                svg: rootSVG
             }),
-            each: option.each
+            each: option.each,
+            parentElement: option.parentElement
         }, (ctx, n) => {
-            ctx.write(true);
             if(n.each && !ctx.isEmpty(n.innerBlock)) {
                 if(n.requireCD.value) ctx.write(`$runtime.makeEachBlock(`);
                 else ctx.write(`$runtime.makeStaticEachBlock(`);
@@ -449,11 +451,11 @@ export function buildBlock(data, option={}) {
             ctx.add(n.tpl);
             if(!ctx.isEmpty(n.innerBlock)) {
                 if(n.each) {
-                    if(n.requireCD.value) ctx.write(`, ($cd, $parentElement, ${n.each.itemName}, ${n.each.indexName}) => {`, true);
-                    else ctx.write(`, ($parentElement, ${n.each.itemName}, ${n.each.indexName}) => {`, true);
+                    if(n.requireCD.value) ctx.write(`, ($cd, ${n.parentElement}, ${n.each.itemName}, ${n.each.indexName}) => {`, true);
+                    else ctx.write(`, (${n.parentElement}, ${n.each.itemName}, ${n.each.indexName}) => {`, true);
                 } else {
-                    if(n.requireCD.value) ctx.write(`, ($cd, $parentElement) => {`, true);
-                    else ctx.write(`, ($parentElement) => {`, true);
+                    if(n.requireCD.value) ctx.write(`, ($cd, ${n.parentElement}) => {`, true);
+                    else ctx.write(`, (${n.parentElement}) => {`, true);
                 }
                 ctx.indent++;
                 ctx.add(n.innerBlock)
@@ -466,6 +468,12 @@ export function buildBlock(data, option={}) {
                 ctx.write(true, `}`);
             }
             ctx.write(`)`);
+        });
+    } else {
+        result.template = xNode('template', {
+            inline: true,
+            body: rootTemplate,
+            svg: rootSVG
         });
     }
 

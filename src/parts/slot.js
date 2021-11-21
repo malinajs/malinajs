@@ -30,11 +30,12 @@ export function attachSlot(slotName, node, requireCD) {
         name: slotName,
         props,
         staticProps,
-        placeholder
+        placeholder,
+        requireCD
     }, (ctx, n) => {
         let dynamicProps = this.glob.apply.value && !n.staticProps;
 
-        if(dynamicProps) requireCD.$value(true);
+        if(dynamicProps) n.requireCD.$value(true);
     
         let missed = '', slotName = n.name == 'default' ? 'null' : n.name;
         if(dynamicProps) ctx.write(`$runtime.invokeSlot($component, ${slotName}, $context`);

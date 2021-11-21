@@ -4,7 +4,7 @@ import { $watch, cd_watchObject, cd_new, cd_attach, cd_destroy, fire } from '../
 
 export const invokeSlotBase = ($component, slotName, $context, props, placeholder) => {
     let $slot = $component.$option.slots?.[slotName || 'default'];
-    return $slot ? $slot($context, props) : placeholder?.();
+    return $slot ? $slot($component, $context, props) : placeholder?.();
 };
 
 

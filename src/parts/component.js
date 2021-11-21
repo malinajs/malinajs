@@ -88,16 +88,10 @@ export function makeComponent(node, requireCD) {
 
             let block = this.buildBlock(slot, {inline: true});
 
-            const template = xNode('template', {
-                body: block.tpl,
-                svg: block.svg,
-                inline: true
-            });
-
             slotBlocks.push(xNode('slot', {
                 $deps: [this.glob.apply],
                 name: slot.name,
-                template,
+                template: block.template,
                 bind: block.source,
                 componentName,
                 props
@@ -130,7 +124,7 @@ export function makeComponent(node, requireCD) {
             assert(isSimpleName(name));
 
             anchorBlocks.push(xNode('anchor', {
-                $compile: [block, bb.requireCD],
+                $compile: [block],
                 $deps: [bb.requireCD],
                 name,
                 block

@@ -9,7 +9,7 @@ import { processCSS } from './css/index';
 
 import * as utils from './utils.js'
 import { parseText } from './parser.js'
-import { makeComponent } from './parts/component.js'
+import { makeComponent, makeComponentDyn } from './parts/component.js'
 import { bindProp } from './parts/prop.js'
 import { makeifBlock } from './parts/if.js'
 import { makeEachBlock } from './parts/each.js'
@@ -273,7 +273,7 @@ function makeComponentFn() {
             ctx.goIndent(() => {
                 ctx.add(xNode('block', {body: n.body}));
             });
-            ctx.write('}', true);
+            ctx.write(true, '}');
         }
     });
 
