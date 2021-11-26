@@ -90,7 +90,10 @@ export async function compile(source, config = {}) {
                 if(name == '$component') ctx.glob.component.$value(true);
                 if(name == '$attributes') ctx.require('$props');
                 if(name == '$props' && !ctx.script.readOnly) ctx.require('apply', '$cd');
-                if(name == '$cd') ctx.require('$component');
+                if(name == '$cd') {
+                    ctx.glob.rootCD.$value(true);
+                    ctx.require('$component');
+                }
                 if(name == '$onDestroy') ctx.require('$component');
                 if(name == '$onMount') ctx.require('$component');
             }

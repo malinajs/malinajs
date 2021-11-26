@@ -288,7 +288,7 @@ export function buildBlock(data, option={}) {
 
                 if(n.attributes.some(a => a.name.startsWith('{...'))) {
                     n.spreading = [];
-                    this.require('$cd');
+                    requireCD.$value(true);
                     binds.push(xNode('spread-to-element', {
                         el: el.bindName(),
                         props: n.spreading
