@@ -330,20 +330,28 @@ xNode.init = {
     },
     template: (ctx, node) => {
         let template = ctx._ctx.xBuild(node.body);
-        let convert;
-        if(node.svg) convert = '$runtime.svgToFragment';
-        else if(!template.match(/[<>]/)) convert = '$runtime.createTextNode';
-        else {
+        let convert, cloneNode = node.cloneNode;
+        if(node.svg) {
+            convert = '$runtime.svgToFragment';
+            cloneNode = false;
+        } else if(!template.match(/[<>]/)) {
+            convert = '$runtime.createTextNode';
+            cloneNode = false;
+        } else {
             convert = '$$htmlToFragment';
             template = template.replace(/<!---->/g, '<>');
         }
         if(node.raw) {
             ctx.write(ctx._ctx.Q(template));
         } else if(node.inline) {
-            ctx.write(`${convert}(\`${ctx._ctx.Q(template)}\`)`);
+            ctx.write(`${convert}(\`${ctx._ctx.Q(template)}\``);
+            if(cloneNode) ctx.write(', 1)');
+            else ctx.write(')');
         } else {
             assert(node.name);
-            ctx.writeLine(`const ${node.name} = ${convert}(\`${ctx._ctx.Q(template)}\`);`);
+            ctx.write(true, `const ${node.name} = ${convert}(\`${ctx._ctx.Q(template)}\``);
+            if(cloneNode) ctx.write(', 1);');
+            else ctx.write(');');
         }
     }
 };

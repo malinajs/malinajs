@@ -17,37 +17,41 @@ export const insertAfter = (label, node) => {
     label.parentNode.insertBefore(node, label.nextSibling);
 }
 
-export const createTextNode = (text) => {
-    let f = document.createDocumentFragment();
-    f.append(text);
-    return f;
-}
+export const createTextNode = (text) => document.createTextNode(text);
 
-export const $$htmlToFragment = (html) => {
-    if(templatecache[html]) return templatecache[html].cloneNode(true);
+export const $$htmlToFragment = (html, clone) => {
+    let result = templatecache[html];
+    if(!result) {
+        let t = document.createElement('template');
+        t.innerHTML = html.replace(/<>/g, '<!---->');
+        result = t.content;
+        if(result.firstChild == result.lastChild) result = result.firstChild;
+        templatecache[html] = result;
+    }
 
-    let t = document.createElement('template');
-    t.innerHTML = html.replace(/<>/g, '<!---->');
-    let result = t.content;
-    templatecache[html] = result.cloneNode(true);
-    return result;
+    return clone ? result.cloneNode(true) : result;
 };
 
-export const $$htmlToFragmentClean = (html) => {
-    if(templatecache[html]) return templatecache[html].cloneNode(true);
+export const $$htmlToFragmentClean = (html, clone) => {
+    let result = templatecache[html];
+    if(!result) {
+        let t = document.createElement('template');
+        t.innerHTML = html.replace(/<>/g, '<!---->');
+        result = t.content;
 
-    let t = document.createElement('template');
-    t.innerHTML = html.replace(/<>/g, '<!---->');
-    let result = t.content;
+        let it = document.createNodeIterator(result, 128);
+        let n;
+        while(n = it.nextNode()) {
+            if(!n.nodeValue) n.parentNode.replaceChild(document.createTextNode(''), n);
+        };
 
-    let it = document.createNodeIterator(result, 128);
-    let n;
-    while(n = it.nextNode()) {
-        if(!n.nodeValue) n.parentNode.replaceChild(document.createTextNode(''), n);
-    };
-    templatecache[html] = result.cloneNode(true);
-    return result;
+        if(result.firstChild == result.lastChild) result = result.firstChild;
+        templatecache[html] = result;
+    }
+
+    return clone ? result.cloneNode(true) : result;
 };
+
 
 export function svgToFragment(content) {
     if(templatecacheSvg[content]) return templatecacheSvg[content].cloneNode(true);

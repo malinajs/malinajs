@@ -109,8 +109,10 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, bind) {
                 let $dom;
                 ({$dom, ...ctx} = bind(item, i));
                 cd_attach(eachCD, ctx.$cd);
-                ctx.first = $dom[firstChild];
-                ctx.last = $dom.lastChild;
+                if($dom.nodeType == 11) {
+                    ctx.first = $dom[firstChild];
+                    ctx.last = $dom.lastChild;
+                } else ctx.first = ctx.last = $dom;
                 parentNode.insertBefore($dom, prevNode?.nextSibling);
             }
             prevNode = ctx.last;

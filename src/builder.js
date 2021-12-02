@@ -21,6 +21,7 @@ export function buildRuntime() {
     bb.requireCD && rootCD.$depends(bb.requireCD);
     bb.template.inline = false;
     bb.template.name = '$parentElement';
+    bb.template.cloneNode = true;
     runtime.push(bb.template);
     runtime.push(bb.source);
 
@@ -391,7 +392,9 @@ export function buildBlock(data, option={}) {
         innerBlock = xNode('block');
         if(!option.oneElement) {
             innerBlock.push(xNode('bindNodes', {
-               root: option.parentElement
+                tpl: rootTemplate,
+                root: option.parentElement,
+                single: rootTemplate.children.length == 1
             }, (ctx, n) => {
     
                 const gen = (parent, parentName) => {
@@ -399,14 +402,20 @@ export function buildBlock(data, option={}) {
                         let node = parent.children[i];
                         let diff = i == 0 ? '[$runtime.firstChild]' : `[$runtime.childNodes][${i}]`;
     
-                        if(node._boundName) ctx.writeLine(`let ${node._boundName} = ${parentName() + diff};`);
+                        if(node._boundName) ctx.write(true, `let ${node._boundName} = ${parentName() + diff};`);
                         if(node.children) gen(node, () => {
                             if(node._boundName) return node._boundName;
                             return parentName() + diff;
                         })
                     }
                 }
-                gen(rootTemplate, () => n.root);
+                if(n.single) {
+                    let node = n.tpl.children[0];
+                    if(node._boundName) ctx.write(true, `let ${node._boundName} = ${n.root};`);
+                    if(node.children) gen(node, () => n.root);
+                } else {
+                    gen(n.tpl, () => n.root);
+                }
             }))
         }
         innerBlock.push(binds);

@@ -10,8 +10,10 @@ export function $$ifBlock(parentCD, label, fn, build, buildElse) {
         let $dom;
         ({$cd, destroy, $dom} = builder());
         cd_attach(parentCD, $cd);
-        first = $dom[firstChild];
-        last = $dom.lastChild;
+        if($dom.nodeType == 11) {
+            first = $dom[firstChild];
+            last = $dom.lastChild;
+        } else first = last = $dom;
         insertAfter(label, $dom);
     };
 
