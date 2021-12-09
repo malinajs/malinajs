@@ -1,11 +1,23 @@
 
 import { __app_onerror, safeCall } from './utils';
 
+
+function WatchObject(fn, cb, option) {
+    Object.assign(this, {
+        fn,
+        cb,
+        value: NaN,
+        ro: false,
+        cmp: null
+    }, option);
+};
+
+
+export const cd_watchObject = (fn, cb, option) => new WatchObject(fn, cb, option);
+
+
 export function $watch(cd, fn, callback, w) {
-    if(!w) w = {};
-    w.fn = fn;
-    w.cb = callback;
-    if(!('value' in w)) w.value = NaN;
+    w = cd_watchObject(fn, callback, w);
     cd.watchers.push(w);
     return w;
 };
@@ -15,6 +27,7 @@ export function $watchReadOnly(cd, fn, callback) {
 };
 
 export function addEvent(cd, el, event, callback) {
+    if(!callback) return;
     el.addEventListener(event, callback);
     cd_onDestroy(cd, () => {
         el.removeEventListener(event, callback);
@@ -36,7 +49,6 @@ function $ChangeDetector(parent) {
     this.watchers = [];
     this._d = [];
     this.prefix = [];
-    this.$$ = parent?.$$;
 };
 
 $ChangeDetector.prototype.new = function() {
@@ -49,12 +61,16 @@ $ChangeDetector.prototype.destroy = function(option) {
     cd_destroy(this, option);
 };
 
+export const cd_component = cd => {
+    while(cd.parent) cd = cd.parent;
+    return cd.component;
+};
+
 export const cd_new = () => new $ChangeDetector();
 
 export const cd_attach = (parent, cd) => {
     if(cd) {
         cd.parent = parent;
-        cd.$$ = parent.$$;
         parent.children.push(cd);
     }
 }

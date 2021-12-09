@@ -1,6 +1,6 @@
 
 import { $watch, $watchReadOnly, $$deepComparator, cloneDeep, $$cloneDeep, cd_new, $digest,
-    $$compareDeep, cd_onDestroy, addEvent, fire, keyComparator, cd_attach, cd_destroy } from './cd';
+    $$compareDeep, cd_onDestroy, addEvent, fire, keyComparator, cd_attach, cd_destroy, cd_component } from './cd';
 import { __app_onerror, safeCall, isFunction } from './utils';
 
 let templatecache = {};
@@ -147,35 +147,10 @@ export const $onDestroy = fn => current_component._d.push(fn);
 export const $onMount = fn => current_component._m.push(fn);
 
 
-export const $readOnlyBase = {
-    a: ($component) => {
-        $component.$cd = {
-            _d: $component._d,
-            watchers: [],
-            prefix: [],
-            new: () => $component.$cd,
-            destroy: noop,
-            $$: $component
-        };
-    },
-    b: ($component) => {
-        let watchers = $component.$cd.watchers;
-        let prefix = $component.$cd.prefix;
-        while(watchers.length || prefix.length) {
-            let wl = watchers.slice();
-            watchers.length = 0;
-            prefix.forEach(safeCall);
-            prefix.length = 0;
-            wl.forEach(w => w.cb(w.fn()));
-        }
-    }
-};
-
-
 export const $base = {
     a: ($component) => {
         let $cd = cd_new();
-        $cd.$$ = $component;
+        $cd.component = $component;
         $onDestroy(() => $cd.destroy());
 
         let id = `a${$$uniqIndex++}`;
@@ -204,7 +179,7 @@ export const $base = {
 
 
 export const makeComponent = (init, $base) => {
-    return ($element, $option={}) => {
+    return ($option={}) => {
         let prev = current_component;
         $context = $option.context || {};
         let $component = current_component = {
@@ -215,11 +190,11 @@ export const makeComponent = (init, $base) => {
             _d: [],
             _m: []
         };
-        $base.a($component);
+        $base?.a($component);
 
         try {
             $component.$dom = init($option, $component.apply);
-            $base.b($component);
+            $base?.b($component);
         } finally {
             current_component = prev;
             $context = null;
@@ -279,7 +254,7 @@ export const callComponent = (context, component, option={}, propFn, cmp, setter
     if(setter && $component?.exportedProps) {
         childWatch = $watch($component.$cd, $component.exportedProps, value => {
             setter(value);
-            cd.$$.apply();
+            cd_component(cd).apply();
         }, {ro: true, idle: true, value: parentWatch.value, cmp})
     }
     return {
@@ -508,10 +483,10 @@ export const callExportedFragment = (childComponent, name, slot, events, props, 
 
 
 export const exportFragment = (childCD, name, fn) => {
-    childCD.$$.exported[name] = (props, events, slot) => {
+    cd_component(childCD).exported[name] = (props, events, slot) => {
         let {$cd, $dom} = fn(props, events || {}, slot);
         cd_attach(childCD, $cd);
-        let apply = childCD.$$.apply;
+        let apply = cd_component(childCD).apply;
         return {
             $dom,
             destroy: () => $cd.destroy(),

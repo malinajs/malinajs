@@ -27,7 +27,7 @@ function xWriter(ctx, node) {
     }
 
     this.add = this.build = function(n) {
-        if(n == null) return;
+        if(n === null) return;
         assert(n instanceof xNode);
         assert(!n.$inserted, 'already inserted');
         node.$result.push({node: n, indent: this.indent});

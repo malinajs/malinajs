@@ -12,7 +12,7 @@ export const isFunction = fn => typeof fn == 'function';
 
 export const safeCall = fn => {
     try {
-        return isFunction(fn) && fn();
+        return fn?.();
     } catch (e) {
         __app_onerror(e);
     }

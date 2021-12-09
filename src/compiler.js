@@ -268,7 +268,7 @@ function makeComponentFn() {
 
             ctx.write('$runtime.makeComponent(');
             ctx.add(component);
-            ctx.write(', $runtime.$readOnlyBase);', true);
+            ctx.write(');', true);
         } else {
             this.glob.componentFn.$value('thin');
             ctx.add(this.glob.componentFn);
