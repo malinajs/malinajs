@@ -21,6 +21,15 @@ export const makeStaticEachBlock = (fr, fn) => {
 };
 
 
+export const makeEachSingleBlock = (fn) => {
+    return (item, index) => {
+        let [rebind, component] = fn(item, index);
+        let {$cd, destroy, $dom} = component;
+        return {$cd, destroy, $dom, rebind};
+    }
+}
+
+
 export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, bind) {
     let eachCD = cd_new();
     cd_attach($parentCD, eachCD);
@@ -58,17 +67,19 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, bind) {
                 else $$removeElements(label.nextSibling, lastNode);
                 eachCD.children.forEach(cd => cd.destroy(false));
                 eachCD.children.length = 0;
+                mapping.forEach(ctx => ctx.destroy?.());
                 mapping.clear();
             } else {
                 eachCD.children = [];
                 mapping.forEach(ctx => {
                     if(ctx.a) {
                         ctx.a = false;
-                        eachCD.children.push(ctx.$cd);
+                        ctx.$cd && eachCD.children.push(ctx.$cd);
                         return;
                     }
                     $$removeElements(ctx.first, ctx.last);
-                    ctx.$cd.destroy(false);
+                    ctx.$cd?.destroy(false);
+                    ctx.destroy?.();
                 });
             }
         }

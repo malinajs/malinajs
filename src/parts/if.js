@@ -12,18 +12,30 @@ export function makeifBlock(data, element) {
 
     let mainBlock, elseBlock;
 
+    const getBlock = b => {
+        if(b.singleBlock) {
+            return xNode('make-block', {
+                block: b.singleBlock
+            }, (ctx, n) => {
+                ctx.write('() => ');
+                ctx.add(n.block);
+            })
+        }
+        return b.block;
+    }
+
     if(data.bodyMain) {
-        mainBlock = this.buildBlock({body: data.bodyMain}, {protectLastTag: true});
-        elseBlock = this.buildBlock(data, {protectLastTag: true});
+        mainBlock = getBlock(this.buildBlock({body: data.bodyMain}, {protectLastTag: true, allowSingleBlock: true}));
+        elseBlock = getBlock(this.buildBlock(data, {protectLastTag: true, allowSingleBlock: true}));
     } else {
-        mainBlock = this.buildBlock(data, {protectLastTag: true});
+        mainBlock = getBlock(this.buildBlock(data, {protectLastTag: true, allowSingleBlock: true}));
     }
 
     const source = xNode('if:bind', {
         el: element.bindName(),
         exp,
-        mainBlock: mainBlock.block,
-        elseBlock: elseBlock && elseBlock.block
+        mainBlock: mainBlock,
+        elseBlock: elseBlock
     }, (ctx, n) => {
         ctx.write(true, `$runtime.$$ifBlock($cd, ${n.el}, () => !!(${n.exp}),`);
         ctx.indent++;

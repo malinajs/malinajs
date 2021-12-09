@@ -93,8 +93,9 @@ export function makeEachBlock(data, option) {
     let nodeItems = trimEmptyNodes(data.body);
     if(!nodeItems.length) nodeItems = [data.body[0]];
 
-    let block = this.buildBlock({body: nodeItems}, {
+    let itemBlock, block = this.buildBlock({body: nodeItems}, {
         protectLastTag: true,
+        allowSingleBlock: !blockPrefix,
         each: {
             blockPrefix,
             rebind,
@@ -103,9 +104,27 @@ export function makeEachBlock(data, option) {
         }
     });
 
+    if(block.singleBlock) {
+        itemBlock = xNode('each-component', {
+            block: block.singleBlock,
+            rebind,
+            itemName,
+            indexName
+        }, (ctx, n) => {
+            ctx.write(`$runtime.makeEachSingleBlock((${n.itemName}, ${n.indexName}) => [`);
+            ctx.indent++;
+            ctx.write(true);
+            ctx.add(n.rebind);
+            ctx.write(',', true);
+            ctx.add(n.block);
+            ctx.indent--;
+            ctx.write(true, `])`);
+        })
+    } else itemBlock = block.block;
+
     const source = xNode('each', {
         keyFunction,
-        block: block.block,
+        block: itemBlock,
     }, (ctx, n) => {
         ctx.writeLine(`$runtime.$$eachBlock($cd, ${option.elName}, ${option.onlyChild?1:0}, () => (${arrayName}),`);
         ctx.indent++;

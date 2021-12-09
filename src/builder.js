@@ -91,6 +91,17 @@ export function buildBlock(data, option={}) {
 
     if(option.each?.blockPrefix) binds.push(option.each.blockPrefix);
 
+    if(option.allowSingleBlock && data.body.length == 1) {
+        let n = data.body[0];
+        if(n.type == 'node' && n.name.match(/^[A-Z]/)) {
+            let component = this.makeComponent(n, requireCD);
+            return {
+                requireCD,
+                singleBlock: component.bind
+            }
+        }
+    }
+
     const go = (data, isRoot, tpl) => {
         let body = data.body.filter(n => {
             if(n.type == 'script' || n.type == 'style' || n.type == 'slot') return false;
