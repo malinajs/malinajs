@@ -2,7 +2,8 @@
 import { $$removeElements, firstChild, insertAfter } from '../runtime/base';
 import { $watch, cd_onDestroy, cd_attach, cd_destroy } from '../runtime/cd';
 
-export function $$ifBlock(parentCD, label, fn, build, buildElse) {
+
+export function ifBlock(parentCD, label, fn, build, buildElse) {
     let first, last, $cd, destroy;
     cd_onDestroy(parentCD, () => destroy?.());
 
@@ -38,4 +39,16 @@ export function $$ifBlock(parentCD, label, fn, build, buildElse) {
             if(buildElse) createBlock(buildElse);
         }
     });
+};
+
+
+export function ifBlockReadOnly(component, label, fn, build, buildElse) {
+    function createBlock(builder) {
+        let {destroy, $dom} = builder();
+        cd_onDestroy(component, destroy);
+        insertAfter(label, $dom);
+    };
+
+    if(fn()) createBlock(build);
+    else if(buildElse) createBlock(buildElse);
 };

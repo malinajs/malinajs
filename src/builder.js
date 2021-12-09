@@ -358,10 +358,7 @@ export function buildBlock(data, option={}) {
                     return;
                 }
             } else if(n.type === 'if') {
-                requireCD.$value(true);
-                let element = placeLabel(n.value);
-                let ifBlock = this.makeifBlock(n, element);
-                binds.push(ifBlock.source);
+                binds.push(this.makeifBlock(n, placeLabel(n.value), requireCD));
                 return;
             } else if(n.type === 'systag') {
                 let r = n.value.match(/^@(\w+)\s+(.*)$/s);
