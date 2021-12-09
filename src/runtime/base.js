@@ -19,20 +19,20 @@ export const insertAfter = (label, node) => {
 
 export const createTextNode = (text) => document.createTextNode(text);
 
-export const $$htmlToFragment = (html, clone) => {
+export const $$htmlToFragment = (html, option) => {
     let result = templatecache[html];
     if(!result) {
         let t = document.createElement('template');
         t.innerHTML = html.replace(/<>/g, '<!---->');
         result = t.content;
-        if(result.firstChild == result.lastChild) result = result.firstChild;
+        if(!(option & 2) && result.firstChild == result.lastChild) result = result.firstChild;
         templatecache[html] = result;
     }
 
-    return clone ? result.cloneNode(true) : result;
+    return option & 1 ? result.cloneNode(true) : result;
 };
 
-export const $$htmlToFragmentClean = (html, clone) => {
+export const $$htmlToFragmentClean = (html, option) => {
     let result = templatecache[html];
     if(!result) {
         let t = document.createElement('template');
@@ -45,11 +45,11 @@ export const $$htmlToFragmentClean = (html, clone) => {
             if(!n.nodeValue) n.parentNode.replaceChild(document.createTextNode(''), n);
         };
 
-        if(result.firstChild == result.lastChild) result = result.firstChild;
+        if(!(option & 2) && result.firstChild == result.lastChild) result = result.firstChild;
         templatecache[html] = result;
     }
 
-    return clone ? result.cloneNode(true) : result;
+    return option & 1 ? result.cloneNode(true) : result;
 };
 
 

@@ -5,6 +5,7 @@ import { xNode } from '../xnode.js'
 
 
 export function makeEachBlock(data, option) {
+    this.require('apply');
 
     // #each items as item, index (key)
     let rx = data.value.match(/^#each\s+(.+)\s+as\s+(.+)$/);

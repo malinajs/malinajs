@@ -334,7 +334,7 @@ xNode.init = {
         if(node.svg) {
             convert = '$runtime.svgToFragment';
             cloneNode = false;
-        } else if(!template.match(/[<>]/)) {
+        } else if(!template.match(/[<>]/) && !node.requireFragment) {
             convert = '$runtime.createTextNode';
             cloneNode = false;
         } else {
@@ -345,13 +345,17 @@ xNode.init = {
             ctx.write(ctx._ctx.Q(template));
         } else if(node.inline) {
             ctx.write(`${convert}(\`${ctx._ctx.Q(template)}\``);
-            if(cloneNode) ctx.write(', 1)');
-            else ctx.write(')');
+            if(cloneNode || node.requireFragment) {
+                let opt = (cloneNode ? 1 : 0) + (node.requireFragment ? 2 : 0);
+                ctx.write(`, ${opt})`);
+            } else ctx.write(')');
         } else {
             assert(node.name);
             ctx.write(true, `const ${node.name} = ${convert}(\`${ctx._ctx.Q(template)}\``);
-            if(cloneNode) ctx.write(', 1);');
-            else ctx.write(');');
+            if(cloneNode || node.requireFragment) {
+                let opt = (cloneNode ? 1 : 0) + (node.requireFragment ? 2 : 0);
+                ctx.write(`, ${opt});`);
+            } else ctx.write(');');
         }
     }
 };

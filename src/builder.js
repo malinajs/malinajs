@@ -81,7 +81,7 @@ export function buildRuntime() {
 
 export function buildBlock(data, option={}) {
     let rootTemplate = xNode('node', {inline: true, _ctx: this});
-    let rootSVG = false;
+    let rootSVG = false, requireFragment = false;
     let binds = xNode('block');
     let result = {};
     let requireCD = result.requireCD = xNode('require-cd', false);
@@ -228,6 +228,7 @@ export function buildBlock(data, option={}) {
                 if(n.name == 'component' || n.name.match(/^[A-Z]/)) {
                     if(n.name == 'component' || !n.elArg) {
                         // component
+                        if(isRoot) requireFragment = true;
                         let el = placeLabel(n.name);
 
                         if(n.name == 'component') {
@@ -352,12 +353,14 @@ export function buildBlock(data, option={}) {
                     binds.push(eachBlock.source);
                     return;
                 } else {
+                    if(isRoot) requireFragment = true;
                     let element = placeLabel(n.value);
                     let eachBlock = this.makeEachBlock(n, {elName: element.bindName()});
                     binds.push(eachBlock.source);
                     return;
                 }
             } else if(n.type === 'if') {
+                if(isRoot) requireFragment = true;
                 binds.push(this.makeifBlock(n, placeLabel(n.value), requireCD));
                 return;
             } else if(n.type === 'systag') {
@@ -402,7 +405,7 @@ export function buildBlock(data, option={}) {
             innerBlock.push(xNode('bindNodes', {
                 tpl: rootTemplate,
                 root: option.parentElement,
-                single: rootTemplate.children.length == 1
+                single: rootTemplate.children.length == 1 && !requireFragment
             }, (ctx, n) => {
     
                 const gen = (parent, parentName) => {
@@ -453,7 +456,8 @@ export function buildBlock(data, option={}) {
             tpl: xNode('template', {
                 inline: true,
                 body: rootTemplate,
-                svg: rootSVG
+                svg: rootSVG,
+                requireFragment
             }),
             each: option.each,
             parentElement: option.parentElement
@@ -490,7 +494,8 @@ export function buildBlock(data, option={}) {
         result.template = xNode('template', {
             inline: true,
             body: rootTemplate,
-            svg: rootSVG
+            svg: rootSVG,
+            requireFragment
         });
     }
 

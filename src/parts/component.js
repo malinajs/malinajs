@@ -4,6 +4,8 @@ import { xNode } from '../xnode.js'
 
 
 export function makeComponent(node, requireCD) {
+    this.require('apply');
+
     let propList = node.attributes;
 
     this.require('$context');
