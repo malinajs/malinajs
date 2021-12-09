@@ -300,7 +300,7 @@ export function transform() {
             if(this.inuse.$props) return 'let $props = $option.props || {};';
         }));
 
-        if(!constantProps && !this.script.readOnly) this.require('apply', '$cd');
+        if(!constantProps && !this.script.readOnly) this.require('apply');
 
         resultBody.splice(lastPropIndex, 0, rawNode(() => {
             let code = [];
