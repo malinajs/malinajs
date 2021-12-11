@@ -81,7 +81,7 @@ export function buildRuntime() {
 
 export function buildBlock(data, option={}) {
     let rootTemplate = xNode('node', {inline: true, _ctx: this});
-    let rootSVG = false, requireFragment = false;
+    let rootSVG = false, requireFragment = option.template?.requireFragment;
     let binds = xNode('block');
     let result = {};
     let requireCD = result.requireCD = xNode('require-cd', false);
@@ -220,7 +220,7 @@ export function buildBlock(data, option={}) {
             } else if(n.type === 'node') {
                 if(n.name == 'malina' && !option.malinaElement) {
                     let b;
-                    if(n.elArg == 'portal') b = this.attachPortal(n);
+                    if(n.elArg == 'portal') b = this.attachPortal(n, requireCD);
                     else b = this.attachHead(n, requireCD);
                     b && binds.push(b);
                     return;
@@ -448,17 +448,20 @@ export function buildBlock(data, option={}) {
     }
 
     if(!option.inline && !option.inlineFunction) {
+        let template = xNode('template', {
+            body: rootTemplate,
+            svg: rootSVG,
+            requireFragment
+        });
+        if(option.template) Object.assign(template, option.template);
+        else template.inline = true;
+
         result.block = xNode('block', {
             $compile: [innerBlock, requireCD],
             $deps: [requireCD],
             requireCD,
             innerBlock,
-            tpl: xNode('template', {
-                inline: true,
-                body: rootTemplate,
-                svg: rootSVG,
-                requireFragment
-            }),
+            tpl: template,
             each: option.each,
             parentElement: option.parentElement
         }, (ctx, n) => {
@@ -492,11 +495,12 @@ export function buildBlock(data, option={}) {
         });
     } else {
         result.template = xNode('template', {
-            inline: true,
             body: rootTemplate,
             svg: rootSVG,
             requireFragment
         });
+        if(option.template) Object.assign(result.template, option.template);
+        else result.template.inline = true;
     }
 
     result.inuse = {};
