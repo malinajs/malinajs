@@ -22,7 +22,7 @@ export function makeAwaitBlock(node, element) {
 
     let parts = [null, null, null];
     if(node.parts.main && node.parts.main.length) {
-        parts[0] = this.buildBlock({body: node.parts.main}, {protectLastTag: true, inlineFunction: true});
+        parts[0] = this.buildBlock({body: node.parts.main}, {protectLastTag: true});
     }
     if(node.parts.then && node.parts.then.length) {
         let args = [];
@@ -36,7 +36,7 @@ export function makeAwaitBlock(node, element) {
                 args.push(rx[1]);
             }
         }
-        parts[1] = this.buildBlock({body: node.parts.then}, {protectLastTag: true, inlineFunction: true, args});
+        parts[1] = this.buildBlock({body: node.parts.then}, {protectLastTag: true, extraArguments: args});
     }
     if(node.parts.catch && node.parts.catch.length) {
         let args = [];
@@ -45,12 +45,15 @@ export function makeAwaitBlock(node, element) {
             assert(isSimpleName(rx[1]));
             args.push(rx[1]);
         }
-        parts[2] = this.buildBlock({body: node.parts.catch}, {protectLastTag: true, inlineFunction: true, args});
+        parts[2] = this.buildBlock({body: node.parts.catch}, {protectLastTag: true, extraArguments: args});
     }
 
+    if(this.script.readOnly) {
+        this.warning('script read-only conflicts with await');
+        return;
+    }
     this.detectDependency(exp);
-    if(this.script.readOnly) this.warning('script read-only conflicts with await');
-    this.require('apply', '$cd');
+    this.require('apply');
 
     return xNode('await', {
         el: element.bindName(),
@@ -58,25 +61,16 @@ export function makeAwaitBlock(node, element) {
         parts,
         keywords
     }, (ctx, n) => {
-        ctx.writeIndent();
-        ctx.write(`$runtime.$$awaitBlock($cd, ${n.el}, () => [${n.keywords.join(', ')}], () => ${n.exp}, $$apply,\n`);
-        ctx.goIndent(() => {
-            n.parts.forEach((part, index) => {
-                if(part) {
-                    let {source, tpl, svg} = part;
-                    ctx.writeIndent();
-                    if(source) {
-                        ctx.build(source);
-                        ctx.write(',\n');
-                        ctx.writeIndent();
-                    } else ctx.write(`$runtime.noop, `);
-                    ctx.build(xNode('template', {body: tpl, svg, inline: true}));
-                    ctx.write(index == 2 ? '\n' : ',\n');
-                } else {
-                    ctx.writeLine(`null, null` + (index == 2 ? '' : ','));
-                };
-            });
+        ctx.write(true, `$runtime.$$awaitBlock($cd, ${n.el}, () => [${n.keywords.join(', ')}], () => ${n.exp},`);
+        ctx.indent++;
+        n.parts.forEach((part, index) => {
+            if(index) ctx.write(', ');
+            if(part) {
+                ctx.write(true);
+                ctx.add(part.block);
+            } else ctx.write('null');
         });
-        ctx.writeLine(');');
+        ctx.indent--;
+        ctx.write(');', true);
     });
 };

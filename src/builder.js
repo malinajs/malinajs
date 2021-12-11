@@ -378,8 +378,11 @@ export function buildBlock(data, option={}) {
                     return;
                 } else throw 'Wrong tag';
             } else if(n.type === 'await') {
+                if(isRoot) requireFragment = true;
+                requireCD.$value(true);
                 let el = placeLabel(n.value);
-                binds.push(this.makeAwaitBlock(n, el));
+                let r = this.makeAwaitBlock(n, el);
+                r && binds.push(r);
                 return;
             } else if(n.type === 'comment') {
                 lastStatic = tpl.push(n.content);
@@ -437,13 +440,6 @@ export function buildBlock(data, option={}) {
 
         if(option.inline) {
             result.source = innerBlock;
-        } else if(option.inlineFunction) {
-            result.source = xNode('function', {
-                inline: true,
-                arrow: true,
-                args: ['$cd', option.parentElement].concat(option.args || []),
-                body: [innerBlock]
-            });
         }
     } else {
         result.requireCD.$done = true;
@@ -451,7 +447,7 @@ export function buildBlock(data, option={}) {
         result.source = null;
     }
 
-    if(!option.inline && !option.inlineFunction) {
+    if(!option.inline) {
         let template = xNode('template', {
             body: rootTemplate,
             svg: rootSVG,
@@ -482,8 +478,9 @@ export function buildBlock(data, option={}) {
                     if(n.requireCD.value) ctx.write(`, ($cd, ${n.parentElement}, ${n.each.itemName}, ${n.each.indexName}) => {`, true);
                     else ctx.write(`, (${n.parentElement}, ${n.each.itemName}, ${n.each.indexName}) => {`, true);
                 } else {
-                    if(n.requireCD.value) ctx.write(`, ($cd, ${n.parentElement}) => {`, true);
-                    else ctx.write(`, (${n.parentElement}) => {`, true);
+                    let extra = option.extraArguments ? ', ' + option.extraArguments.join(', ') : '';
+                    if(n.requireCD.value) ctx.write(`, ($cd, ${n.parentElement}${extra}) => {`, true);
+                    else ctx.write(`, (${n.parentElement}${extra}) => {`, true);
                 }
                 ctx.indent++;
                 ctx.add(n.innerBlock)

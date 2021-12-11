@@ -511,9 +511,9 @@ export const unwrapProps = (cd, props, fn) => {
 
 
 export const makeBlock = (fr, fn) => {
-    return () => {
+    return (v) => {
         let $dom = fr.cloneNode(true), $cd = cd_new();
-        fn($cd, $dom);
+        fn($cd, $dom, v);
         return {$cd, $dom};
     }
 }
