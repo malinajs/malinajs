@@ -1,5 +1,5 @@
 
-import { $$htmlToFragment, insertAfter, svgToFragment } from '../runtime/base';
+import { $$htmlToFragment, insertAfter, svgToFragment, $$removeElements } from '../runtime/base';
 import { $watch } from '../runtime/cd';
 
 export function $$htmlBlock($cd, tag, fn) {
@@ -7,24 +7,19 @@ export function $$htmlBlock($cd, tag, fn) {
     let create = (html) => {
         let fr;
         if(tag.parentElement instanceof SVGElement) fr = svgToFragment(html);
-        else fr = $$htmlToFragment(html);
+        else fr = $$htmlToFragment(html, 3);
         lastElement = fr.lastChild;
         insertAfter(tag, fr);
     };
     let destroy = () => {
         if(!lastElement) return;
-        let next, el = tag.nextSibling;
-        while(el) {
-            next = el.nextSibling;
-            el.remove();
-            if(el == lastElement) break;
-            el = next;
-        }
-
+        $$removeElements(tag.nextSibling, lastElement);
         lastElement = null;
     };
-    $watch($cd, fn, (html) => {
-        destroy();
-        if(html) create(html);
-    }, {ro: true});
+    if($cd) {
+        $watch($cd, fn, (html) => {
+            destroy();
+            if(html) create(html);
+        }, {ro: true});
+    } else create(fn());
 };

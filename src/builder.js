@@ -372,8 +372,9 @@ export function buildBlock(data, option={}) {
                 let exp = r[2];
 
                 if(name == 'html') {
+                    if(isRoot) requireFragment = true;
                     let el = placeLabel('html');
-                    binds.push(this.makeHtmlBlock(exp, el));
+                    binds.push(this.makeHtmlBlock(exp, el, requireCD));
                     return;
                 } else throw 'Wrong tag';
             } else if(n.type === 'await') {
