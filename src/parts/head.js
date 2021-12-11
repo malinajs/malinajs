@@ -3,7 +3,7 @@ import { assert } from '../utils.js';
 import { xNode } from '../xnode.js'
 
 
-export function attachHead(n) {
+export function attachHead(n, requireCD) {
     if(n.elArg == 'window' || n.elArg == 'body') {
         let name = 'el' + (this.uniqIndex++);
         let block = this.buildBlock({body: [n]}, {malinaElement: true, inline: true, oneElement: name, bindAttributes: true});
@@ -29,7 +29,10 @@ export function attachHead(n) {
             return true;
         });
 
-        let d = {};
+        let d = {
+            $deps: [this.glob.apply],
+            requireCD
+        };
         if(title?.body?.[0]) {
             assert(title.body[0].type == 'text');
             let r = this.parseText(title.body[0].value);
@@ -40,27 +43,37 @@ export function attachHead(n) {
             }
         }
         if(body.length) {
-            let block = this.buildBlock({body}, {inline: true});
-            d.source = block.source;
-            d.template = xNode('template', {
-                name: '$parentElement',
-                body: block.tpl
-            })
+            let bb = this.buildBlock({body}, {inline: true});
+            d.source = bb.source;
+            d.template = bb.template;
+            d.blockCD = bb.requireCD;
+
+            d.$compile = [d.source];
+            d.$deps.push(d.blockCD);
+
+            d.template.name = '$parentElement';
+            d.template.requireFragment = true;
+            d.template.cloneNode = true;
+            d.template.inline = false;
+
             this.require('$onDestroy');
         }
 
-        return xNode('malina:head', d, (ctx, n) => {
+        const result = xNode('malina:head', d, (ctx, n) => {
+            if(n.blockCD.value) n.requireCD.$value(true);
             if(n.title != null) ctx.writeLine(`document.title = ${n.title};`);
             if(n.dynTitle) {
-                if(ctx.inuse.apply) ctx.writeLine(`$watchReadOnly($cd, () => (${n.dynTitle}), (value) => {document.title = value;});`);
-                else ctx.writeLine(`document.title = ${n.dynTitle};`);
+                if(this.glob.apply.value) {
+                    n.requireCD.$value(true);
+                    ctx.writeLine(`$watchReadOnly($cd, () => (${n.dynTitle}), (value) => {document.title = value;});`);
+                } else ctx.writeLine(`document.title = ${n.dynTitle};`);
             }
 
             if(n.template) {
                 ctx.writeLine(`{`);
                 ctx.indent++;
-                ctx.build(n.template);
-                ctx.build(n.source);
+                ctx.add(n.template);
+                ctx.add(n.source);
                 ctx.writeLine(`let a=$parentElement.firstChild, b=$parentElement.lastChild;`);
                 ctx.writeLine(`$onDestroy(() => {$runtime.$$removeElements(a, b)});`);
                 ctx.writeLine(`document.head.appendChild($parentElement);`);
@@ -68,5 +81,7 @@ export function attachHead(n) {
                 ctx.writeLine(`}`);
             }
         });
+        requireCD.$depends(result);
+        return result;
     } else throw 'Wrong tag';
 }

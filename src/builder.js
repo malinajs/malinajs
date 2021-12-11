@@ -221,7 +221,7 @@ export function buildBlock(data, option={}) {
                 if(n.name == 'malina' && !option.malinaElement) {
                     let b;
                     if(n.elArg == 'portal') b = this.attachPortal(n);
-                    else b = this.attachHead(n);
+                    else b = this.attachHead(n, requireCD);
                     b && binds.push(b);
                     return;
                 }
