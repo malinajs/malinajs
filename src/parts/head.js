@@ -43,18 +43,20 @@ export function attachHead(n, requireCD) {
             }
         }
         if(body.length) {
-            let bb = this.buildBlock({body}, {inline: true});
+            let bb = this.buildBlock({body}, {
+                inline: true,
+                template: {
+                    name: '$parentElement',
+                    cloneNode: true,
+                    requireFragment: true
+                }
+            });
             d.source = bb.source;
             d.template = bb.template;
             d.blockCD = bb.requireCD;
 
             d.$compile = [d.source];
             d.$deps.push(d.blockCD);
-
-            d.template.name = '$parentElement';
-            d.template.requireFragment = true;
-            d.template.cloneNode = true;
-            d.template.inline = false;
 
             this.require('$onDestroy');
         }

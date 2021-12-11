@@ -17,11 +17,14 @@ export function buildRuntime() {
     runtime.push(rootCD);
     this.glob.component.$depends(rootCD);
 
-    let bb = this.buildBlock(this.DOM, {inline: true});
+    let bb = this.buildBlock(this.DOM, {
+        inline: true,
+        template: {
+            name: '$parentElement',
+            cloneNode: true
+        }
+    });
     bb.requireCD && rootCD.$depends(bb.requireCD);
-    bb.template.inline = false;
-    bb.template.name = '$parentElement';
-    bb.template.cloneNode = true;
     runtime.push(bb.template);
     runtime.push(bb.source);
 
