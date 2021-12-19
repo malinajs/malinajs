@@ -86,11 +86,20 @@ export function detectExpressionType(name) {
         return true;
     }
 
+    function checkFunctionCall(body) {
+        if(body.length != 1) return;
+        if(body[0].type != 'ExpressionStatement') return;
+        let obj = body[0].expression;
+        if(obj.type != 'CallExpression') return;
+        if(obj.callee?.type == 'Identifier') return obj.callee.name;
+    }
+
     if(checkIdentificator(ast.body)) return 'identifier';
     if(checkMemberIdentificator(ast.body)) return 'identifier';
     if(checkFunction(ast.body)) return 'function';
 
-    return;
+    let fn = checkFunctionCall(ast.body);
+    if(fn) return {type: 'function-call', name: fn};
 };
 
 

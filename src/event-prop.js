@@ -50,14 +50,18 @@ export function makeEventProp(prop, requireElement) {
 
     this.detectDependency(exp || handler);
 
+    let globalFunction = false;
     if(exp) {
         let type = detectExpressionType(exp);
         if(type == 'identifier') {
+            globalFunction = !!this.script.rootFunctions[exp];
             handler = exp;
             exp = null;
         } else if(type == 'function') {
             func = exp;
             exp = null;
+        } else if(type?.type == 'function-call') {
+            globalFunction = !!this.script.rootFunctions[type.name];
         };
     }
 
@@ -119,7 +123,8 @@ export function makeEventProp(prop, requireElement) {
         exp,
         handlerName: handler,
         func,
-        mods
+        mods,
+        globalFunction
     }, (ctx, n) => {
         if(n.handlerName && !ctx.inuse.apply && !n.mods) return ctx.write(n.handlerName);
         ctx.write(`($event) => { `);
@@ -129,7 +134,7 @@ export function makeEventProp(prop, requireElement) {
             if(last(n.exp) != ';') n.exp += ';';
             ctx.write(`${n.exp}`);
         } else if(n.func) ctx.write(`(${n.func})($event);`);
-        if(ctx.inuse.apply) ctx.write(` $$apply();`);
+        if(ctx.inuse.apply && !n.globalFunction) ctx.write(` $$apply();`);
         ctx.write(`}`);
     });
 
