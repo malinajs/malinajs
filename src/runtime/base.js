@@ -94,22 +94,11 @@ export const getFinalLabel = n => {
 };
 
 
-let _tick_list = [];
-let _tick_planned = {};
-export function $tick(fn, uniq) {
-    if(uniq) {
-        if(_tick_planned[uniq]) return;
-        _tick_planned[uniq] = true;
-    }
-    _tick_list.push(fn);
-    if(_tick_planned.$tick) return;
-    _tick_planned.$tick = true;
-    setTimeout(() => {
-        _tick_planned = {};
-        let list = _tick_list;
-        _tick_list = [];
-        list.map(safeCall);
-    }, 0);
+const resolvedPromise = Promise.resolve();
+
+export function $tick(fn) {
+    fn && resolvedPromise.then(fn);
+    return resolvedPromise;
 };
 
 
@@ -153,18 +142,17 @@ export const $base = {
         $cd.component = $component;
         $onDestroy(() => $cd.destroy());
 
-        let id = `a${$$uniqIndex++}`;
-        let process;
+        let planned;
         let apply = r => {
-            if (process) return r;
+            if(planned) return r;
+            planned = true;
             $tick(() => {
                 try {
-                    process = true;
                     $digest($cd);
                 } finally {
-                    process = false;
+                    planned = false;
                 }
-            }, id);
+            });
             return r;
         };
 
