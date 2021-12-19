@@ -69,7 +69,7 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, bind) {
                 eachCD.children.length = 0;
                 mapping.forEach(ctx => ctx.destroy?.());
                 mapping.clear();
-            } else {
+            } else if(count < mapping.size) {
                 eachCD.children = [];
                 mapping.forEach(ctx => {
                     if(ctx.a) {

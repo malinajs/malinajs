@@ -2,18 +2,20 @@
 import { __app_onerror, safeCall } from './utils';
 
 
-function WatchObject(fn, cb, option) {
-    Object.assign(this, {
-        fn,
-        cb,
-        value: NaN,
-        ro: false,
-        cmp: null
-    }, option);
-};
+function WatchObject(fn, cb) {
+    this.fn = fn;
+    this.cb = cb;
+    this.value = NaN;
+    this.ro = false;
+    this.cmp = null;
+}
 
 
-export const cd_watchObject = (fn, cb, option) => new WatchObject(fn, cb, option);
+export const cd_watchObject = (fn, cb, option) => {
+    let w = new WatchObject(fn, cb);
+    option && Object.assign(w, option);
+    return w;
+}
 
 
 export function $watch(cd, fn, callback, w) {
