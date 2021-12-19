@@ -23,6 +23,7 @@ export function makeEventProp(prop, requireElement) {
     let modList = [], _mod = '';
     let handler = '', exp, func;
     let step = 0;
+    let rootModifier = false;
     for(let a of name) {
         if(a == '|') {
             assert(step <= 1);
@@ -83,6 +84,10 @@ export function makeEventProp(prop, requireElement) {
     let mods = [];
     let needPrevent, preventInserted;
     modList.forEach(opt => {
+        if(opt == 'root') {
+            rootModifier = true;
+            return;
+        }
         if(opt == 'preventDefault' || opt == 'prevent') {
             if(preventInserted) return;
             mods.push('$event.preventDefault();');
@@ -138,5 +143,5 @@ export function makeEventProp(prop, requireElement) {
         ctx.write(`}`);
     });
 
-    return {event, fn};
+    return {event, fn, rootModifier};
 }

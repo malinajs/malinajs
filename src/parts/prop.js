@@ -89,15 +89,18 @@ export function bindProp(prop, node, element, requireCD) {
             })};
         }
 
-        let {event, fn} = this.makeEventProp(prop, () => element.bindName());
-        requireCD.$value(true);
+        let {event, fn, rootModifier} = this.makeEventProp(prop, () => element.bindName());
+        if(rootModifier) this.require('rootEvent');
+        else requireCD.$value(true);
 
         return {bind: xNode('bindEvent', {
             event,
             fn,
-            el: element.bindName()
+            el: element.bindName(),
+            rootModifier
         }, (ctx, n) => {
-            ctx.write(true, `$runtime.addEvent($cd, ${n.el}, '${n.event}', `);
+            if(n.rootModifier) ctx.write(true, `$$addRootEvent(${n.el}, '${n.event}', `);
+            else ctx.write(true, `$runtime.addEvent($cd, ${n.el}, '${n.event}', `);
             ctx.build(n.fn);
             ctx.write(`);`);
         })};

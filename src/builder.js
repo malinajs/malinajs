@@ -26,6 +26,10 @@ export function buildRuntime() {
     });
     bb.requireCD && rootCD.$depends(bb.requireCD);
     runtime.push(bb.template);
+    runtime.push(xNode('root-event', (ctx) => {
+        if(!this.inuse.rootEvent) return;
+        ctx.write(true, `const $$addRootEvent = $runtime.makeRootEvent($parentElement);`);
+    }));
     runtime.push(bb.source);
 
     if(this.script.onMount) runtime.push(`$runtime.$onMount(onMount);`);

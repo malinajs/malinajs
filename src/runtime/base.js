@@ -552,3 +552,42 @@ export const mergeEvents = (...callbacks) => {
     callbacks = callbacks.filter(i => i);
     return (e) => callbacks.forEach(cb => cb(e));
 }
+
+
+export const makeRootEvent = (root) => {
+    let events = {}, nodes = [];
+
+    if(root.nodeType == 11) {
+        let n = root.firstElementChild;
+        while(n) {
+            nodes.push(n);
+            n = n.nextElementSibling;
+        }
+    } else nodes = [root];
+
+    $onDestroy(() => {
+        for(let eventName in events) {
+            nodes.forEach(n => n.removeEventListener(eventName, events[eventName]));
+        }
+    });
+    return (target, eventName, callback) => {
+        let handler = events[eventName];
+        if(!handler) {
+            handler = events[eventName] = ($event) => {
+                let top = $event.currentTarget;
+                let el = $event.target;
+                while(el) {
+                    if(el.__cb?.[eventName]) {
+                        el.__cb[eventName]($event);
+                        return;
+                    }
+                    if(el == top) break;
+                    el = el.parentNode;
+                }
+            }
+            nodes.forEach(n => n.addEventListener(eventName, handler));
+        };
+        if(!target.__cb) target.__cb = {};
+        target.__cb[eventName] = callback;
+    }
+}
