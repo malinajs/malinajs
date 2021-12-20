@@ -299,16 +299,18 @@ export const addClass = (el, className) => el.classList.add(className);
 
 
 export const bindClass = (cd, element, fn, className) => {
-    $watchReadOnly(cd, fn, value => {
+    $watch(cd, fn, value => {
         if(value) addClass(element, className);
         else element.classList.remove(className);
-    });
-}
+    }, {ro: true, value: false});
+};
 
 
-export const setClassToElement = (element, value) => {
-    if(typeof element.className == 'string') element.className = value;
-    else element.className.baseVal = value;
+export const setClassToElement = (element, value) => bindAttributeBase(element, 'class', value);
+
+
+export const bindClassExp = (cd, element, fn) => {
+    $watch(cd, fn, value => setClassToElement(element, value), {ro: true, value: ''});
 }
 
 

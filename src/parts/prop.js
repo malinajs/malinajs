@@ -291,16 +291,16 @@ export function bindProp(prop, node, element, requireCD) {
                 if(ctx.inuse.resolveClass) {
                     if(ctx.inuse.apply) {
                         n.requireCD.$value(true);
-                        ctx.writeLine(`$watchReadOnly($cd, () => $$resolveClass((${n.exp})${base}), value => $runtime.setClassToElement(${n.el}, value));`);
+                        ctx.write(true, `$runtime.bindClassExp($cd, ${n.el}, () => $$resolveClass((${n.exp})${base}))`);
                     } else {
-                        ctx.writeLine(`$runtime.setClassToElement(${n.el}, $$resolveClass((${n.exp})${base}));`);
+                        ctx.write(true, `$runtime.setClassToElement(${n.el}, $$resolveClass((${n.exp})${base}));`);
                     }
                 } else {
                     if(ctx.inuse.apply) {
                         n.requireCD.$value(true);
-                        ctx.writeLine(`$watchReadOnly($cd, () => ${n.exp}${base}, value => $runtime.setClassToElement(${n.el}, value));`);
+                        ctx.write(true, `$runtime.bindClassExp($cd, ${n.el}, () => (${n.exp})${base})`);
                     } else {
-                        ctx.writeLine(`$runtime.setClassToElement(${n.el}, ${n.exp}${base});`);
+                        ctx.write(true, `$runtime.setClassToElement(${n.el}, ${n.exp}${base});`);
                     }
                 }
             });
