@@ -561,23 +561,19 @@ export const makeRootEvent = (root) => {
         }
     });
     return (target, eventName, callback) => {
-        let handler = events[eventName];
-        if(!handler) {
-            handler = events[eventName] = ($event) => {
+        const key = `_$$${eventName}`;
+        if(!events[eventName]) {
+            let handler = events[eventName] = ($event) => {
                 let top = $event.currentTarget;
                 let el = $event.target;
                 while(el) {
-                    if(el.__cb?.[eventName]) {
-                        el.__cb[eventName]($event);
-                        return;
-                    }
-                    if(el == top) break;
+                    el[key]?.($event);
+                    if(el == top || $event.cancelBubble) break;
                     el = el.parentNode;
                 }
             }
             nodes.forEach(n => n.addEventListener(eventName, handler));
         };
-        if(!target.__cb) target.__cb = {};
-        target.__cb[eventName] = callback;
+        target[key] = callback;
     }
 }
