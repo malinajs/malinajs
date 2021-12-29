@@ -34,7 +34,6 @@
   "main": "malina",
   "files": [
     "malina.js",
-    "compile.js",
     "runtime.js",
     "malina-rollup.js",
     "malina-esbuild.js",
