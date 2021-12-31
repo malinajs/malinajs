@@ -65,15 +65,20 @@ export function svgToFragment(content) {
     return result;
 };
 
-export function $$removeElements(el, last) {
+
+export const iterNodes = (el, last, fn) => {
     let next;
     while(el) {
         next = el.nextSibling;
-        el.remove();
+        fn(el);
         if(el == last) break;
         el = next;
     }
-};
+}
+
+
+export const $$removeElements = (el, last) => iterNodes(el, last, n => n.remove());
+
 
 export function removeElementsBetween(el, stop) {
     let next;
@@ -346,7 +351,7 @@ export const bindAction = (cd, element, action, fn, subscribe) => {
             value = fn();
             handler = action.apply(null, [element].concat(value));
         } else handler = action(element);
-        if(handler?.destroy) cd_onDestroy(cd, handler.destroy);
+        cd_onDestroy(cd, handler?.destroy);
         subscribe?.(cd, fn, handler, value);
     });
 };

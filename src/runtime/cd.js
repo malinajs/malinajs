@@ -77,11 +77,16 @@ export const cd_attach = (parent, cd) => {
     }
 }
 
+export let destroyResults = null;
+
 export const cd_destroy = (cd, option) => {
     if(option !== false && cd.parent) $$removeItem(cd.parent.children, cd);
     cd.watchers.length = 0;
     cd.prefix.length = 0;
-    cd._d.map(safeCall);
+    cd._d.forEach(fn => {
+        let p = safeCall(fn);
+        p && destroyResults && destroyResults.push(p);
+    });
     cd._d.length = 0;
     cd.children.map(cd => cd.destroy(false));
     cd.children.length = 0;

@@ -1,6 +1,7 @@
 
 import { $$removeElements, firstChild, insertAfter } from '../runtime/base';
 import { $watch, cd_onDestroy, cd_attach, cd_destroy } from '../runtime/cd';
+import * as cdruntime from '../runtime/cd';
 
 
 export function ifBlock(parentCD, label, fn, build, buildElse) {
@@ -20,14 +21,21 @@ export function ifBlock(parentCD, label, fn, build, buildElse) {
 
     function destroyBlock() {
         if(!first) return;
+        cdruntime.destroyResults = [];
         destroy?.();
         destroy = null;
         if($cd) {
             cd_destroy($cd);
             $cd = null;
         }
-        $$removeElements(first, last);
+        if(cdruntime.destroyResults.length) {
+            let f = first, l = last;
+            Promise.allSettled(cdruntime.destroyResults).then(() => {
+                $$removeElements(f, l);
+            });
+        } else $$removeElements(first, last);
         first = last = null;
+        cdruntime.destroyResults = null;
     };
 
     $watch(parentCD, fn, (value) => {

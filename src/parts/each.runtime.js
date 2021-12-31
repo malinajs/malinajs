@@ -1,6 +1,7 @@
 
-import { $$removeElements, childNodes, firstChild } from '../runtime/base';
-import { $watch, $$compareArray, isArray, cd_attach, cd_new } from '../runtime/cd';
+import { $$removeElements, childNodes, firstChild, iterNodes } from '../runtime/base';
+import { $watch, $$compareArray, isArray, cd_attach, cd_new, cd_destroy } from '../runtime/cd';
+import * as cdruntime from '../runtime/cd';
 
 
 export const makeEachBlock = (fr, fn) => {
@@ -35,7 +36,7 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, bind) {
     cd_attach($parentCD, eachCD);
 
     let mapping = new Map();
-    let lastNode;
+    let lastNode, vi = 0;
 
     $watch(eachCD, fn, (array) => {
         if(!array) array = [];
@@ -54,45 +55,72 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, bind) {
 
         if(mapping.size) {
             let ctx, count = 0;
+            vi++;
             for(let i=0;i<array.length;i++) {
                 ctx = mapping.get(getKey(array[i], i, array));
                 if(ctx) {
-                    ctx.a = true;
+                    ctx.a = vi;
                     count++;
                 }
             }
 
             if(!count && lastNode) {
-                if(onlyChild) label.textContent = '';
-                else $$removeElements(label.nextSibling, lastNode);
-                eachCD.children.forEach(cd => cd.destroy(false));
+                cdruntime.destroyResults = [];
+                eachCD.children.forEach(cd => cd_destroy(cd, false));
                 eachCD.children.length = 0;
                 mapping.forEach(ctx => ctx.destroy?.());
                 mapping.clear();
+
+                if(cdruntime.destroyResults.length) {
+                    let removedNodes = [];
+                    iterNodes(onlyChild ? label.firstChild : label.nextSibling, lastNode, n => {
+                        n.$$removing = true;
+                        removedNodes.push(n);
+                    })
+                    Promise.allSettled(cdruntime.destroyResults).then(() => removedNodes.forEach(n => n.remove()));
+                } else {
+                    if(onlyChild) label.textContent = '';
+                    else $$removeElements(label.nextSibling, lastNode);
+                }
+
+                cdruntime.destroyResults = null;
             } else if(count < mapping.size) {
                 eachCD.children = [];
+                cdruntime.destroyResults = [];
+                let removedNodes = [];
                 mapping.forEach(ctx => {
-                    if(ctx.a) {
-                        ctx.a = false;
+                    if(ctx.a == vi) {
                         ctx.$cd && eachCD.children.push(ctx.$cd);
                         return;
                     }
-                    $$removeElements(ctx.first, ctx.last);
-                    ctx.$cd?.destroy(false);
+                    ctx.$cd && cd_destroy(ctx.$cd, false);
                     ctx.destroy?.();
+                    iterNodes(ctx.first, ctx.last, n => {
+                        n.$$removing = true;
+                        removedNodes.push(n);
+                    });
                 });
+
+                if(cdruntime.destroyResults.length) {
+                    Promise.allSettled(cdruntime.destroyResults).then(() => removedNodes.forEach(n => n.remove()));
+                } else {
+                    removedNodes.forEach(n => n.remove());
+                }
+                cdruntime.destroyResults = null;
             }
         }
 
-        let i, item, next_ctx, ctx, nextEl;
+        let i, item, next_ctx, ctx, nextEl, key;
         for(i=0;i<array.length;i++) {
             item = array[i];
+            key = getKey(item, i, array);
             if(next_ctx) {
                 ctx = next_ctx;
                 next_ctx = null;
-            } else ctx = mapping.get(getKey(item, i, array));
+            } else ctx = mapping.get(key);
             if(ctx) {
                 nextEl = i == 0 && onlyChild ? parentNode[firstChild] : prevNode.nextSibling;
+                while(nextEl && nextEl.$$removing) nextEl = nextEl.nextSibling;
                 if(nextEl != ctx.first) {
                     let insert = true;
 
@@ -127,7 +155,7 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, bind) {
                 parentNode.insertBefore($dom, prevNode?.nextSibling);
             }
             prevNode = ctx.last;
-            newMapping.set(getKey(item, i, array), ctx);
+            newMapping.set(key, ctx);
         };
         lastNode = prevNode;
         mapping.clear();
