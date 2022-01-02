@@ -1,7 +1,7 @@
 
 import { $watch, $watchReadOnly, $$deepComparator, cloneDeep, $$cloneDeep, cd_new, $digest,
     $$compareDeep, cd_onDestroy, addEvent, fire, keyComparator, cd_attach, cd_destroy, cd_component } from './cd';
-import { __app_onerror, safeCall, isFunction } from './utils';
+import { __app_onerror, safeCall, isFunction, isObject } from './utils';
 
 let templatecache = {};
 let templatecacheSvg = {};
@@ -419,7 +419,7 @@ export const makeExternalProperty = ($component, name, getter, setter) => {
 }
 
 
-export const eachDefaultKey = (item, index, array) => typeof array[0] === 'object' ? item : index;
+export const eachDefaultKey = (item, index, array) => isObject(array[0]) ? item : index;
 
 
 export const attachAnchor = ($option, $cd, el, name) => {

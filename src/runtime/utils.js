@@ -10,6 +10,9 @@ export const configure = (option) => {
 export const isFunction = fn => typeof fn == 'function';
 
 
+export const isObject = d => typeof d == 'object';
+
+
 export const safeCall = fn => {
     try {
         return fn?.();
