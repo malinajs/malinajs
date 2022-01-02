@@ -376,7 +376,6 @@ export function bindProp(prop, node, element, requireCD) {
                 selected: true,
                 innerHTML: true,
                 innerText: true,
-                placeholder: true,
                 src: true,
                 readonly: 'readOnly'
             }
