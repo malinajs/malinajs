@@ -223,3 +223,23 @@ export const parseJS = (exp, fn) => {
     }
     return result;
 };
+
+
+export const htmlEntitiesToText = (text) => {                                                                                                                               
+    let entities = [                                                                                                                                                 
+        [/&amp;/g, '&'],                                                                                                                                             
+        [/&apos;/g, '\''],                                                                                                                                           
+        [/&#x27;/g, '\''],                                                                                                                                           
+        [/&#x2F;/g, '/'],                                                                                                                                            
+        [/&#39;/g, '\''],                                                                                                                                            
+        [/&#47;/g, '/'],                                                                                                                                             
+        [/&lt;/g, '<'],                                                                                                                                              
+        [/&gt;/g, '>'],                                                                                                                                              
+        [/&nbsp;/g, ' '],                                                                                                                                            
+        [/&quot;/g, '"']                                                                                                                                             
+    ];                                                                                                                                                               
+    entities.forEach(([k, v]) => {                                                                                                                                   
+        text = text.replace(k, v);                                                                                                                                   
+    });                                                                                                                                                              
+    return text;                                                                                                                                                     
+}

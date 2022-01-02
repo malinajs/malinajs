@@ -1,5 +1,5 @@
 
-import { last, assert } from './utils.js';
+import { last, assert, htmlEntitiesToText } from './utils.js';
 
 
 function I(value = 0) {
@@ -337,6 +337,7 @@ xNode.init = {
         } else if(!template.match(/[<>]/) && !node.requireFragment) {
             convert = '$runtime.createTextNode';
             cloneNode = false;
+            if(!node.raw) template = htmlEntitiesToText(template);
         } else {
             convert = '$$htmlToFragment';
             template = template.replace(/<!---->/g, '<>');
