@@ -340,7 +340,10 @@ export const bindAttributeBase = (element, name, value) => {
 
 
 export const bindAttribute = (cd, element, name, fn) => {
-    $watchReadOnly(cd, () => '' + fn(), value => bindAttributeBase(element, name, value));
+    $watchReadOnly(cd, () => {
+        let v = fn();
+        return v == null ? v : '' + v;
+    }, value => bindAttributeBase(element, name, value));
 };
 
 
