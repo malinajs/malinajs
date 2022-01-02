@@ -141,33 +141,29 @@ export const $onDestroy = fn => current_component._d.push(fn);
 export const $onMount = fn => current_component._m.push(fn);
 
 
-export const $base = {
-    a: ($component) => {
-        let $cd = cd_new();
-        $cd.component = $component;
-        $onDestroy(() => $cd.destroy());
+export const $base = ($component) => {
+    let $cd = cd_new();
+    $cd.component = $component;
+    $onDestroy(() => $cd.destroy());
 
-        let planned;
-        let apply = r => {
-            if(planned) return r;
-            planned = true;
-            $tick(() => {
-                try {
-                    $digest($cd);
-                } finally {
-                    planned = false;
-                }
-            });
-            return r;
-        };
+    let planned;
+    let apply = r => {
+        if(planned) return r;
+        planned = true;
+        $tick(() => {
+            try {
+                $digest($cd);
+            } finally {
+                planned = false;
+            }
+        });
+        return r;
+    };
 
-        $component.$cd = $cd;
-        $component.apply = apply;
-        $component.push = apply;
-    },
-    b: ($component) => {
-        safeCall(() => $digest($component.$cd))
-    }
+    $component.$cd = $cd;
+    $component.apply = apply;
+    $component.push = apply;
+    apply();
 };
 
 
@@ -183,11 +179,10 @@ export const makeComponent = (init, $base) => {
             _d: [],
             _m: []
         };
-        $base?.a($component);
+        $base?.($component);
 
         try {
             $component.$dom = init($option, $component.apply);
-            $base?.b($component);
         } finally {
             current_component = prev;
             $context = null;
