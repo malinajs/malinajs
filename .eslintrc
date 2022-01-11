@@ -9,18 +9,27 @@
     "node": true,
     "es6": true
   },
+  "ignorePatterns": ["src/css/ext/nwsapi.js"],
   "rules": {
     "no-import-assign": "warn",
     "prefer-regex-literals": "error",
     "multiline-ternary": "off",
     "camelcase": "off",
-    "arrow-parens": ["error", "as-needed"],
+    "arrow-parens": "off",
     "space-before-function-paren": ["error", "never"],
     "no-multiple-empty-lines": ["error", { "max": 2, "maxEOF": 1, "maxBOF": 0 }],
     "no-trailing-spaces": "error",
     "semi": ["error", "always"],
     "eqeqeq": "off",
     "indent": ["error", 4],
-    "no-constant-condition": ["error", { "checkLoops": false }]
+    "no-constant-condition": ["error", { "checkLoops": false }],
+    "prefer-const": "off",
+    "one-var": "off",
+    "no-useless-return": "off",
+    "keyword-spacing": ["error", { "overrides": {
+      "if": { "after": false },
+      "for": { "after": false },
+      "while": { "after": false }
+    }}]
   }
 }
