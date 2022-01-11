@@ -1,4 +1,3 @@
-
 import { last, assert, htmlEntitiesToText } from './utils.js';
 
 
@@ -17,28 +16,28 @@ function xWriter(ctx, node) {
             if(i === true) node.$result.push(new I(this.indent));
             else node.$result.push(i);
         }
-    }
-    this.writeLine = function(s) {this.write(true, s);};
-    this.writeIndent = function() {this.write(true)};
+    };
+    this.writeLine = function(s) { this.write(true, s); };
+    this.writeIndent = function() { this.write(true); };
     this.goIndent = fn => {
         this.indent++;
         fn();
         this.indent--;
-    }
+    };
 
     this.add = this.build = function(n) {
         if(n === null) return;
         assert(n instanceof xNode);
         assert(!n.$inserted, 'already inserted');
-        node.$result.push({node: n, indent: this.indent});
+        node.$result.push({ node: n, indent: this.indent });
         n.$inserted = true;
-    }
+    };
 
     this.isEmpty = function(n) {
         if(n == null) return true;
         assert(n.$done, 'Node is not built');
         return !n.$result.some(r => {
-            if(typeof(r) == 'string') return true;
+            if(typeof (r) == 'string') return true;
             else if(r.node instanceof xNode) return !this.isEmpty(r.node);
             else if(r instanceof I) return true;
             else {
@@ -46,8 +45,8 @@ function xWriter(ctx, node) {
                 throw 'error type';
             }
         });
-    }
-};
+    };
+}
 
 
 export function xBuild(ctx, node) {
@@ -76,9 +75,9 @@ export function xBuild(ctx, node) {
                 if(r?.node instanceof xNode) resolve(r.node);
             });
         } else pending++;
-    }
+    };
     let depth;
-    for(depth=10;depth > 0;depth--) {
+    for(depth = 10; depth > 0; depth--) {
         pending = 0;
         resolve(node);
         if(!pending) break;
@@ -93,24 +92,23 @@ export function xBuild(ctx, node) {
             throw 'node is not resolved';
         }
         n.$result.forEach(r => {
-            if(typeof(r) == 'string') result.push(r);
+            if(typeof (r) == 'string') result.push(r);
             else if(r.node instanceof xNode) {
                 asm(r.node, r.indent + baseIndent);
-            }
-            else if(r instanceof I) {
+            } else if(r instanceof I) {
                 r.$indent += baseIndent;
                 result.push(r);
             } else {
                 console.error('Type', r);
                 throw 'error type';
             }
-        })
-    }
+        });
+    };
     asm(node, 0);
 
     for(let i = 0; i < result.length; i++) {
         let r = result[i];
-        let next = result[i+1];
+        let next = result[i + 1];
 
         if(r instanceof I) {
             if(next instanceof I) {
@@ -183,11 +181,11 @@ export function xNode(_type, _data, _handler) {
         assert(!this.$done, 'Attempt to add dependecy, but node is already resolved');
         if(!this.$deps) this.$deps = [];
         this.$deps.push(n);
-    }
+    };
     this.$value = function(value) {
         assert(!this.$done, 'Attempt to set active, depends node is already resolved');
         this.value = value === undefined ? true : value;
-    }
+    };
     return this;
 }
 
@@ -200,8 +198,8 @@ xNode.init = {
             if(!node.body) node.body = [];
             node.push = function(child) {
                 assert(arguments.length == 1, 'Wrong xNode');
-                if(typeof child == 'string') child = xNode('raw', {value: child});
-                this.body.push(child)
+                if(typeof child == 'string') child = xNode('raw', { value: child });
+                this.body.push(child);
             };
         },
         handler: (ctx, node) => {
@@ -237,7 +235,7 @@ xNode.init = {
             }
             ctx.write(`(${node.args.join(', ')}) `);
             if(node.arrow) ctx.write('=> ');
-            ctx.write(`{`, true);
+            ctx.write('{', true);
             ctx.indent++;
             xNode.init.block.handler(ctx, node);
             ctx.indent--;
@@ -261,13 +259,13 @@ xNode.init = {
                         p.value += n;
                         return p;
                     }
-                    n = xNode('node:text', {value: n});
+                    n = xNode('node:text', { value: n });
                 }
                 assert(n instanceof xNode);
                 this.children.push(n);
                 n._ctx = this._ctx;
                 return n;
-            }
+            };
         },
         handler: (ctx, node) => {
             if(node.inline) {
@@ -285,7 +283,7 @@ xNode.init = {
 
                         if(p.value) ctx.write(` ${p.name}="${p.value}"`);
                         else ctx.write(` ${p.name}`);
-                    })
+                    });
                 }
 
                 let className = {};
@@ -301,13 +299,13 @@ xNode.init = {
                     node.children.forEach(n => ctx.build(n));
                     ctx.write(`</${node.name}>`);
                 } else {
-                    if(node.voidTag) ctx.write(`/>`);
+                    if(node.voidTag) ctx.write('/>');
                     else ctx.write(`></${node.name}>`);
                 }
             }
         },
         bindName: function() {
-            if(!this._boundName) this._boundName = `el${this._ctx.uniqIndex++}`
+            if(!this._boundName) this._boundName = `el${this._ctx.uniqIndex++}`;
             return this._boundName;
         }
     },
@@ -325,7 +323,7 @@ xNode.init = {
         },
         handler: (ctx, node) => {
             if(ctx._ctx.config.debug && ctx._ctx.config.debugLabel) ctx.write(`<!-- ${node.value} -->`);
-            else ctx.write(`<!---->`);
+            else ctx.write('<!---->');
         }
     },
     template: (ctx, node) => {

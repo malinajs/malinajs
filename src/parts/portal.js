@@ -1,13 +1,12 @@
-
 import { trimEmptyNodes, unwrapExp } from '../utils.js';
-import { xNode } from '../xnode.js'
+import { xNode } from '../xnode.js';
 
 
 export function attachPortal(node, requireCD) {
     let body = trimEmptyNodes(node.body || []);
     if(!body.length) return;
 
-    let bb = this.buildBlock({body}, {
+    let bb = this.buildBlock({ body }, {
         inline: true,
         template: {
             name: '$parentElement',
@@ -35,8 +34,8 @@ export function attachPortal(node, requireCD) {
         ctx.indent++;
         ctx.add(n.template);
         ctx.add(n.source);
-        ctx.writeLine(`let $$first = $parentElement[$runtime.firstChild];`);
-        ctx.writeLine(`let $$last = $parentElement.lastChild;`);
+        ctx.writeLine('let $$first = $parentElement[$runtime.firstChild];');
+        ctx.writeLine('let $$last = $parentElement.lastChild;');
         ctx.writeLine(`$runtime.cd_onDestroy(${n.$deps[0].value ? '$cd' : '$component'}, () => $runtime.$$removeElements($$first, $$last));`);
         ctx.writeLine(`$tick(() => ${label}.appendChild($parentElement));`);
         ctx.indent--;

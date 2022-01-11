@@ -1,4 +1,3 @@
-
 import acorn from 'acorn';
 import astring from 'astring';
 
@@ -26,22 +25,22 @@ export function toCamelCase(name) {
     return name.replace(/(\-\w)/g, function(part) {
         return part[1].toUpperCase();
     });
-};
+}
 
 export function Q(s) {
     return s.replace(/`/g, '\\`').replace(/\\/g, '\\\\');
-};
+}
 
 export function Q2(s) {
     return s.replace(/`/g, '\\`').replace(/\\/g, '\\\\').replace(/\n/g, '\\n');
-};
+}
 
 export function unwrapExp(e) {
     assert(e, 'Empty expression');
     let rx = e.match(/^\{(.*)\}$/);
     assert(rx, 'Wrong expression: ' + e);
     return rx[1];
-};
+}
 
 export function isSimpleName(name) {
     if(!name) return false;
@@ -55,12 +54,12 @@ export const isNumber = (value) => {
     if(!value) return false;
     if(typeof value != 'string') return false;
     return !isNaN(value);
-}
+};
 
 export function detectExpressionType(name) {
     if(isSimpleName(name)) return 'identifier';
 
-    let ast = acorn.parse(name, {allowReturnOutsideFunction: true});
+    let ast = acorn.parse(name, { allowReturnOutsideFunction: true });
 
     function checkIdentificator(body) {
         if(body.length != 1) return;
@@ -99,18 +98,18 @@ export function detectExpressionType(name) {
     if(checkFunction(ast.body)) return 'function';
 
     let fn = checkFunctionCall(ast.body);
-    if(fn) return {type: 'function-call', name: fn};
-};
+    if(fn) return { type: 'function-call', name: fn };
+}
 
 
 export function checkRootName(name) {
     let rx = name.match(/^([\w\$_][\w\d\$_]*)/);
-    if(!rx) return this.warning({message: 'Error name: ' + name});
+    if(!rx) return this.warning({ message: 'Error name: ' + name });
     let root = rx[1];
 
     if(this.script.rootVariables[root] || this.script.rootFunctions[root]) return true;
-    this.warning({message:'No name: ' + name});
-};
+    this.warning({ message: 'No name: ' + name });
+}
 
 
 export function trimEmptyNodes(srcNodes) {
@@ -131,13 +130,13 @@ export function trimEmptyNodes(srcNodes) {
 
 export const genId = () => {
     let id = Math.floor(Date.now() * Math.random()).toString(36);
-    if(id.length > 6) id = id.substring(id.length - 6)
+    if(id.length > 6) id = id.substring(id.length - 6);
     return 'm' + id;
 };
 
 
 export const extractKeywords = (exp) => {
-    let ast = acorn.parse(exp, {sourceType: 'module', ecmaVersion: 12});
+    let ast = acorn.parse(exp, { sourceType: 'module', ecmaVersion: 12 });
 
     const keys = new Set();
     const rec = (n) => {
@@ -160,17 +159,18 @@ export const extractKeywords = (exp) => {
         for(let k in n) {
             if(k == '_parent') continue;
             let v = n[k];
-            if(typeof(v) != 'object') continue;
-            if(Array.isArray(v)) v.forEach(i => {
-                i._parent = self || n._parent;
-                rec(i);
-            });
-            else {
+            if(typeof (v) != 'object') continue;
+            if(Array.isArray(v)) {
+                v.forEach(i => {
+                    i._parent = self || n._parent;
+                    rec(i);
+                });
+            } else {
                 v._parent = self || n._parent;
                 rec(v);
             }
         }
-    }
+    };
     rec(ast);
 
     return [...keys];
@@ -187,12 +187,12 @@ export const replaceElementKeyword = (exp, fn) => {
         changed = true;
     });
     return changed ? r.build().trim() : exp;
-}
+};
 
 
 export const parseJS = (exp, fn) => {
     let result = {};
-    let ast = result.ast = acorn.parse(exp, {sourceType: 'module', ecmaVersion: 12});
+    let ast = result.ast = acorn.parse(exp, { sourceType: 'module', ecmaVersion: 12 });
 
     const rec = (n, pk) => {
         let self;
@@ -204,7 +204,7 @@ export const parseJS = (exp, fn) => {
         for(let k in n) {
             if(k == '_parent') continue;
             let v = n[k];
-            if(v == null || typeof(v) != 'object') continue;
+            if(v == null || typeof (v) != 'object') continue;
             if(Array.isArray(v)) {
                 v.forEach(i => {
                     i._parent = self || n._parent;
@@ -215,31 +215,31 @@ export const parseJS = (exp, fn) => {
                 rec(v, k);
             }
         }
-    }
+    };
     rec(ast, null);
 
     result.build = (data) => {
         return astring.generate(data || ast);
-    }
+    };
     return result;
 };
 
 
-export const htmlEntitiesToText = (text) => {                                                                                                                               
-    let entities = [                                                                                                                                                 
-        [/&amp;/g, '&'],                                                                                                                                             
-        [/&apos;/g, '\''],                                                                                                                                           
-        [/&#x27;/g, '\''],                                                                                                                                           
-        [/&#x2F;/g, '/'],                                                                                                                                            
-        [/&#39;/g, '\''],                                                                                                                                            
-        [/&#47;/g, '/'],                                                                                                                                             
-        [/&lt;/g, '<'],                                                                                                                                              
-        [/&gt;/g, '>'],                                                                                                                                              
-        [/&nbsp;/g, ' '],                                                                                                                                            
-        [/&quot;/g, '"']                                                                                                                                             
-    ];                                                                                                                                                               
-    entities.forEach(([k, v]) => {                                                                                                                                   
-        text = text.replace(k, v);                                                                                                                                   
-    });                                                                                                                                                              
-    return text;                                                                                                                                                     
-}
+export const htmlEntitiesToText = (text) => {
+    let entities = [
+        [/&amp;/g, '&'],
+        [/&apos;/g, '\''],
+        [/&#x27;/g, '\''],
+        [/&#x2F;/g, '/'],
+        [/&#39;/g, '\''],
+        [/&#47;/g, '/'],
+        [/&lt;/g, '<'],
+        [/&gt;/g, '>'],
+        [/&nbsp;/g, ' '],
+        [/&quot;/g, '"']
+    ];
+    entities.forEach(([k, v]) => {
+        text = text.replace(k, v);
+    });
+    return text;
+};

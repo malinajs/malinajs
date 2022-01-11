@@ -1,4 +1,3 @@
-
 import { last } from './utils.js';
 
 
@@ -11,20 +10,20 @@ export function compactDOM() {
         fragment: [n => n.body],
         if: [n => n.body, n => n.bodyMain],
         await: [n => n.parts.main, n => n.parts.then, n => n.parts.catch]
-    }
+    };
 
     function go(body, parentNode) {
         let i;
 
         const getPrev = () => {
             return i > 0 && body.length ? body[i - 1] : null;
-        }
+        };
 
         const getNext = () => {
             return i < body.length ? body[i + 1] : null;
-        }
+        };
 
-        for(i=0; i<body.length; i++) {
+        for(i = 0; i < body.length; i++) {
             let node = body[i];
             if(node.type == 'text') {
                 let next = getNext();
@@ -53,7 +52,7 @@ export function compactDOM() {
                 keys && keys.forEach(k => {
                     let body = k(node);
                     if(body && body.length) go(body, node);
-                })
+                });
             }
         }
 
@@ -63,7 +62,7 @@ export function compactDOM() {
         while(i < body.length) {
             let node = body[i];
             if(node.type == 'text' && !node.value.trim()) {
-                if(parentNode && (parentNode.name == 'table' || isTable(parentNode)) && (i == 0 || i == body.length -1)) {
+                if(parentNode && (parentNode.name == 'table' || isTable(parentNode)) && (i == 0 || i == body.length - 1)) {
                     body.splice(i, 1);
                     continue;
                 }
@@ -86,9 +85,9 @@ export function compactDOM() {
                         if(isTable(prev) && isTable(next) ||
                             prev.name == 'li' && next.name == 'li' ||
                             prev.name == 'div' && next.name == 'div') {
-                                body.splice(i, 1);
-                                continue;
-                            }
+                            body.splice(i, 1);
+                            continue;
+                        }
                     }
                 } else if(parentNode) {
                     let p = prev && prev.type == 'node' && prev.name;
@@ -122,7 +121,6 @@ export function compactDOM() {
             }
             i++;
         }
-
     }
 
     function trimNodes(srcNodes) {
@@ -156,4 +154,4 @@ export function compactDOM() {
     data.body = trimNodes(data.body);
 
     go(data.body);
-};
+}

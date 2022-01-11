@@ -1,4 +1,3 @@
-
 import { $watch, cd_watchObject, cd_new, cd_attach, cd_destroy, fire } from '../runtime/cd.js';
 
 
@@ -13,9 +12,9 @@ export const invokeSlot = ($component, slotName, $context, propsFn, placeholder,
 
     if($slot) {
         let push, w, result;
-        w = cd_watchObject(propsFn, value => push?.(value), {ro: true, value: {}, cmp});
+        w = cd_watchObject(propsFn, value => push?.(value), { ro: true, value: {}, cmp });
         fire(w);
-        ({push, ...result} = $slot($component, $context, w.value));
+        ({ push, ...result } = $slot($component, $context, w.value));
         if(push) {
             result.$cd = cd_new();
             result.$cd.watchers.push(w);

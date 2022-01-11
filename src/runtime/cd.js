@@ -1,4 +1,3 @@
-
 import { __app_onerror, safeCall, isObject } from './utils';
 
 
@@ -15,18 +14,18 @@ export const cd_watchObject = (fn, cb, option) => {
     let w = new WatchObject(fn, cb);
     option && Object.assign(w, option);
     return w;
-}
+};
 
 
 export function $watch(cd, fn, callback, w) {
     w = cd_watchObject(fn, callback, w);
     cd.watchers.push(w);
     return w;
-};
+}
 
 export function $watchReadOnly(cd, fn, callback) {
-    return $watch(cd, fn, callback, {ro: true});
-};
+    return $watch(cd, fn, callback, { ro: true });
+}
 
 export function addEvent(cd, el, event, callback) {
     if(!callback) return;
@@ -34,16 +33,16 @@ export function addEvent(cd, el, event, callback) {
     cd_onDestroy(cd, () => {
         el.removeEventListener(event, callback);
     });
-};
+}
 
 export function cd_onDestroy(cd, fn) {
     if(fn) cd._d.push(fn);
-};
+}
 
 export function $$removeItem(array, item) {
     let i = array.indexOf(item);
-    if(i>=0) array.splice(i, 1);
-};
+    if(i >= 0) array.splice(i, 1);
+}
 
 function $ChangeDetector(parent) {
     this.parent = parent;
@@ -51,10 +50,10 @@ function $ChangeDetector(parent) {
     this.watchers = [];
     this._d = [];
     this.prefix = [];
-};
+}
 
 $ChangeDetector.prototype.new = function() {
-    var cd = new $ChangeDetector(this);
+    let cd = new $ChangeDetector(this);
     this.children.push(cd);
     return cd;
 };
@@ -75,7 +74,7 @@ export const cd_attach = (parent, cd) => {
         cd.parent = parent;
         parent.children.push(cd);
     }
-}
+};
 
 export let destroyResults = null;
 
@@ -90,7 +89,7 @@ export const cd_destroy = (cd, option) => {
     cd._d.length = 0;
     cd.children.map(cd => cd.destroy(false));
     cd.children.length = 0;
-}
+};
 
 export const isArray = (a) => Array.isArray(a);
 
@@ -100,7 +99,7 @@ const compareArray = (a, b) => {
     if(a0 !== a1) return true;
     if(!a0) return a !== b;
     if(a.length !== b.length) return true;
-    for(let i=0;i<a.length;i++) {
+    for(let i = 0; i < a.length; i++) {
         if(a[i] !== b[i]) return true;
     }
     return false;
@@ -113,7 +112,7 @@ export function $$compareArray(w, value) {
     else w.value = value;
     w.cb(w.value);
     return w.ro ? 0 : 1;
-};
+}
 
 
 const compareDeep = (a, b, lvl) => {
@@ -129,13 +128,13 @@ const compareDeep = (a, b, lvl) => {
 
     if(a0) {
         if(a.length !== b.length) return true;
-        for(let i=0;i<a.length;i++) {
-            if(compareDeep(a[i], b[i], lvl-1)) return true;
+        for(let i = 0; i < a.length; i++) {
+            if(compareDeep(a[i], b[i], lvl - 1)) return true;
         }
     } else {
         let set = {};
         for(let k in a) {
-            if(compareDeep(a[k], b[k], lvl-1)) return true;
+            if(compareDeep(a[k], b[k], lvl - 1)) return true;
             set[k] = true;
         }
         for(let k in b) {
@@ -153,13 +152,13 @@ export function cloneDeep(d, lvl) {
     if(isObject(d)) {
         if(d instanceof Date) return d;
         if(d instanceof Element) return d;
-        if(isArray(d)) return d.map(i => cloneDeep(i, lvl-1));
+        if(isArray(d)) return d.map(i => cloneDeep(i, lvl - 1));
         let r = {};
-        for(let k in d) r[k] = cloneDeep(d[k], lvl-1);
+        for(let k in d) r[k] = cloneDeep(d[k], lvl - 1);
         return r;
     }
     return d;
-};
+}
 
 export const $$cloneDeep = function(d) {
     return cloneDeep(d, 10);
@@ -172,7 +171,7 @@ export function $$deepComparator(depth) {
         w.idle = false;
         return !w.ro && diff ? 1 : 0;
     };
-};
+}
 
 export const $$compareDeep = $$deepComparator(10);
 
@@ -186,7 +185,7 @@ export const keyComparator = (w, value) => {
     diff && !w.idle && w.cb(value);
     w.idle = false;
     return !w.ro && diff ? 1 : 0;
-}
+};
 
 
 export const fire = w => {
@@ -206,8 +205,8 @@ export function $digest($cd) {
         let queue = [];
         let i, value, cd = $cd;
         while(cd) {
-            for(i=0;i<cd.prefix.length;i++) cd.prefix[i]();
-            for(i=0;i<cd.watchers.length;i++) {
+            for(i = 0; i < cd.prefix.length; i++) cd.prefix[i]();
+            for(i = 0; i < cd.watchers.length; i++) {
                 w = cd.watchers[i];
                 value = w.fn();
                 if(w.value !== value) {
@@ -219,7 +218,7 @@ export function $digest($cd) {
                         w.cb(w.value);
                     }
                 }
-            };
+            }
             if(cd.children.length) queue.push.apply(queue, cd.children);
             cd = queue[index++];
         }
@@ -227,4 +226,4 @@ export function $digest($cd) {
         if(!changes) break;
     }
     if(loop < 0) __app_onerror('Infinity changes: ', w);
-};
+}

@@ -1,4 +1,3 @@
-
 import csstree from 'css-tree';
 import { assert, genId as utilsGenId, last } from '../utils.js';
 import nwsapi from './ext/nwsapi';
@@ -8,32 +7,32 @@ export function processCSS() {
     let styleNodes = this.styleNodes;
     const genId = () => this.config.cssGenId ? this.config.cssGenId() : utilsGenId();
 
-    let self = this.css = {id: genId(), externalMainName: null};
+    let self = this.css = { id: genId(), externalMainName: null };
     let astList = [];
     let selectors = {};
     let removeBlocks = [];
     let active = false;
 
     const selector2str = (sel) => {
-        if(!sel.children) sel = {type: 'Selector', children: sel};
+        if(!sel.children) sel = { type: 'Selector', children: sel };
         return csstree.generate(sel);
-    }
+    };
 
     const convertAst = (node, parent) => {
         if(!node) return node;
         if(typeof node != 'object') return node;
         if(Array.isArray(node)) return node.map(i => convertAst(i, parent));
         if(node.toArray) return node.toArray().map(i => convertAst(i, parent));
-        let r = {parent};
+        let r = { parent };
         let newParent = node.type ? r : parent;
         for(let k in node) r[k] = convertAst(node[k], newParent);
         return r;
-    }
+    };
 
     const parseCSS = (content, option) => {
         let ast = csstree.parse(content, option);
         return convertAst(ast, null);
-    }
+    };
 
     const isKeyframes = (name) => name == 'keyframes' || name == '-webkit-keyframes' || name == '-moz-keyframes' || name == '-o-keyframes';
 
@@ -73,13 +72,13 @@ export function processCSS() {
                     if(isKeyframes(node.parent.parent.name)) return;
                 }
 
-                assert(node.prelude.type=='SelectorList');
+                assert(node.prelude.type == 'SelectorList');
 
                 let emptyBlock = node.block.children.length == 0;
                 if(emptyBlock) removeBlocks.push(node);
 
                 let selectorList = node.prelude.children;
-                for(let i=0; i < selectorList.length; i++) {
+                for(let i = 0; i < selectorList.length; i++) {
                     processSelector(selectorList[i]);
                 }
 
@@ -90,12 +89,12 @@ export function processCSS() {
                         if(sel.type == 'PseudoClassSelector' && sel.name == 'global') {
                             sel = sel.children[0];
                             assert(sel.type == 'Raw');
-                            let a = parseCSS(sel.value, {context: 'selector'});
+                            let a = parseCSS(sel.value, { context: 'selector' });
                             assert(a.type == 'Selector');
                             a.children.forEach(sel => {
                                 sel.global = true;
                                 origin.push(sel);
-                            })
+                            });
                         } else {
                             origin.push(sel);
                         }
@@ -104,18 +103,18 @@ export function processCSS() {
                     assert(origin.length);
 
                     let cleanSelectorItems = [];
-                    for(let i=0; i<origin.length; i++) {
+                    for(let i = 0; i < origin.length; i++) {
                         let s = origin[i];
                         if(s.global) continue;
                         if(s.type == 'PseudoClassSelector' || s.type == 'PseudoElementSelector') {
                             let prev = origin[i - 1];
                             if(!prev || prev.type == 'Combinator' || prev.type == 'WhiteSpace') {
-                                cleanSelectorItems.push({type: 'TypeSelector', name: '*'});
+                                cleanSelectorItems.push({ type: 'TypeSelector', name: '*' });
                             }
                         } else cleanSelectorItems.push(s);
                     }
                     while(cleanSelectorItems.length && ['WhiteSpace', 'Combinator'].includes(last(cleanSelectorItems).type)) cleanSelectorItems.pop();
-                    if(!cleanSelectorItems.length || globalBlock) {  // fully global?
+                    if(!cleanSelectorItems.length || globalBlock) { // fully global?
                         assert(origin.length);
                         fullSelector.children = origin;
                         return;
@@ -127,14 +126,14 @@ export function processCSS() {
                         let isSimple = false;
                         if(cleanSelectorItems[0].type == 'ClassSelector') {
                             isSimple = true;
-                            for(let i=1; i<cleanSelectorItems.length; i++) {
+                            for(let i = 1; i < cleanSelectorItems.length; i++) {
                                 if(cleanSelectorItems[i].type != 'AttributeSelector') {
                                     isSimple = false;
                                     break;
                                 }
                             }
                         }
-    
+
                         selectors[cleanSelector] = sobj = {
                             cleanSelector,
                             isSimple,
@@ -159,10 +158,10 @@ export function processCSS() {
                     sobj.hashedSelectors.push(hashed);
 
                     const insert = (i) => {
-                        hashed.splice(i, 0, {type: "ClassSelector", loc: null, name: null, __hash: true});
-                    }
+                        hashed.splice(i, 0, { type: 'ClassSelector', loc: null, name: null, __hash: true });
+                    };
 
-                    for(let i=hashed.length-1;i>=0;i--) {
+                    for(let i = hashed.length - 1; i >= 0; i--) {
                         let sel = hashed[i];
                         let left = hashed[i - 1];
                         let right = hashed[i + 1];
@@ -175,7 +174,7 @@ export function processCSS() {
                     }
 
                     fullSelector.children = hashed;
-                };
+                }
             }
         });
     }
@@ -183,15 +182,15 @@ export function processCSS() {
     self.isExternalClass = (name) => {
         let sobj = selectors['.' + name];
         return sobj && sobj.external;
-    }
+    };
 
     self.markAsExternal = (name) => {
         let sobj = selectors['.' + name];
-        if(!sobj) selectors['.' + name] = sobj = {isSimple: true, cleanSelector: '.' + name};
+        if(!sobj) selectors['.' + name] = sobj = { isSimple: true, cleanSelector: '.' + name };
         assert(!sobj.resolved);
         if(!sobj.external) sobj.external = true;
         active = true;
-    }
+    };
 
     self.active = () => active;
 
@@ -200,7 +199,7 @@ export function processCSS() {
             if(!sel.isSimple) return;
             return sel.external;
         });
-    }
+    };
 
     let _hashesResolved = false;
     const resolveHashes = () => {
@@ -214,7 +213,7 @@ export function processCSS() {
                 if(sel.local === true) {
                     if(self.passingClass) sel.local = genId();
                     else sel.local = self.id;
-                };
+                }
             } else {
                 assert(sel.local === true);
                 if(self.passingClass) sel.local = genId();
@@ -226,7 +225,7 @@ export function processCSS() {
                 hashed.forEach(n => {
                     if(!n.__hash) return;
                     n.name = hash;
-                })
+                });
             });
         });
     };
@@ -246,8 +245,8 @@ export function processCSS() {
                 classMap[className] = sel.local;
             }
         });
-        return {classMap, metaClass, main: self.externalMainName};
-    }
+        return { classMap, metaClass, main: self.externalMainName };
+    };
 
     self.process = function(data) {
         let dom = makeDom(data);
@@ -270,7 +269,7 @@ export function processCSS() {
             selected.forEach(s => {
                 s.node.__node.classes.add(sel);
                 s.lvl.forEach(l => l.__node.classes.add(sel));
-            })
+            });
         });
     };
 
@@ -283,22 +282,21 @@ export function processCSS() {
         }
         assert(sel.local && sel.local !== true);
         return sel.local;
-    }
+    };
 
     self.getContent = function() {
         removeBlocks.forEach(node => {
             let i = node.parent.children.indexOf(node);
-            if(i>=0) node.parent.children.splice(i, 1);
+            if(i >= 0) node.parent.children.splice(i, 1);
         });
         resolveHashes();
 
         return astList.map(ast => csstree.generate(ast)).join('');
-    }
+    };
 }
 
 
 function makeDom(data) {
-
     function build(parent, list) {
         list.forEach(e => {
             if(e.type == 'each' || e.type == 'fragment' || e.type == 'slot') {
@@ -314,8 +312,8 @@ function makeDom(data) {
                 if(e.parts.catch && e.parts.catch.length) build(parent, e.parts.catch);
                 return;
             } else if(e.type != 'node') return;
-            //if(e.name[0].match(/[A-Z]/)) return;
-            let n = new Node(e.name, {__node: e});
+            // if(e.name[0].match(/[A-Z]/)) return;
+            let n = new Node(e.name, { __node: e });
             e.attributes.forEach(a => {
                 if(a.name == 'class') n.className += ' ' + a.value;
                 else if(a.name == 'id') n.id = a.value;
@@ -327,7 +325,7 @@ function makeDom(data) {
             parent.appendChild(n);
             if(e.body && e.body.length) build(n, e.body);
         });
-    };
+    }
 
     let body = new Node('body', {
         nodeType: 9,
@@ -339,7 +337,7 @@ function makeDom(data) {
     build(body, data.body);
 
     return body;
-};
+}
 
 function Node(name, data, children) {
     this.nodeName = name;
@@ -355,13 +353,13 @@ function Node(name, data, children) {
 
     if(data) Object.assign(this, data);
     if(children) children.forEach(c => this.appendChild(c));
-};
+}
 
 Node.prototype.getAttribute = function(n) {
     if(n == 'class') return this.className;
     if(n == 'id') return this.id;
     return this.attributes[n];
-}
+};
 
 Node.prototype.appendChild = function(n) {
     n.parentElement = this;

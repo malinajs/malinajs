@@ -1,5 +1,4 @@
-
-import { assert, last } from './utils.js'
+import { assert, last } from './utils.js';
 
 
 export function parse() {
@@ -9,7 +8,7 @@ export function parse() {
     const readNext = () => {
         assert(index < source.length, 'EOF');
         return source[index++];
-    }
+    };
 
     const readTag = () => {
         let start = index;
@@ -25,7 +24,7 @@ export function parse() {
             let e = new Error(name);
             e.details = source.substring(start, index);
             throw e;
-        }
+        };
 
         function flush(shift) {
             if(!attr_start) return;
@@ -50,7 +49,7 @@ export function parse() {
             attributes.push(a);
             attr_start = null;
             eq = null;
-        };
+        }
 
         while(true) {
             a = readNext();
@@ -76,7 +75,7 @@ export function parse() {
                 flush();
                 const voidTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
                 let voidTag = voidTags.indexOf(name) >= 0;
-                let closedTag = voidTag || source[index-2] == '/';
+                let closedTag = voidTag || source[index - 2] == '/';
                 return {
                     type: 'node',
                     name,
@@ -87,7 +86,7 @@ export function parse() {
                     closedTag,
                     voidTag,
                     attributes
-                }
+                };
             }
             if(begin) {
                 if(a.match(/[\da-zA-Z^]/)) {
@@ -117,14 +116,14 @@ export function parse() {
                 if(a != q) continue;
                 if(p == '\\') continue;
                 q = null;
-                continue
+                continue;
             }
             if(a == '"' || a == '\'' || a == '`') {
                 q = a;
                 continue;
             }
             if(a == '<') {
-                if(source.substring(index-1, index + endTag.length - 1) == endTag) {
+                if(source.substring(index - 1, index + endTag.length - 1) == endTag) {
                     let end = index - 1;
                     index += endTag.length - 1;
                     return source.substring(start, end);
@@ -136,7 +135,7 @@ export function parse() {
     const readStyle = () => {
         let start = index;
         let end = source.substring(start).indexOf('</style>') + start;
-        assert(end >= 0, '<style> is not closed')
+        assert(end >= 0, '<style> is not closed');
         index = end + 9;
         return source.substring(start, end);
     };
@@ -155,7 +154,7 @@ export function parse() {
                 if(a != q) continue;
                 if(p == '\\') continue;
                 q = null;
-                continue
+                continue;
             }
             if(a == '"' || a == "'" || a == '`') {
                 q = a;
@@ -202,7 +201,7 @@ export function parse() {
             if(!textNode) return;
             parent.body.push(textNode);
             textNode = null;
-        }
+        };
 
         while(index < source.length) {
             let a = source[index];
@@ -217,7 +216,7 @@ export function parse() {
                     continue;
                 }
 
-                if(source[index + 1] === '/') {  // close tag
+                if(source[index + 1] === '/') { // close tag
                     let name = '';
                     index += 2;
                     while(true) {
@@ -249,7 +248,7 @@ export function parse() {
                     continue;
                 } else {
                     tag.classes = new Set();
-                };
+                }
 
                 if(tag.closedTag) continue;
 
@@ -362,12 +361,12 @@ export function parse() {
                 textNode = {
                     type: 'text',
                     value: ''
-                }
+                };
             }
             textNode.value += readNext();
-        };
+        }
         flushText();
-        assert(parent.type === 'root', 'File ends to early')
+        assert(parent.type === 'root', 'File ends to early');
     };
 
     let root = {
@@ -377,7 +376,7 @@ export function parse() {
     go(root);
 
     this.DOM = root;
-};
+}
 
 
 export function parseText(source) {
@@ -411,7 +410,7 @@ export function parseText(source) {
                     if(js) exp = exp.substring(1);
                     exp = exp.trim();
                     if(!exp) throw 'Wrong expression';
-                    parts.push({value: exp, type: js ? 'js' : 'exp'});
+                    parts.push({ value: exp, type: js ? 'js' : 'exp' });
                     exp = '';
                     continue;
                 }
@@ -422,7 +421,7 @@ export function parseText(source) {
         if(a === '{') {
             depth++;
             if(text) {
-                parts.push({value: text, type: 'text'});
+                parts.push({ value: text, type: 'text' });
                 text = '';
             }
             step = 1;
@@ -430,7 +429,7 @@ export function parseText(source) {
         }
         text += a;
     }
-    if(text) parts.push({value: text, type: 'text'});
+    if(text) parts.push({ value: text, type: 'text' });
     assert(step == 0, 'Wrong expression: ' + source);
     let staticText = null;
     if(!parts.some(p => p.type == 'exp')) staticText = parts.map(p => p.type == 'text' ? p.value : '').join('');
@@ -441,9 +440,9 @@ export function parseText(source) {
         else {
             let l = last(result);
             if(l?.type == 'text') l.value += p.value;
-            else result.push({...p});
+            else result.push({ ...p });
         }
     });
     result = result.map(p => p.type == 'text' ? '`' + this.Q(p.value) + '`' : '(' + p.value + ')').join('+');
-    return {result, parts, staticText};
-};
+    return { result, parts, staticText };
+}

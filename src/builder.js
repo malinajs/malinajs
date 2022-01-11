@@ -1,10 +1,9 @@
-
-import {svgElements, last, replaceElementKeyword, assert} from './utils.js'
-import { xNode } from './xnode.js'
+import { svgElements, last, replaceElementKeyword, assert } from './utils.js';
+import { xNode } from './xnode.js';
 
 
 export function buildRuntime() {
-    let runtime = xNode('block', {scope: true, $compile: []});
+    let runtime = xNode('block', { scope: true, $compile: [] });
 
     let rootCD = this.glob.rootCD;
     rootCD.$handler = (ctx, n) => {
@@ -28,12 +27,12 @@ export function buildRuntime() {
     runtime.push(bb.template);
     runtime.push(xNode('root-event', (ctx) => {
         if(!this.inuse.rootEvent) return;
-        ctx.write(true, `const $$addRootEvent = $runtime.makeRootEvent($parentElement);`);
+        ctx.write(true, 'const $$addRootEvent = $runtime.makeRootEvent($parentElement);');
     }));
     runtime.push(bb.source);
 
-    if(this.script.onMount) runtime.push(`$runtime.$onMount(onMount);`);
-    if(this.script.onDestroy) runtime.push(`$runtime.$onDestroy(onDestroy);`);
+    if(this.script.onMount) runtime.push('$runtime.$onMount(onMount);');
+    if(this.script.onDestroy) runtime.push('$runtime.$onDestroy(onDestroy);');
     if(this.script.watchers.length) {
         this.script.watchers.forEach(n => runtime.push(n));
     }
@@ -54,7 +53,7 @@ export function buildRuntime() {
     runtime.push(xNode('bind-component-element', {
         $deps: [this.glob.componentFn]
     }, (ctx) => {
-        if(this.glob.componentFn.value == 'thin') ctx.writeLine(`return {$dom: $parentElement};`);
+        if(this.glob.componentFn.value == 'thin') ctx.writeLine('return {$dom: $parentElement};');
         else ctx.writeLine('return $parentElement;');
     }));
 
@@ -65,7 +64,7 @@ export function buildRuntime() {
     this.module.head.push(xNode('resolveClass', (ctx) => {
         if(!this.inuse.resolveClass) return;
         if(this.css.active()) {
-            let {classMap, metaClass, main} = this.css.getClassMap();
+            let { classMap, metaClass, main } = this.css.getClassMap();
             if(main) main = `'${main}'`;
             else main = 'null';
             classMap = Object.entries(classMap).map(i => `'${i[0]}': '${i[1]}'`).join(', ');
@@ -74,20 +73,20 @@ export function buildRuntime() {
                 return `'${i[0]}': ${value}`;
             }).join(', ');
 
-            ctx.writeLine(`const $$resolveClass = $runtime.makeClassResolver(`);
+            ctx.writeLine('const $$resolveClass = $runtime.makeClassResolver(');
             ctx.indent++;
-            ctx.writeLine(`$option, {${classMap}}, {${metaClass}}, ${main}`)
+            ctx.writeLine(`$option, {${classMap}}, {${metaClass}}, ${main}`);
             ctx.indent--;
-            ctx.writeLine(`);`)
+            ctx.writeLine(');');
         } else {
-            ctx.writeLine(`const $$resolveClass = $runtime.noop;`);
+            ctx.writeLine('const $$resolveClass = $runtime.noop;');
         }
-    }))
+    }));
 }
 
 
-export function buildBlock(data, option={}) {
-    let rootTemplate = xNode('node', {inline: true, _ctx: this});
+export function buildBlock(data, option = {}) {
+    let rootTemplate = xNode('node', { inline: true, _ctx: this });
     let rootSVG = false, requireFragment = option.template?.requireFragment;
     let binds = xNode('block');
     let result = {};
@@ -105,7 +104,7 @@ export function buildBlock(data, option={}) {
             return {
                 requireCD,
                 singleBlock: component.bind
-            }
+            };
         }
     }
 
@@ -135,7 +134,7 @@ export function buildBlock(data, option={}) {
                 }
 
                 if(!tbody) {
-                    tbody = {type: 'node', name: 'tbody', body: [], attributes: [], classes: new Set()};
+                    tbody = { type: 'node', name: 'tbody', body: [], attributes: [], classes: new Set() };
                     result.push(tbody);
                 }
                 tbody.body.push(n);
@@ -146,8 +145,8 @@ export function buildBlock(data, option={}) {
         {
             let i = 1;
             while(body[i]) {
-                if(body[i].type == 'text' && body[i-1].type == 'text') {
-                    body[i-1].value += body[i].value;
+                if(body[i].type == 'text' && body[i - 1].type == 'text') {
+                    body[i - 1].value += body[i].value;
                     body.splice(i, 1);
                 } else i++;
             }
@@ -172,16 +171,16 @@ export function buildBlock(data, option={}) {
                 el.label = true;
                 lastStatic = null;
             } else {
-                el = xNode('node:comment', {label: true, value: name});
+                el = xNode('node:comment', { label: true, value: name });
                 tpl.push(el);
             }
             return el;
-        }
+        };
 
         const bindNode = (n) => {
             if(n.type === 'text') {
                 let prev = tpl.getLast();
-                if(prev?.$type == 'node:text' && prev._boundName) tpl.push(xNode('node:comment', {label: true}));
+                if(prev?.$type == 'node:text' && prev._boundName) tpl.push(xNode('node:comment', { label: true }));
 
                 if(n.value.indexOf('{') >= 0) {
                     const pe = this.parseText(n.value);
@@ -210,9 +209,11 @@ export function buildBlock(data, option={}) {
                         if(p.type != 'js') return;
                         let exp = p.value;
                         if(!exp.endsWith(';')) exp += ';';
-                        binds.push(xNode('block', {body: [
-                            replaceElementKeyword(exp, () => textNode.bindName())
-                        ]}));
+                        binds.push(xNode('block', {
+                            body: [
+                                replaceElementKeyword(exp, () => textNode.bindName())
+                            ]
+                        }));
                     });
 
                     lastStatic = textNode;
@@ -296,12 +297,12 @@ export function buildBlock(data, option={}) {
                     }, (ctx, n) => {
                         ctx.write(true, `$runtime.attachBlock($cd, ${n.el}, `);
                         ctx.add(n.fragment);
-                        ctx.write(`)`);
+                        ctx.write(')');
                     }));
                     return;
                 }
 
-                let el = xNode('node', {name: n.name});
+                let el = xNode('node', { name: n.name });
                 if(option.oneElement) el._boundName = option.oneElement;
                 tpl.push(el);
                 lastStatic = el;
@@ -328,13 +329,13 @@ export function buildBlock(data, option={}) {
 
                 if(option.bindAttributes && (el.attributes.length || el.class.size)) {
                     el.bindName();
-                    binds.push(xNode('bindAttributes', {el}, (ctx, n) => {
+                    binds.push(xNode('bindAttributes', { el }, (ctx, n) => {
                         let elName = n.el.bindName();
                         n.el.attributes.forEach(a => {
                             ctx.writeLine(`${elName}.setAttribute('${a.name}', \`${this.Q(a.value)}\`);`);
                         });
                     }));
-                    binds.push(xNode('bindClasses', {el}, (ctx, n) => {
+                    binds.push(xNode('bindClasses', { el }, (ctx, n) => {
                         let el = n.el;
                         let elName = el.bindName();
                         if(el.class.size) {
@@ -362,7 +363,7 @@ export function buildBlock(data, option={}) {
                 } else {
                     if(isRoot) requireFragment = true;
                     let element = placeLabel(n.value);
-                    let eachBlock = this.makeEachBlock(n, {elName: element.bindName()});
+                    let eachBlock = this.makeEachBlock(n, { elName: element.bindName() });
                     binds.push(eachBlock.source);
                     return;
                 }
@@ -391,7 +392,7 @@ export function buildBlock(data, option={}) {
             } else if(n.type === 'comment') {
                 lastStatic = tpl.push(n.content);
             }
-        }
+        };
         body.forEach(node => {
             try {
                 bindNode(node);
@@ -404,7 +405,7 @@ export function buildBlock(data, option={}) {
     if(option.protectLastTag) {
         let l = rootTemplate.getLast();
         if(l?.label) {
-            rootTemplate.push(xNode('node:comment', {value: ''}));
+            rootTemplate.push(xNode('node:comment', { value: '' }));
         }
     }
 
@@ -418,19 +419,20 @@ export function buildBlock(data, option={}) {
                 root: option.parentElement,
                 single: rootTemplate.children.length == 1 && !requireFragment
             }, (ctx, n) => {
-    
                 const gen = (parent, parentName) => {
-                    for(let i=0; i < parent.children.length; i++) {
+                    for(let i = 0; i < parent.children.length; i++) {
                         let node = parent.children[i];
                         let diff = i == 0 ? '[$runtime.firstChild]' : `[$runtime.childNodes][${i}]`;
-    
+
                         if(node._boundName) ctx.write(true, `let ${node._boundName} = ${parentName() + diff};`);
-                        if(node.children) gen(node, () => {
-                            if(node._boundName) return node._boundName;
-                            return parentName() + diff;
-                        })
+                        if(node.children) {
+                            gen(node, () => {
+                                if(node._boundName) return node._boundName;
+                                return parentName() + diff;
+                            });
+                        }
                     }
-                }
+                };
                 if(n.single) {
                     let node = n.tpl.children[0];
                     if(node._boundName) ctx.write(true, `let ${node._boundName} = ${n.root};`);
@@ -438,7 +440,7 @@ export function buildBlock(data, option={}) {
                 } else {
                     gen(n.tpl, () => n.root);
                 }
-            }))
+            }));
         }
         innerBlock.push(binds);
 
@@ -470,11 +472,11 @@ export function buildBlock(data, option={}) {
             parentElement: option.parentElement
         }, (ctx, n) => {
             if(n.each && !ctx.isEmpty(n.innerBlock)) {
-                if(n.requireCD.value) ctx.write(`$runtime.makeEachBlock(`);
-                else ctx.write(`$runtime.makeStaticEachBlock(`);
+                if(n.requireCD.value) ctx.write('$runtime.makeEachBlock(');
+                else ctx.write('$runtime.makeStaticEachBlock(');
             } else {
-                if(n.requireCD.value) ctx.write(`$runtime.makeBlock(`);
-                else ctx.write(`$runtime.makeStaticBlock(`);
+                if(n.requireCD.value) ctx.write('$runtime.makeBlock(');
+                else ctx.write('$runtime.makeStaticBlock(');
             }
             ctx.add(n.tpl);
             if(!ctx.isEmpty(n.innerBlock)) {
@@ -487,16 +489,16 @@ export function buildBlock(data, option={}) {
                     else ctx.write(`, (${n.parentElement}${extra}) => {`, true);
                 }
                 ctx.indent++;
-                ctx.add(n.innerBlock)
+                ctx.add(n.innerBlock);
                 if(n.each?.rebind) {
-                    ctx.write(true, `return `);
+                    ctx.write(true, 'return ');
                     ctx.add(n.each.rebind);
-                    ctx.write(`;`, true);
-                };
+                    ctx.write(';', true);
+                }
                 ctx.indent--;
-                ctx.write(true, `}`);
+                ctx.write(true, '}');
             }
-            ctx.write(`)`);
+            ctx.write(')');
         });
     } else {
         result.template = xNode('template', {
@@ -513,7 +515,7 @@ export function buildBlock(data, option={}) {
         result.inuse[k] = this.inuse[k] - (inuse[k] || 0);
     }
     return result;
-};
+}
 
 function wrapException(e, n) {
     if(typeof e === 'string') e = new Error(e);
@@ -525,4 +527,4 @@ function wrapException(e, n) {
         else if(n.type == 'if') e.details = n.value.trim();
     }
     throw e;
-};
+}

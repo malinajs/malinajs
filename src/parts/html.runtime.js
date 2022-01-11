@@ -1,4 +1,3 @@
-
 import { $$htmlToFragment, insertAfter, svgToFragment, $$removeElements } from '../runtime/base';
 import { $watch } from '../runtime/cd';
 
@@ -20,6 +19,6 @@ export function $$htmlBlock($cd, tag, fn) {
         $watch($cd, fn, (html) => {
             destroy();
             if(html) create(html);
-        }, {ro: true});
+        }, { ro: true });
     } else create(fn());
-};
+}

@@ -1,5 +1,4 @@
-
-import { xNode } from '../xnode.js'
+import { xNode } from '../xnode.js';
 
 
 export function attachSlot(slotName, node, requireCD) {
@@ -7,7 +6,7 @@ export function attachSlot(slotName, node, requireCD) {
 
     if(node.attributes && node.attributes.length) {
         node.attributes.forEach(prop => {
-            let {name, value, ...ip} = this.inspectProp(prop);
+            let { name, value, ...ip } = this.inspectProp(prop);
             if(!ip.static) staticProps = false;
             props.push(xNode('slot-prop', {
                 name,
@@ -15,9 +14,8 @@ export function attachSlot(slotName, node, requireCD) {
             }, (ctx, n) => {
                 ctx.write(`${n.name}: ${n.value}`);
             }));
-
         });
-    };
+    }
 
     let placeholder;
     if(node.body?.length) placeholder = this.buildBlock(node).block;
@@ -36,7 +34,7 @@ export function attachSlot(slotName, node, requireCD) {
         let dynamicProps = this.glob.apply.value && !n.staticProps;
 
         if(dynamicProps) n.requireCD.$value(true);
-    
+
         let missed = '', slotName = n.name == 'default' ? 'null' : n.name;
         if(dynamicProps) ctx.write(`$runtime.invokeSlot($component, ${slotName}, $context`);
         else ctx.write(`$runtime.invokeSlotBase($component, ${slotName}, $context`);
@@ -60,11 +58,11 @@ export function attachSlot(slotName, node, requireCD) {
 
         if(dynamicProps) {
             ctx.write(missed, ', ');
-            if(this.config.immutable) ctx.write(`$runtime.keyComparator`)
-            else ctx.write(`$runtime.$$compareDeep`)
+            if(this.config.immutable) ctx.write('$runtime.keyComparator');
+            else ctx.write('$runtime.$$compareDeep');
         }
         ctx.write(')');
     });
     requireCD.$depends(result);
     return result;
-};
+}

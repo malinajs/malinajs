@@ -1,9 +1,8 @@
-
-import {unwrapExp, toCamelCase, assert, isNumber} from './utils.js';
+import { unwrapExp, toCamelCase, assert, isNumber } from './utils.js';
 
 
 export function inspectProp(prop) {
-    let {name, value} = prop;
+    let { name, value } = prop;
     if(name[0] == '{') {
         assert(!prop.value);
         value = name;
@@ -49,5 +48,5 @@ export function inspectProp(prop) {
         statical = true;
     }
 
-    return {name, value, rawValue, static: statical};
+    return { name, value, rawValue, static: statical };
 }

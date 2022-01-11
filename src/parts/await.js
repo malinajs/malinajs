@@ -1,5 +1,5 @@
-import { isSimpleName, assert, extractKeywords } from "../utils";
-import { xNode } from '../xnode.js'
+import { isSimpleName, assert, extractKeywords } from '../utils';
+import { xNode } from '../xnode.js';
 
 
 export function makeAwaitBlock(node, element) {
@@ -22,7 +22,7 @@ export function makeAwaitBlock(node, element) {
 
     let parts = [null, null, null];
     if(node.parts.main && node.parts.main.length) {
-        parts[0] = this.buildBlock({body: node.parts.main}, {protectLastTag: true});
+        parts[0] = this.buildBlock({ body: node.parts.main }, { protectLastTag: true });
     }
     if(node.parts.then && node.parts.then.length) {
         let args = [];
@@ -36,7 +36,7 @@ export function makeAwaitBlock(node, element) {
                 args.push(rx[1]);
             }
         }
-        parts[1] = this.buildBlock({body: node.parts.then}, {protectLastTag: true, extraArguments: args});
+        parts[1] = this.buildBlock({ body: node.parts.then }, { protectLastTag: true, extraArguments: args });
     }
     if(node.parts.catch && node.parts.catch.length) {
         let args = [];
@@ -45,7 +45,7 @@ export function makeAwaitBlock(node, element) {
             assert(isSimpleName(rx[1]));
             args.push(rx[1]);
         }
-        parts[2] = this.buildBlock({body: node.parts.catch}, {protectLastTag: true, extraArguments: args});
+        parts[2] = this.buildBlock({ body: node.parts.catch }, { protectLastTag: true, extraArguments: args });
     }
 
     if(this.script.readOnly) {
@@ -73,4 +73,4 @@ export function makeAwaitBlock(node, element) {
         ctx.indent--;
         ctx.write(');', true);
     });
-};
+}

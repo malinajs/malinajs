@@ -1,4 +1,3 @@
-
 import { $$removeElements, firstChild, insertAfter } from '../runtime/base';
 import { $watch, keyComparator, cd_onDestroy, cd_attach, cd_component } from '../runtime/cd';
 
@@ -17,13 +16,13 @@ export function $$awaitBlock(parentCD, label, relation, fn, build_main, build_th
         }
         $$removeElements(first, last);
         first = last = null;
-    };
+    }
 
     function render(builder, value) {
         destroyBlock();
 
         let $dom;
-        ({$cd, destroy, $dom} = builder(value));
+        ({ $cd, destroy, $dom } = builder(value));
         cd_attach(parentCD, $cd);
         if($dom.nodeType == 11) {
             first = $dom[firstChild];
@@ -31,7 +30,7 @@ export function $$awaitBlock(parentCD, label, relation, fn, build_main, build_th
         } else first = last = $dom;
         insertAfter(label, $dom);
         cd_component(parentCD).apply();
-    };
+    }
 
     $watch(parentCD, relation, () => {
         let p = fn();
@@ -49,5 +48,5 @@ export function $$awaitBlock(parentCD, label, relation, fn, build_main, build_th
                 render(build_catch, value);
             });
         }
-    }, {ro: true, value: [], cmp: keyComparator})
+    }, { ro: true, value: [], cmp: keyComparator });
 }

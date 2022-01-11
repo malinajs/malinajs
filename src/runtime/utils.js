@@ -1,4 +1,3 @@
-
 export let __app_onerror = console.error;
 
 
@@ -19,4 +18,4 @@ export const safeCall = fn => {
     } catch (e) {
         __app_onerror(e);
     }
-}
+};

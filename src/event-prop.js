@@ -1,17 +1,16 @@
-
 import { unwrapExp, assert as _assert, detectExpressionType, replaceElementKeyword, last } from './utils.js';
-import { xNode } from './xnode.js'
+import { xNode } from './xnode.js';
 
 
 export function makeEventProp(prop, requireElement) {
     const assert = x => {
-        _assert(x, `Wrong event prop: ${prop.content}`)
-    }
+        _assert(x, `Wrong event prop: ${prop.content}`);
+    };
 
     let name = prop.name;
     if(name.startsWith('@@')) {
         assert(!prop.value);
-        return {forward: true, name};
+        return { forward: true, name };
     }
     if(name.startsWith('on:')) name = name.substring(3);
     else {
@@ -63,7 +62,7 @@ export function makeEventProp(prop, requireElement) {
             exp = null;
         } else if(type?.type == 'function-call') {
             globalFunction = !!this.script.rootFunctions[type.name];
-        };
+        }
     }
 
     // modifiers
@@ -96,11 +95,11 @@ export function makeEventProp(prop, requireElement) {
         } else if(opt == 'stopPropagation' || opt == 'stop') {
             mods.push('$event.stopPropagation();');
             return;
-        };
+        }
 
         if(keyEvent) {
             if(opt === 'delete') {
-                mods.push(`if($event.key != 'Backspace' && $event.key != 'Delete') return;`);
+                mods.push('if($event.key != \'Backspace\' && $event.key != \'Delete\') return;');
                 return;
             }
             let keyCode = keyCodes[opt];
@@ -110,10 +109,10 @@ export function makeEventProp(prop, requireElement) {
             }
         }
 
-        if(opt == 'ctrl') {mods.push(`if(!$event.ctrlKey) return;`); return;}
-        if(opt == 'alt') {mods.push(`if(!$event.altKey) return;`); return;}
-        if(opt == 'shift') {mods.push(`if(!$event.shiftKey) return;`); return;}
-        if(opt == 'meta') {mods.push(`if(!$event.metaKey) return;`); return;}
+        if(opt == 'ctrl') { mods.push('if(!$event.ctrlKey) return;'); return; }
+        if(opt == 'alt') { mods.push('if(!$event.altKey) return;'); return; }
+        if(opt == 'shift') { mods.push('if(!$event.shiftKey) return;'); return; }
+        if(opt == 'meta') { mods.push('if(!$event.metaKey) return;'); return; }
 
         throw 'Wrong modificator: ' + opt;
     });
@@ -132,16 +131,16 @@ export function makeEventProp(prop, requireElement) {
         globalFunction
     }, (ctx, n) => {
         if(n.handlerName && !ctx.inuse.apply && !n.mods) return ctx.write(n.handlerName);
-        ctx.write(`($event) => { `);
+        ctx.write('($event) => { ');
         if(n.mods) ctx.write(n.mods, ' ');
         if(n.handlerName) ctx.write(`${n.handlerName}($event);`);
         else if(n.exp) {
             if(last(n.exp) != ';') n.exp += ';';
             ctx.write(`${n.exp}`);
         } else if(n.func) ctx.write(`(${n.func})($event);`);
-        if(ctx.inuse.apply && !n.globalFunction) ctx.write(` $$apply();`);
-        ctx.write(`}`);
+        if(ctx.inuse.apply && !n.globalFunction) ctx.write(' $$apply();');
+        ctx.write('}');
     });
 
-    return {event, fn, rootModifier};
+    return { event, fn, rootModifier };
 }

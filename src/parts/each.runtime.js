@@ -1,4 +1,3 @@
-
 import { $$removeElements, childNodes, firstChild, iterNodes } from '../runtime/base';
 import { $watch, $$compareArray, isArray, cd_attach, cd_new, cd_destroy } from '../runtime/cd';
 import * as cdruntime from '../runtime/cd';
@@ -8,8 +7,8 @@ export const makeEachBlock = (fr, fn) => {
     return (item, index) => {
         let $dom = fr.cloneNode(true), $cd = cd_new();
         let rebind = fn($cd, $dom, item, index);
-        return {$cd, $dom, rebind};
-    }
+        return { $cd, $dom, rebind };
+    };
 };
 
 
@@ -17,18 +16,18 @@ export const makeStaticEachBlock = (fr, fn) => {
     return (item, index) => {
         let $dom = fr.cloneNode(true);
         let rebind = fn($dom, item, index);
-        return {$dom, rebind};
-    }
+        return { $dom, rebind };
+    };
 };
 
 
 export const makeEachSingleBlock = (fn) => {
     return (item, index) => {
         let [rebind, component] = fn(item, index);
-        let {$cd, destroy, $dom} = component;
-        return {$cd, destroy, $dom, rebind};
-    }
-}
+        let { $cd, destroy, $dom } = component;
+        return { $cd, destroy, $dom, rebind };
+    };
+};
 
 
 export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, bind) {
@@ -40,7 +39,7 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, bind) {
 
     $watch(eachCD, fn, (array) => {
         if(!array) array = [];
-        if(typeof(array) == 'number') array = [...Array(array)].map((_,i) => i + 1);
+        if(typeof (array) == 'number') array = [...Array(array)].map((_, i) => i + 1);
         else if(!isArray(array)) array = [];
 
         let newMapping = new Map();
@@ -56,7 +55,7 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, bind) {
         if(mapping.size) {
             let ctx, count = 0;
             vi++;
-            for(let i=0;i<array.length;i++) {
+            for(let i = 0; i < array.length; i++) {
                 ctx = mapping.get(getKey(array[i], i, array));
                 if(ctx) {
                     ctx.a = vi;
@@ -76,7 +75,7 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, bind) {
                     iterNodes(onlyChild ? label.firstChild : label.nextSibling, lastNode, n => {
                         n.$$removing = true;
                         removedNodes.push(n);
-                    })
+                    });
                     Promise.allSettled(cdruntime.destroyResults).then(() => removedNodes.forEach(n => n.remove()));
                 } else {
                     if(onlyChild) label.textContent = '';
@@ -111,7 +110,7 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, bind) {
         }
 
         let i, item, next_ctx, ctx, nextEl, key;
-        for(i=0;i<array.length;i++) {
+        for(i = 0; i < array.length; i++) {
             item = array[i];
             key = getKey(item, i, array);
             if(next_ctx) {
@@ -146,7 +145,7 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, bind) {
                 ctx.rebind?.(i, item);
             } else {
                 let $dom;
-                ({$dom, ...ctx} = bind(item, i));
+                ({ $dom, ...ctx } = bind(item, i));
                 cd_attach(eachCD, ctx.$cd);
                 if($dom.nodeType == 11) {
                     ctx.first = $dom[firstChild];
@@ -156,9 +155,9 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, bind) {
             }
             prevNode = ctx.last;
             newMapping.set(key, ctx);
-        };
+        }
         lastNode = prevNode;
         mapping.clear();
         mapping = newMapping;
-    }, {ro: true, cmp: $$compareArray});
-};
+    }, { ro: true, cmp: $$compareArray });
+}

@@ -1,8 +1,7 @@
-
 import acorn from 'acorn';
 import astring from 'astring';
-import { assert, detectExpressionType } from './utils.js'
-import { xNode } from './xnode.js'
+import { assert, detectExpressionType } from './utils.js';
+import { xNode } from './xnode.js';
 
 
 export function parse() {
@@ -25,12 +24,12 @@ export function parse() {
             source = source.split(/\n/).map(line => {
                 let rx = line.match(/^(\s*)\/\/(.*)$/);
                 if(!rx) return line;
-                let code = rx[2].trim()
+                let code = rx[2].trim();
                 if(code != '!no-check') return line;
                 return rx[1] + '$$_noCheck;';
             }).join('\n');
         }
-        this.script.ast = acorn.parse(source, {sourceType: 'module', ecmaVersion: 12});
+        this.script.ast = acorn.parse(source, { sourceType: 'module', ecmaVersion: 12 });
 
         if(source.includes('$props')) this.require('$props');
         if(source.includes('$attributes')) this.require('$attributes');
@@ -42,11 +41,11 @@ export function parse() {
     } else {
         this.script.ast = {
             body: [],
-            sourceType: "module",
-            type: "Program"
+            sourceType: 'module',
+            type: 'Program'
         };
     }
-};
+}
 
 export function transform() {
     const result = this.script;
@@ -73,7 +72,7 @@ export function transform() {
         FunctionDeclaration: 1,
         FunctionExpression: 1,
         ArrowFunctionExpression: 1
-    }
+    };
 
     const applyBlock = () => {
         this.require('apply');
@@ -87,8 +86,8 @@ export function transform() {
                 },
                 type: 'CallExpression'
             }
-        }
-    }
+        };
+    };
 
     const returnApplyBlock = (a) => {
         this.require('apply');
@@ -100,8 +99,8 @@ export function transform() {
             },
             type: 'CallExpression',
             arguments: [a]
-        }
-    }
+        };
+    };
 
     function isInLoop(node) {
         if(!node._parent || node._parent.type != 'CallExpression') return false;
@@ -112,12 +111,12 @@ export function transform() {
 
     function isNoCheck(node) {
         return node.type == 'ExpressionStatement' && node.expression.type == 'Identifier' && node.expression.name == '$$_noCheck';
-    };
+    }
 
     function transformNode(node) {
         if(funcTypes[node.type] && node.body.body && node.body.body.length) {
             if(node._parent.type == 'CallExpression' && node._parent.callee.name == '$onDestroy') return 'stop';
-            for(let i=0; i<node.body.body.length; i++) {
+            for(let i = 0; i < node.body.body.length; i++) {
                 let n = node.body.body[i];
                 if(!isNoCheck(n)) continue;
                 node.body.body.splice(i, 1);
@@ -150,7 +149,7 @@ export function transform() {
                 }
             }
         }
-    };
+    }
 
     function walk(node, parent, fn) {
         if(typeof node !== 'object') return;
@@ -168,29 +167,29 @@ export function transform() {
             if(!child || typeof child !== 'object') continue;
 
             if(Array.isArray(child)) {
-                for(let i=0;i<child.length;i++) {
+                for(let i = 0; i < child.length; i++) {
                     walk(child[i], forParent, fn);
                 }
             } else {
                 walk(child, forParent, fn);
             }
         }
-    };
+    }
     if(!this.script.readOnly) walk(ast, null, transformNode);
 
     function makeVariable(name) {
         return {
-            "type": "VariableDeclaration",
-            "declarations": [{
-                "type": "VariableDeclarator",
-                "id": {
-                    "type": "Identifier",
-                    "name": name
+            type: 'VariableDeclaration',
+            declarations: [{
+                type: 'VariableDeclarator',
+                id: {
+                    type: 'Identifier',
+                    name: name
                 },
-                "init": null
+                init: null
             }],
-            "kind": "var"
-        }
+            kind: 'var'
+        };
     }
 
     const makeWatch = (n) => {
@@ -198,7 +197,7 @@ export function transform() {
             if(['Identifier', 'TemplateLiteral', 'Literal'].includes(n.type)) return;
             if(n.type.endsWith('Expression')) return;
             throw 'Wrong expression';
-        };
+        }
 
         if(n.body.type != 'ExpressionStatement') throw 'Error';
         if(n.body.expression.type == 'AssignmentExpression') {
@@ -232,12 +231,12 @@ export function transform() {
                 if(this.config.immutable) result.watchers.push(`$watch($cd, () => (${exp}), ${callback});`);
                 else result.watchers.push(`$watch($cd, () => (${exp}), ${callback}, {cmp: $runtime.$$deepComparator(0)});`);
             } else if(ex.length > 2) {
-                for(let i = 0;i<ex.length-1;i++) assertExpression(ex[i]);
-                let exp = source.substring(ex[0].start, ex[ex.length-2].end);
+                for(let i = 0; i < ex.length - 1; i++) assertExpression(ex[i]);
+                let exp = source.substring(ex[0].start, ex[ex.length - 2].end);
                 result.watchers.push(`$watch($cd, () => [${exp}], ($args) => { (${callback}).apply(null, $args); }, {cmp: $runtime.$$deepComparator(1)});`);
             } else throw 'Error';
         } else throw 'Error';
-    }
+    };
 
     let imports = [];
     let resultBody = [];
@@ -259,7 +258,7 @@ export function transform() {
             assert(n.declaration.type == 'VariableDeclaration', 'Wrong export');
             n.declaration.declarations.forEach(d => {
                 assert(d.type == 'VariableDeclarator', 'Wrong export');
-                let p = {name: d.id.name};
+                let p = { name: d.id.name };
                 if(d.init) {
                     if(d.init.type == 'Literal') {
                         p.value = d.init.raw;
@@ -312,8 +311,8 @@ export function transform() {
                 code.push(`let {${pa}, ...$attributes} = $props;`);
 
                 if(!this.script.readOnly && !constantProps) {
-                    code.push(`$runtime.current_component.push = () => ({${result.props.map(p => p.name+'='+p.name).join(', ')}, ...$attributes} = $props = $option.props || {});`);
-                    code.push(`$runtime.current_component.exportedProps = () => ({${result.props.map(p => p.name).join(', ')}});`)
+                    code.push(`$runtime.current_component.push = () => ({${result.props.map(p => p.name + '=' + p.name).join(', ')}, ...$attributes} = $props = $option.props || {});`);
+                    code.push(`$runtime.current_component.exportedProps = () => ({${result.props.map(p => p.name).join(', ')}});`);
                 }
             } else if(this.inuse.$props) {
                 let pa = result.props.map(p => {
@@ -323,8 +322,8 @@ export function transform() {
                 code.push(`let {${pa}} = $props;`);
 
                 if(!this.script.readOnly && !constantProps) {
-                    code.push(`$runtime.current_component.push = () => ({${result.props.map(p => p.name+'='+p.name).join(', ')}} = $props = $option.props || {});`);
-                    code.push(`$runtime.current_component.exportedProps = () => ({${result.props.map(p => p.name).join(', ')}});`)
+                    code.push(`$runtime.current_component.push = () => ({${result.props.map(p => p.name + '=' + p.name).join(', ')}} = $props = $option.props || {});`);
+                    code.push(`$runtime.current_component.exportedProps = () => ({${result.props.map(p => p.name).join(', ')}});`);
                 }
             }
             return code;
@@ -334,13 +333,13 @@ export function transform() {
             let code = [];
             if(this.inuse.$props && this.inuse.$attributes) {
                 code.push('let $props = $option.props || {}, $attributes = $props;');
-                if(!constantProps && !this.script.readOnly) code.push(`$runtime.current_component.push = () => $props = $option.props || {}, $attributes = $props;`);
+                if(!constantProps && !this.script.readOnly) code.push('$runtime.current_component.push = () => $props = $option.props || {}, $attributes = $props;');
             } else if(this.inuse.$props) {
                 code.push('let $props = $option.props || {};');
-                if(!constantProps && !this.script.readOnly) code.push(`$runtime.current_component.push = () => $props = $option.props || {};`);
+                if(!constantProps && !this.script.readOnly) code.push('$runtime.current_component.push = () => $props = $option.props || {};');
             } else if(this.inuse.$attributes) {
                 code.push('let $attributes = $option.props || {};');
-                if(!constantProps && !this.script.readOnly) code.push(`$runtime.current_component.push = () => $attributes = $option.props || {};`);
+                if(!constantProps && !this.script.readOnly) code.push('$runtime.current_component.push = () => $attributes = $option.props || {};');
             }
             return code;
         }));
@@ -352,11 +351,11 @@ export function transform() {
 
 
     imports.push(rawNode(() => {
-        if(this.inuse.$onMount) return `import {$onMount} from 'malinajs/runtime.js';`;
+        if(this.inuse.$onMount) return 'import {$onMount} from \'malinajs/runtime.js\';';
     }));
 
     header.push(rawNode(() => {
-        if(this.inuse.$onDestroy) return `const $onDestroy = fn => $component._d.push(fn);`;
+        if(this.inuse.$onDestroy) return 'const $onDestroy = fn => $component._d.push(fn);';
     }));
 
     if(this.config.autoSubscribe) {
@@ -388,10 +387,10 @@ export function transform() {
         Object.values(this.script.autoimport).forEach(l => ctx.writeLine(l));
     }));
 
-    this.module.top.push(xNode('ast', {body: imports}));
-    this.module.head.push(xNode('ast', {body: header}));
-    this.module.code.push(xNode('ast', {body: resultBody}));
-};
+    this.module.top.push(xNode('ast', { body: imports }));
+    this.module.head.push(xNode('ast', { body: header }));
+    this.module.code.push(xNode('ast', { body: resultBody }));
+}
 
 export function build() {
     const generator = Object.assign({
@@ -404,7 +403,7 @@ export function build() {
             state.write(node.value);
         }
     }, astring.baseGenerator);
-    this.script.code = astring.generate(this.script.ast, {generator});
+    this.script.code = astring.generate(this.script.ast, { generator });
 }
 
 
@@ -425,22 +424,22 @@ const generator = Object.assign({
     Raw: function(node, state) {
         let value = typeof node.value == 'function' ? node.value() : node.value;
         if(value) {
-            var indent = state.indent.repeat(state.indentLevel);
+            let indent = state.indent.repeat(state.indentLevel);
             if(!Array.isArray(value)) value = [value];
             value.forEach(v => {
                 state.write(indent + v + state.lineEnd);
-            })
+            });
         }
     },
     CustomBlock: function(node, state) {
-        var indent = state.indent.repeat(state.indentLevel);
-        var lineEnd = state.lineEnd;
+        let indent = state.indent.repeat(state.indentLevel);
+        let lineEnd = state.lineEnd;
 
-        var statements = node.body;
-        var length = statements.length;
+        let statements = node.body;
+        let length = statements.length;
 
-        for (var i = 0; i < length; i++) {
-            var statement = statements[i];
+        for(let i = 0; i < length; i++) {
+            let statement = statements[i];
 
             if(statement.type != 'Raw') state.write(indent);
             this[statement.type](statement, state);
@@ -455,8 +454,8 @@ xNode.init.ast = (ctx, node) => {
     let code = astring.generate({
         type: 'CustomBlock',
         body: node.body
-    }, {generator, startingIndentLevel: 0});
+    }, { generator, startingIndentLevel: 0 });
     code.split(/\n/).forEach(s => {
         if(s) ctx.write(true, s);
     });
-}
+};

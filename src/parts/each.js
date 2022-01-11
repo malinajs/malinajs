@@ -1,7 +1,6 @@
-
 import acorn from 'acorn';
-import { assert, isSimpleName, detectExpressionType, trimEmptyNodes } from '../utils.js'
-import { xNode } from '../xnode.js'
+import { assert, isSimpleName, detectExpressionType, trimEmptyNodes } from '../utils.js';
+import { xNode } from '../xnode.js';
 
 
 export function makeEachBlock(data, option) {
@@ -29,7 +28,7 @@ export function makeEachBlock(data, option) {
         let exp = rx[1], keywords;
 
         try {
-            keywords = acorn.parse(`(${exp} = $$item)`, {sourceType: 'module', ecmaVersion: 12}).body[0].expression.left.properties.map(p => p.key.name);
+            keywords = acorn.parse(`(${exp} = $$item)`, { sourceType: 'module', ecmaVersion: 12 }).body[0].expression.left.properties.map(p => p.key.name);
         } catch (e) {
             throw new Error('Wrong destructuring in each: ' + data.value);
         }
@@ -79,7 +78,7 @@ export function makeEachBlock(data, option) {
                 else ctx.writeLine(`return ${data.key};`);
             })]
         });
-    };
+    }
 
     let rebind;
     if(!this.script.readOnly) {
@@ -94,7 +93,7 @@ export function makeEachBlock(data, option) {
     let nodeItems = trimEmptyNodes(data.body);
     if(!nodeItems.length) nodeItems = [data.body[0]];
 
-    let itemBlock, block = this.buildBlock({body: nodeItems}, {
+    let itemBlock, block = this.buildBlock({ body: nodeItems }, {
         protectLastTag: true,
         allowSingleBlock: !blockPrefix,
         each: {
@@ -119,26 +118,26 @@ export function makeEachBlock(data, option) {
             ctx.write(',', true);
             ctx.add(n.block);
             ctx.indent--;
-            ctx.write(true, `])`);
-        })
+            ctx.write(true, '])');
+        });
     } else itemBlock = block.block;
 
     const source = xNode('each', {
         keyFunction,
-        block: itemBlock,
+        block: itemBlock
     }, (ctx, n) => {
-        ctx.writeLine(`$runtime.$$eachBlock($cd, ${option.elName}, ${option.onlyChild?1:0}, () => (${arrayName}),`);
+        ctx.writeLine(`$runtime.$$eachBlock($cd, ${option.elName}, ${option.onlyChild ? 1 : 0}, () => (${arrayName}),`);
         ctx.indent++;
         ctx.write(true);
         if(n.keyFunction === 'noop') ctx.write('$runtime.noop');
         else if(n.keyFunction) ctx.add(n.keyFunction);
         else ctx.write('$runtime.eachDefaultKey');
-        ctx.write(`,`);
+        ctx.write(',');
         ctx.add(n.block);
         ctx.indent--;
-        ctx.write(true, `);`, true);
+        ctx.write(true, ');', true);
     });
     this.detectDependency(arrayName);
 
-    return {source};
-};
+    return { source };
+}

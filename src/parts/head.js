@@ -1,20 +1,19 @@
-
 import { assert } from '../utils.js';
-import { xNode } from '../xnode.js'
+import { xNode } from '../xnode.js';
 
 
 export function attachHead(n, requireCD) {
     if(n.elArg == 'window' || n.elArg == 'body') {
         let name = 'el' + (this.uniqIndex++);
-        let block = this.buildBlock({body: [n]}, {malinaElement: true, inline: true, oneElement: name, bindAttributes: true});
+        let block = this.buildBlock({ body: [n] }, { malinaElement: true, inline: true, oneElement: name, bindAttributes: true });
         if(block.source) {
             return xNode('block', {
                 name,
                 target: n.elArg,
                 source: block.source
             }, (ctx, n) => {
-                if(n.target == 'window') ctx.writeLine(`let ${n.name} = window;`)
-                else ctx.writeLine(`let ${n.name} = document.body;`)
+                if(n.target == 'window') ctx.writeLine(`let ${n.name} = window;`);
+                else ctx.writeLine(`let ${n.name} = document.body;`);
                 ctx.build(n.source);
             });
         }
@@ -43,7 +42,7 @@ export function attachHead(n, requireCD) {
             }
         }
         if(body.length) {
-            let bb = this.buildBlock({body}, {
+            let bb = this.buildBlock({ body }, {
                 inline: true,
                 template: {
                     name: '$parentElement',
@@ -72,15 +71,15 @@ export function attachHead(n, requireCD) {
             }
 
             if(n.template) {
-                ctx.writeLine(`{`);
+                ctx.writeLine('{');
                 ctx.indent++;
                 ctx.add(n.template);
                 ctx.add(n.source);
-                ctx.writeLine(`let a=$parentElement.firstChild, b=$parentElement.lastChild;`);
-                ctx.writeLine(`$onDestroy(() => {$runtime.$$removeElements(a, b)});`);
-                ctx.writeLine(`document.head.appendChild($parentElement);`);
+                ctx.writeLine('let a=$parentElement.firstChild, b=$parentElement.lastChild;');
+                ctx.writeLine('$onDestroy(() => {$runtime.$$removeElements(a, b)});');
+                ctx.writeLine('document.head.appendChild($parentElement);');
                 ctx.indent--;
-                ctx.writeLine(`}`);
+                ctx.writeLine('}');
             }
         });
         requireCD.$depends(result);

@@ -1,6 +1,5 @@
-
-import { assert, detectExpressionType, isSimpleName, unwrapExp, last, toCamelCase, replaceElementKeyword } from '../utils.js'
-import { xNode } from '../xnode.js'
+import { assert, detectExpressionType, isSimpleName, unwrapExp, last, toCamelCase, replaceElementKeyword } from '../utils.js';
+import { xNode } from '../xnode.js';
 
 
 export function bindProp(prop, node, element, requireCD) {
@@ -11,9 +10,13 @@ export function bindProp(prop, node, element, requireCD) {
         assert(pe.parts[0].type == 'js');
         let exp = pe.parts[0].value;
         if(!exp.endsWith(';')) exp += ';';
-        return {bind: xNode('block', {body: [
-            replaceElementKeyword(exp, () => element.bindName())
-        ]})};
+        return {
+            bind: xNode('block', {
+                body: [
+                    replaceElementKeyword(exp, () => element.bindName())
+                ]
+            })
+        };
     }
 
     if(prop.name[0] == '@' || prop.name.startsWith('on:')) name = 'event';
@@ -45,7 +48,7 @@ export function bindProp(prop, node, element, requireCD) {
         }
     }
     if(!name) {
-        let r = prop.name.match(/^(\w+)\:(.*)$/)
+        let r = prop.name.match(/^(\w+)\:(.*)$/);
         if(r) {
             name = r[1];
             arg = r[2];
@@ -58,52 +61,58 @@ export function bindProp(prop, node, element, requireCD) {
         let exp = prop.value.match(/^\{(.*)\}$/)[1];
         assert(exp, prop.content);
         return exp;
-    }
+    };
 
     if(name[0] == '#') {
         let target = name.substring(1);
         assert(isSimpleName(target), target);
         this.checkRootName(target);
-        return {bind: `${target}=${element.bindName()};`};
+        return { bind: `${target}=${element.bindName()};` };
     } else if(name == 'event') {
         if(prop.name.startsWith('@@')) {
             assert(!prop.value);
             requireCD.$value(true);
             this.require('$events');
             if(prop.name == '@@') {
-                return {bind: xNode('forwardAllEvents', {
-                    el: element.bindName()
-                }, (ctx, data) => {
-                    ctx.writeLine(`for(let event in $events)`);
-                    ctx.goIndent(() => {
-                        ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, event, $events[event]);`);
-                    });
-                })};
+                return {
+                    bind: xNode('forwardAllEvents', {
+                        el: element.bindName()
+                    }, (ctx, data) => {
+                        ctx.writeLine('for(let event in $events)');
+                        ctx.goIndent(() => {
+                            ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, event, $events[event]);`);
+                        });
+                    })
+                };
             }
 
-            return {bind: xNode('forwardEvent', {
-                event: prop.name.substring(2),
-                el: element.bindName()
-            }, (ctx, n) => {
-                ctx.writeLine(`$events.${n.event} && $runtime.addEvent($cd, ${n.el}, '${n.event}', $events.${n.event});`);
-            })};
+            return {
+                bind: xNode('forwardEvent', {
+                    event: prop.name.substring(2),
+                    el: element.bindName()
+                }, (ctx, n) => {
+                    ctx.writeLine(`$events.${n.event} && $runtime.addEvent($cd, ${n.el}, '${n.event}', $events.${n.event});`);
+                })
+            };
         }
 
-        let {event, fn, rootModifier} = this.makeEventProp(prop, () => element.bindName());
+        let { event, fn, rootModifier } = this.makeEventProp(prop, () => element.bindName());
         if(rootModifier) this.require('rootEvent');
         else requireCD.$value(true);
 
-        return {bind: xNode('bindEvent', {
-            event,
-            fn,
-            el: element.bindName(),
-            rootModifier
-        }, (ctx, n) => {
-            if(n.rootModifier) ctx.write(true, `$$addRootEvent(${n.el}, '${n.event}', `);
-            else ctx.write(true, `$runtime.addEvent($cd, ${n.el}, '${n.event}', `);
-            ctx.build(n.fn);
-            ctx.write(`);`);
-        })};
+        return {
+            bind: xNode('bindEvent', {
+                event,
+                fn,
+                el: element.bindName(),
+                rootModifier
+            }, (ctx, n) => {
+                if(n.rootModifier) ctx.write(true, `$$addRootEvent(${n.el}, '${n.event}', `);
+                else ctx.write(true, `$runtime.addEvent($cd, ${n.el}, '${n.event}', `);
+                ctx.build(n.fn);
+                ctx.write(');');
+            })
+        };
     } else if(name == 'bind') {
         if(this.script.readOnly) {
             this.warning('script read-only conflicts with bind: ' + node.openTag);
@@ -140,11 +149,13 @@ export function bindProp(prop, node, element, requireCD) {
 
         let argName = 'a' + (this.uniqIndex++);
 
-        return {bind: xNode('bindInput', {
-            el: element.bindName()
-        }, (ctx, n) => {
-            ctx.writeLine(`$runtime.bindInput($cd, ${n.el}, '${attr}', () => ${exp}, ${argName} => {${exp} = ${argName}; $$apply();});`);
-        })};
+        return {
+            bind: xNode('bindInput', {
+                el: element.bindName()
+            }, (ctx, n) => {
+                ctx.writeLine(`$runtime.bindInput($cd, ${n.el}, '${attr}', () => ${exp}, ${argName} => {${exp} = ${argName}; $$apply();});`);
+            })
+        };
     } else if(name == 'style' && arg) {
         let styleName = toCamelCase(arg);
         let exp;
@@ -158,13 +169,15 @@ export function bindProp(prop, node, element, requireCD) {
                     this.detectDependency(parsed);
                     exp = parsed.result;
                 } else {
-                    return {bind: xNode('staticStyle', {
-                        el: element.bindName(),
-                        name: styleName,
-                        value: prop.value
-                    }, (ctx, n) => {
-                        ctx.writeLine(`${n.el}.style.${n.name} = \`${this.Q(n.value)}\`;`);
-                    })};
+                    return {
+                        bind: xNode('staticStyle', {
+                            el: element.bindName(),
+                            name: styleName,
+                            value: prop.value
+                        }, (ctx, n) => {
+                            ctx.writeLine(`${n.el}.style.${n.name} = \`${this.Q(n.value)}\`;`);
+                        })
+                    };
                 }
             }
         } else {
@@ -172,22 +185,24 @@ export function bindProp(prop, node, element, requireCD) {
         }
 
         let hasElement = exp.includes('$element');
-        return {bind: xNode('block', {
-            scope: hasElement,
-            body: [xNode('bindStyle', {
-                el: element.bindName(),
-                styleName,
-                exp,
-                hasElement
-            }, (ctx, n) => {
-                if(n.hasElement) ctx.writeLine(`let $element=${n.el};`);
-                if(ctx.inuse.apply) {
-                    ctx.writeLine(`$runtime.bindStyle($cd, ${n.el}, '${n.styleName}', () => (${n.exp}));`);
-                } else {
-                    ctx.writeLine(`${n.el}.style.${n.styleName} = ${n.exp};`);
-                }
-            })]
-        })};
+        return {
+            bind: xNode('block', {
+                scope: hasElement,
+                body: [xNode('bindStyle', {
+                    el: element.bindName(),
+                    styleName,
+                    exp,
+                    hasElement
+                }, (ctx, n) => {
+                    if(n.hasElement) ctx.writeLine(`let $element=${n.el};`);
+                    if(ctx.inuse.apply) {
+                        ctx.writeLine(`$runtime.bindStyle($cd, ${n.el}, '${n.styleName}', () => (${n.exp}));`);
+                    } else {
+                        ctx.writeLine(`${n.el}.style.${n.styleName} = ${n.exp};`);
+                    }
+                })]
+            })
+        };
     } else if(name == 'use') {
         if(arg) {
             requireCD.$value(true);
@@ -195,35 +210,39 @@ export function bindProp(prop, node, element, requireCD) {
             this.checkRootName(arg);
             let args = prop.value ? `, () => [${getExpression()}]` : '';
             this.detectDependency(args);
-            return {bind: xNode('action', {
-                name: arg,
-                args,
-                el: element.bindName()
-            }, (ctx, n) => {
-                if(ctx.inuse.apply && n.args) {
-                    ctx.writeLine(`$runtime.bindAction($cd, ${n.el}, ${n.name}${n.args}, $runtime.__bindActionSubscribe);`);
-                } else {
-                    ctx.writeLine(`$runtime.bindAction($cd, ${n.el}, ${n.name}${n.args});`);
-                }
-            })}
+            return {
+                bind: xNode('action', {
+                    name: arg,
+                    args,
+                    el: element.bindName()
+                }, (ctx, n) => {
+                    if(ctx.inuse.apply && n.args) {
+                        ctx.writeLine(`$runtime.bindAction($cd, ${n.el}, ${n.name}${n.args}, $runtime.__bindActionSubscribe);`);
+                    } else {
+                        ctx.writeLine(`$runtime.bindAction($cd, ${n.el}, ${n.name}${n.args});`);
+                    }
+                })
+            };
         }
         let exp = getExpression();
         this.detectDependency(exp);
         let hasElement = exp.includes('$element');
-        return {bind: xNode('inline-action', {
-            exp,
-            el: hasElement && element.bindName(),
-            element,
-            hasElement
-        }, (ctx, n) => {
-            ctx.writeLine(`$tick(() => {`);
-            ctx.goIndent(() => {
-                if(n.hasElement) ctx.writeLine(`let $element=${n.el};`);
-                ctx.writeLine(n.exp);
-                if(ctx.inuse.apply) ctx.writeLine('$$apply();');
-            });
-            ctx.writeLine(`});`);
-        })}
+        return {
+            bind: xNode('inline-action', {
+                exp,
+                el: hasElement && element.bindName(),
+                element,
+                hasElement
+            }, (ctx, n) => {
+                ctx.writeLine('$tick(() => {');
+                ctx.goIndent(() => {
+                    if(n.hasElement) ctx.writeLine(`let $element=${n.el};`);
+                    ctx.writeLine(n.exp);
+                    if(ctx.inuse.apply) ctx.writeLine('$$apply();');
+                });
+                ctx.writeLine('});');
+            })
+        };
     } else if(name == 'class') {
         if(node.__skipClass) return {};
         node.__skipClass = true;
@@ -245,7 +264,7 @@ export function bindProp(prop, node, element, requireCD) {
                 classes = [prop.name.slice(6)];
             }
             return this.config.passClass && classes.some(name => {
-                if(this.css.isExternalClass(name)) compound=true;
+                if(this.css.isExternalClass(name)) compound = true;
                 else if(name[0] == '$') {
                     this.css.markAsExternal(name.substring(1));
                     compound = true;
@@ -305,7 +324,7 @@ export function bindProp(prop, node, element, requireCD) {
                 }
             });
             requireCD.$depends(bind);
-            return {bind};
+            return { bind };
         } else {
             let bind = xNode('block');
             props.forEach(prop => {
@@ -328,37 +347,39 @@ export function bindProp(prop, node, element, requireCD) {
                         requireCD
                     }, (ctx, n) => {
                         if(n.$element) {
-                            ctx.writeLine(`{`);
+                            ctx.writeLine('{');
                             ctx.indent++;
-                            ctx.writeLine(`let $element = ${n.el};`)
+                            ctx.writeLine(`let $element = ${n.el};`);
                         }
                         if(this.glob.apply.value) {
                             n.requireCD.$value(true);
-                            ctx.writeLine(`$runtime.bindClass($cd, ${n.el}, () => !!(${n.exp}), '${n.className}');`)
+                            ctx.writeLine(`$runtime.bindClass($cd, ${n.el}, () => !!(${n.exp}), '${n.className}');`);
                         } else {
-                            ctx.writeLine(`(${n.exp}) && $runtime.addClass(${n.el}, '${n.className}');`)
+                            ctx.writeLine(`(${n.exp}) && $runtime.addClass(${n.el}, '${n.className}');`);
                         }
                         if(n.$element) {
                             ctx.indent--;
-                            ctx.writeLine(`}`);
+                            ctx.writeLine('}');
                         }
                     });
                     requireCD.$depends(n);
                     bind.push(n);
                 }
             });
-            return {bind: bind.body.length ? bind : null};
+            return { bind: bind.body.length ? bind : null };
         }
     } else if(name[0] == '^') {
         requireCD.$value(true);
-        return {bindTail: xNode('bindAnchor', {
-            name: name.slice(1) || 'default',
-            el: element.bindName()
-        }, (ctx, n) => {
-            ctx.write(true, `$runtime.attachAnchor($option, $cd, ${n.el}`)
-            if(n.name == 'default') ctx.write(`);`)
-            else ctx.write(`, '${n.name}');`)
-        })};
+        return {
+            bindTail: xNode('bindAnchor', {
+                name: name.slice(1) || 'default',
+                el: element.bindName()
+            }, (ctx, n) => {
+                ctx.write(true, `$runtime.attachAnchor($option, $cd, ${n.el}`);
+                if(n.name == 'default') ctx.write(');');
+                else ctx.write(`, '${n.name}');`);
+            })
+        };
     } else {
         if(prop.value && prop.value.indexOf('{') >= 0) {
             const parsed = this.parseText(prop.value);
@@ -378,7 +399,7 @@ export function bindProp(prop, node, element, requireCD) {
                 innerText: true,
                 src: true,
                 readonly: 'readOnly'
-            }
+            };
 
             let n = xNode('bindAttribute', {
                 name,
@@ -407,10 +428,12 @@ export function bindProp(prop, node, element, requireCD) {
             });
             requireCD.$depends(n);
 
-            return {bind: xNode('block', {
-                scope: hasElement,
-                body: [n]
-            })};
+            return {
+                bind: xNode('block', {
+                    scope: hasElement,
+                    body: [n]
+                })
+            };
         }
 
         if(node.spreading) return node.spreading.push(`${name}: \`${this.Q(prop.value)}\``);
@@ -420,4 +443,4 @@ export function bindProp(prop, node, element, requireCD) {
             value: prop.value
         });
     }
-};
+}

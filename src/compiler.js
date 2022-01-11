@@ -1,23 +1,21 @@
-
 import { assert } from './utils.js';
-import { xNode, xBuild } from './xnode.js'
+import { xNode, xBuild } from './xnode.js';
 import { compactDOM } from './compact.js';
-import { parse as parseHTML } from './parser';
+import { parse as parseHTML, parseText } from './parser';
 import * as codelib from './code';
 import { buildRuntime, buildBlock } from './builder';
 import { processCSS } from './css/index';
 
-import * as utils from './utils.js'
-import { parseText } from './parser.js'
-import { makeComponent, makeComponentDyn } from './parts/component.js'
-import { bindProp } from './parts/prop.js'
-import { makeifBlock } from './parts/if.js'
-import { makeEachBlock } from './parts/each.js'
-import { makeHtmlBlock } from './parts/html.js'
-import { makeAwaitBlock } from './parts/await.js'
-import { attachSlot } from './parts/slot.js'
-import { makeFragment, attachFragment, attachFragmentSlot, attchExportedFragment } from './parts/fragment.js'
-import { attachHead } from './parts/head.js'
+import * as utils from './utils.js';
+import { makeComponent, makeComponentDyn } from './parts/component.js';
+import { bindProp } from './parts/prop.js';
+import { makeifBlock } from './parts/if.js';
+import { makeEachBlock } from './parts/each.js';
+import { makeHtmlBlock } from './parts/html.js';
+import { makeAwaitBlock } from './parts/await.js';
+import { attachSlot } from './parts/slot.js';
+import { makeFragment, attachFragment, attachFragmentSlot, attchExportedFragment } from './parts/fragment.js';
+import { attachHead } from './parts/head.js';
 import { inspectProp } from './code-utils.js';
 import { attachPortal } from './parts/portal.js';
 import { makeEventProp } from './event-prop.js';
@@ -49,7 +47,7 @@ export async function compile(source, config = {}) {
         config,
         uniqIndex: 0,
         warning: config.warning || (w => console.warn('!', w.message || w)),
-        
+
         Q: config.inlineTemplate ? utils.Q2 : utils.Q,
         buildBlock,
         bindProp,
@@ -81,7 +79,7 @@ export async function compile(source, config = {}) {
         require: function(...args) {
             for(let name of args) {
                 let deps = true;
-                if(name == '$props:no-deps') {name = '$props'; deps = false;};
+                if(name == '$props:no-deps') { name = '$props'; deps = false; }
                 if(name == 'apply' && ctx.script.readOnly) name = 'blankApply';
                 if(ctx.inuse[name] == null) ctx.inuse[name] = 0;
                 ctx.inuse[name]++;
@@ -170,12 +168,12 @@ export async function compile(source, config = {}) {
 
     await hook(ctx, 'build:before');
     const result = ctx.result = xNode('block');
-    result.push(`import * as $runtime from 'malinajs/runtime.js';`)
-    result.push(`import { $watch, $watchReadOnly, $tick } from 'malinajs/runtime.js';`)
+    result.push('import * as $runtime from \'malinajs/runtime.js\';');
+    result.push('import { $watch, $watchReadOnly, $tick } from \'malinajs/runtime.js\';');
     if(config.hideLabel) {
-        result.push(`import { $$htmlToFragmentClean as $$htmlToFragment } from 'malinajs/runtime.js';`);
+        result.push('import { $$htmlToFragmentClean as $$htmlToFragment } from \'malinajs/runtime.js\';');
     } else {
-        result.push(`import { $$htmlToFragment } from 'malinajs/runtime.js';`);
+        result.push('import { $$htmlToFragment } from \'malinajs/runtime.js\';');
     }
     result.push(ctx.module.top);
     result.push(makeComponentFn.call(ctx));
@@ -184,15 +182,15 @@ export async function compile(source, config = {}) {
 
     await hook(ctx, 'build');
     return ctx;
-};
+}
 
 
 async function hook(ctx, name) {
-    for(let i=0; i<ctx.config.plugins.length; i++) {
+    for(let i = 0; i < ctx.config.plugins.length; i++) {
         const fn = ctx.config.plugins[i][name];
         if(fn) await fn(ctx);
     }
-};
+}
 
 
 function detectDependency(data) {
@@ -200,7 +198,7 @@ function detectDependency(data) {
         for(let k of ['$props', '$attributes', '$emit', '$context']) {
             if(name.includes(k)) this.require(k);
         }
-    }
+    };
 
     if(typeof data == 'string') {
         check(data);
@@ -221,7 +219,7 @@ function loadConfig(filename, option) {
 
     let localConfig;
     let parts = filename.split(/[\/\\]/);
-    for(let i=parts.length-1;i>1;i--) {
+    for(let i = parts.length - 1; i > 1; i--) {
         let local = parts.slice(0, i).join('/') + '/malina.config.js';
         if(fs.existsSync(local)) {
             localConfig = local;
@@ -243,7 +241,7 @@ function loadConfig(filename, option) {
 function makeComponentFn() {
     let componentFn = xNode('componentFn', {
         $deps: [this.glob.apply, this.glob.rootCD],
-        body: [this.module.head, this.module.code, this.module.body],
+        body: [this.module.head, this.module.code, this.module.body]
     }, (ctx, n) => {
         let component = xNode('function', {
             args: ['$option'],
@@ -262,7 +260,7 @@ function makeComponentFn() {
             ctx.add(this.glob.componentFn);
             if(ctx.inuse.blankApply) {
                 component.body[0].body.unshift(xNode('block', (ctx) => {
-                    ctx.writeLine('let $$apply = $runtime.noop;')
+                    ctx.writeLine('let $$apply = $runtime.noop;');
                 }));
             }
 
@@ -274,7 +272,7 @@ function makeComponentFn() {
             ctx.add(this.glob.componentFn);
             ctx.write('($option={}) => {', true);
             ctx.goIndent(() => {
-                ctx.add(xNode('block', {body: n.body}));
+                ctx.add(xNode('block', { body: n.body }));
             });
             ctx.write(true, '}');
         }

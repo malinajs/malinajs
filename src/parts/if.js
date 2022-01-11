@@ -1,6 +1,5 @@
-
-import { assert } from '../utils.js'
-import { xNode } from '../xnode.js'
+import { assert } from '../utils.js';
+import { xNode } from '../xnode.js';
 
 
 export function makeifBlock(data, element, requireCD) {
@@ -19,18 +18,18 @@ export function makeifBlock(data, element, requireCD) {
             }, (ctx, n) => {
                 ctx.write('() => ');
                 ctx.add(n.block);
-            })
+            });
         }
         return b.block;
-    }
+    };
 
     if(data.bodyMain) {
-        mainBlock = getBlock(this.buildBlock({body: data.bodyMain}, {protectLastTag: true, allowSingleBlock: true}));
-        elseBlock = getBlock(this.buildBlock(data, {protectLastTag: true, allowSingleBlock: true}));
+        mainBlock = getBlock(this.buildBlock({ body: data.bodyMain }, { protectLastTag: true, allowSingleBlock: true }));
+        elseBlock = getBlock(this.buildBlock(data, { protectLastTag: true, allowSingleBlock: true }));
     } else {
-        mainBlock = getBlock(this.buildBlock(data, {protectLastTag: true, allowSingleBlock: true}));
+        mainBlock = getBlock(this.buildBlock(data, { protectLastTag: true, allowSingleBlock: true }));
     }
-    
+
     const result = xNode('if:bind', {
         $deps: [this.glob.apply],
         requireCD,
@@ -60,4 +59,4 @@ export function makeifBlock(data, element, requireCD) {
     requireCD.$depends(result);
     this.glob.component.$depends(result);
     return result;
-};
+}
