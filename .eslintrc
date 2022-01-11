@@ -21,7 +21,7 @@
     "no-trailing-spaces": "error",
     "semi": ["error", "always"],
     "eqeqeq": "off",
-    "indent": ["error", 4],
+    "indent": ["error", 2],
     "no-constant-condition": ["error", { "checkLoops": false }],
     "prefer-const": "off",
     "one-var": "off",

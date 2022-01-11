@@ -2,7 +2,7 @@ export let __app_onerror = console.error;
 
 
 export const configure = (option) => {
-    __app_onerror = option.onerror;
+  __app_onerror = option.onerror;
 };
 
 
@@ -13,9 +13,9 @@ export const isObject = d => typeof d == 'object';
 
 
 export const safeCall = fn => {
-    try {
-        return fn?.();
-    } catch (e) {
-        __app_onerror(e);
-    }
+  try {
+    return fn?.();
+  } catch (e) {
+    __app_onerror(e);
+  }
 };
