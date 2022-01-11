@@ -12,12 +12,14 @@
     "web": "http-server ./example/public",
     "test": "NODE_PATH=.. node ./node_modules/.bin/mocha ./test/run.js",
     "test-debug": "NODE_PATH=.. node --inspect-brk ./node_modules/.bin/mocha ./test/run.js",
-    "brotli": "brotli --input /app/malinajs/example/public/app.min.js --output /app/malinajs/example/public/app.min.js.br; brotli --input /app/malinajs/example/public/app.min2.js --output /app/malinajs/example/public/app.min2.js.br"
+    "brotli": "brotli --input /app/malinajs/example/public/app.min.js --output /app/malinajs/example/public/app.min.js.br; brotli --input /app/malinajs/example/public/app.min2.js --output /app/malinajs/example/public/app.min2.js.br",
+    "fix": "npx standardx --fix src/**/*.js"
   },
   "dependencies": {
     "acorn": "^7.3.1",
     "astring": "^1.4.3",
-    "css-tree": "^1.0.0-alpha.39"
+    "css-tree": "^1.0.0-alpha.39",
+    "standardx": "^7.0.0"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^13.0.2",
