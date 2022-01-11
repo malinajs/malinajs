@@ -1,0 +1,26 @@
+{
+  "extends": ["eslint:recommended"],
+  "parserOptions": {
+    "sourceType": "module",
+    "ecmaVersion": 2020
+  },
+  "env": {
+    "browser": true,
+    "node": true,
+    "es6": true
+  },
+  "rules": {
+    "no-import-assign": "warn",
+    "prefer-regex-literals": "error",
+    "multiline-ternary": "off",
+    "camelcase": "off",
+    "arrow-parens": ["error", "as-needed"],
+    "space-before-function-paren": ["error", "never"],
+    "no-multiple-empty-lines": ["error", { "max": 2, "maxEOF": 1, "maxBOF": 0 }],
+    "no-trailing-spaces": "error",
+    "semi": ["error", "always"],
+    "eqeqeq": "off",
+    "indent": ["error", 4],
+    "no-constant-condition": ["error", { "checkLoops": false }]
+  }
+}

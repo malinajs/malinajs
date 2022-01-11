@@ -12,7 +12,8 @@
     "web": "http-server ./example/public",
     "test": "NODE_PATH=.. node ./node_modules/.bin/mocha ./test/run.js",
     "test-debug": "NODE_PATH=.. node --inspect-brk ./node_modules/.bin/mocha ./test/run.js",
-    "brotli": "brotli --input /app/malinajs/example/public/app.min.js --output /app/malinajs/example/public/app.min.js.br; brotli --input /app/malinajs/example/public/app.min2.js --output /app/malinajs/example/public/app.min2.js.br"
+    "brotli": "brotli --input /app/malinajs/example/public/app.min.js --output /app/malinajs/example/public/app.min.js.br; brotli --input /app/malinajs/example/public/app.min2.js --output /app/malinajs/example/public/app.min2.js.br",
+    "fix": "npx standardx --fix src/**/*.js"
   },
   "dependencies": {
     "acorn": "^7.3.1",
@@ -29,7 +30,8 @@
     "rollup": "^2.17.1",
     "rollup-plugin-css-only": "^3.1.0",
     "terser": "^5.4.0",
-    "uglify-js": "^3.13.7"
+    "uglify-js": "^3.13.7",
+    "standardx": "^7.0.0"
   },
   "main": "malina",
   "files": [
