@@ -145,6 +145,7 @@ export function makeComponent(node, requireCD) {
   propList = propList.filter(({ name }) => {
     if(name == '@@') {
       forwardAllEvents = true;
+      this.require('$events');
       return false;
     } else if(name == 'this') {
       return false;
