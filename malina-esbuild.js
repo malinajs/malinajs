@@ -11,11 +11,9 @@ process.argv.includes('-w') ? process.env.WATCH = 1 : null;
 
 const esbuildConfigPath = path.join(process.cwd(),'esbuild.config.js');
 const derverConfigPath = path.join(process.cwd(),'derver.config.js');
-const malinaConfigPath = path.join(process.cwd(),'malina.config.js');
 
 const esbuildConfig = fs.existsSync(esbuildConfigPath) ? require(esbuildConfigPath) : {};
 const derverConfig = fs.existsSync(derverConfigPath) ? require(derverConfigPath) : {};
-const malinaConfig = fs.existsSync(malinaConfigPath) ? require(malinaConfigPath) : {};
 
 // Executable
 
@@ -60,11 +58,6 @@ function malinaPlugin(options={}){
 
     const cssModules = new Map();
 
-    options = {
-        ...malinaConfig,
-        ...options
-    }
-
     if(options.displayVersion !== false) console.log('! Malina.js', malina.version);
     
     return {
@@ -77,13 +70,14 @@ function malinaPlugin(options={}){
                     let source = await fsp.readFile(args.path, 'utf8');
 
                     let ctx = await malina.compile(source,{
+                        path: args.path,
                         name: args.path.match(/([^/\\]+)\.\w+$/)[1],
                         ...options
                     });
 
                     let code = ctx.result;
                     
-                    if(!options.css && ctx.css.result){
+                    if(ctx.css.result){
                         const cssPath = args.path.replace(/\.\w+$/, ".malina.css").replace(/\\/g, "/");
                         cssModules.set(cssPath,ctx.css.result);
                         code += `\nimport "${cssPath}";`
