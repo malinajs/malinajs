@@ -1,5 +1,5 @@
 import { $$removeElements, firstChild, insertAfter } from '../runtime/base';
-import { $watch, keyComparator, cd_onDestroy, cd_attach, cd_component } from '../runtime/cd';
+import { $watch, keyComparator, cd_onDestroy, cd_attach, cd_component, cd_destroy } from '../runtime/cd';
 
 
 export function $$awaitBlock(parentCD, label, relation, fn, build_main, build_then, build_catch) {

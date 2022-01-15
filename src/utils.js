@@ -44,7 +44,7 @@ export function unwrapExp(e) {
 
 export function isSimpleName(name) {
   if(!name) return false;
-  if(!name.match(/^([a-zA-Z\$_][\w\d\$_\.]*)$/)) return false;
+  if(!name.match(/^([a-zA-Z$_][\w\d$_.]*)$/)) return false;
   if(name[name.length - 1] == '.') return false;
   return true;
 }
@@ -103,7 +103,7 @@ export function detectExpressionType(name) {
 
 
 export function checkRootName(name) {
-  let rx = name.match(/^([\w\$_][\w\d\$_]*)/);
+  let rx = name.match(/^([\w$_][\w\d$_]*)/);
   if(!rx) return this.warning({ message: 'Error name: ' + name });
   let root = rx[1];
 

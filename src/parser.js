@@ -314,13 +314,13 @@ export function parse() {
             parent.body.push(tag);
             go(tag);
             continue;
-          } else if(bind.value.match(/^\:then( |$)/)) {
+          } else if(bind.value.match(/^:then( |$)/)) {
             assert(parent.type === 'await', 'Bind error: await-then');
             let thenPart = [];
             parent.parts.then = thenPart;
             parent.parts.thenValue = bind.value;
             parent.body = thenPart;
-          } else if(bind.value.match(/^\:catch( |$)/)) {
+          } else if(bind.value.match(/^:catch( |$)/)) {
             assert(parent.type === 'await', 'Bind error: await-catch');
             let catchPart = [];
             parent.parts.catch = catchPart;
@@ -329,7 +329,7 @@ export function parse() {
           } else if(bind.value == '/await') {
             assert(parent.type === 'await', 'Bind error: /await');
             return;
-          } else if(bind.value.match(/^\#slot(\:| |$)/)) {
+          } else if(bind.value.match(/^#slot(:| |$)/)) {
             let tag = {
               type: 'slot',
               value: bind.value,

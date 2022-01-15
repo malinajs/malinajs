@@ -48,7 +48,7 @@ export function bindProp(prop, node, element, requireCD) {
     }
   }
   if(!name) {
-    let r = prop.name.match(/^(\w+)\:(.*)$/);
+    let r = prop.name.match(/^(\w+):(.*)$/);
     if(r) {
       name = r[1];
       arg = r[2];
@@ -122,7 +122,7 @@ export function bindProp(prop, node, element, requireCD) {
     requireCD.$value(true);
     this.require('apply');
     let exp;
-    arg = arg.split(/[\:\|]/);
+    arg = arg.split(/[:|]/);
     let attr = arg.shift();
     assert(attr, prop.content);
 

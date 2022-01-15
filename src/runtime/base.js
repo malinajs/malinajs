@@ -7,8 +7,6 @@ import { __app_onerror, safeCall, isFunction, isObject } from './utils';
 let templatecache = {};
 let templatecacheSvg = {};
 
-let $$uniqIndex = 1;
-
 export const childNodes = 'childNodes';
 export const firstChild = 'firstChild';
 

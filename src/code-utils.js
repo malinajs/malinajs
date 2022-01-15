@@ -9,7 +9,7 @@ export function inspectProp(prop) {
     name = unwrapExp(name);
   }
 
-  assert(name.match(/^([\w\$_][\w\d\$_\.\-]*)$/), `Wrong property: '${name}'`);
+  assert(name.match(/^([\w$_][\w\d$_.\-]*)$/), `Wrong property: '${name}'`);
   name = toCamelCase(name);
   if(name == 'class') name = '_class';
 

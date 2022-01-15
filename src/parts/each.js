@@ -14,7 +14,7 @@ export function makeEachBlock(data, option) {
   let keyName;
 
   // get keyName
-  rx = right.match(/^(.*)\s*\(\s*([^\(\)]+)\s*\)\s*$/);
+  rx = right.match(/^(.*)\s*\(\s*([^()]+)\s*\)\s*$/);
   if(rx) {
     right = rx[1];
     keyName = rx[2];
@@ -49,7 +49,7 @@ export function makeEachBlock(data, option) {
       }
     });
   } else {
-    rx = right.trim().split(/\s*\,\s*/);
+    rx = right.trim().split(/\s*,\s*/);
     assert(rx.length <= 2, `Wrong #each expression '${data.value}'`);
     itemName = rx[0];
     indexName = rx[1] || '$index';

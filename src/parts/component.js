@@ -47,7 +47,7 @@ export function makeComponent(node, requireCD) {
         return false;
       }
       if(n.type != 'slot') return true;
-      let rx = n.value.match(/^\#slot:(\S+)/);
+      let rx = n.value.match(/^#slot:(\S+)/);
       if(rx) n.name = rx[1];
       else n.name = 'default';
       assert(!slots[n], 'double slot');
