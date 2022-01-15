@@ -11,11 +11,13 @@ export function parse() {
     watchers: [],
     imports: [],
     importedNames: [],
+    autosubscribeNames: [],
     props: [],
     rootVariables: {},
     rootFunctions: {},
     readOnly: false,
-    autoimport: {}
+    autoimport: {},
+    comments: []
   };
   if(source) {
     this.script.readOnly = this.scriptNodes.some(n => n.attributes.some(a => a.name == 'read-only'));
@@ -29,7 +31,11 @@ export function parse() {
         return rx[1] + '$$_noCheck;';
       }).join('\n');
     }
-    this.script.ast = acorn.parse(source, { sourceType: 'module', ecmaVersion: 12 });
+    const onComment = (isBlockComment, value, start, end) => {
+      if(isBlockComment) return;
+      this.script.comments.push({start, end, value});
+    }
+    this.script.ast = acorn.parse(source, {sourceType: 'module', ecmaVersion: 12, onComment});
 
     if(source.includes('$props')) this.require('$props');
     if(source.includes('$attributes')) this.require('$attributes');
@@ -243,14 +249,30 @@ export function transform() {
   let lastPropIndex = null;
   let constantProps = true;
 
+  if(result.comments.length) {
+    result.comments.forEach(c => {
+      let last;
+      for(let i = 0; i < ast.body.length; i++) {
+        let n = ast.body[i];
+        if(n.start >= c.start) break;
+        last = n;
+      }
+      if(last && last.end <= c.start) last._comment = c.value;
+    });
+  }
+
   ast.body.forEach(n => {
     if(n.type == 'ImportDeclaration') {
       imports.push(n);
       n.specifiers.forEach(s => {
         if(s.local.type != 'Identifier') return;
-        result.importedNames.push(s.local.name);
+        let name = s.local.name;
+        result.importedNames.push(name);
+        if(name[0].toLowerCase() == name[0]) {
+          if(!n._comment || !n._comment.includes('!no-autosubscribe')) result.autosubscribeNames.push(s.local.name);
+        }
         if(s.type != 'ImportDefaultSpecifier') return;
-        result.imports.push(s.local.name);
+        result.imports.push(name);
       });
       return;
     } else if(n.type == 'ExportNamedDeclaration') {
@@ -358,14 +380,11 @@ export function transform() {
     if(this.inuse.$onDestroy) return 'const $onDestroy = fn => $component._d.push(fn);';
   }));
 
-  if(this.config.autoSubscribe) {
-    let names = result.importedNames.filter(name => name[0].toLowerCase() == name[0]);
-    if(names.length) {
-      if(!this.script.readOnly) this.require('$cd', 'apply');
+  if(this.config.autoSubscribe && result.autosubscribeNames.length) {
+    if(!this.script.readOnly) this.require('$cd', 'apply');
       header.push(rawNode(() => {
-        if(this.inuse.apply) return `$runtime.autoSubscribe(${names.join(', ')});`;
-      }));
-    }
+        if(this.inuse.apply) return `$runtime.autoSubscribe(${result.autosubscribeNames.join(', ')});`;
+    }));
   }
 
   if(!rootFunctions.$emit) {
