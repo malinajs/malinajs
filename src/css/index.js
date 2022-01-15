@@ -315,8 +315,10 @@ function makeDom(data) {
       // if(e.name[0].match(/[A-Z]/)) return;
       let n = new Node(e.name, { __node: e });
       e.attributes.forEach(a => {
-        if(a.name == 'class') n.className += ' ' + a.value;
-        else if(a.name == 'id') n.id = a.value;
+        if(a.name == 'class') {
+          if(a.value != null) n.className += ' ' + a.value;
+          n.attributes[a.name] = a.value
+        } else if(a.name == 'id') n.attributes.id = n.id = a.value;
         else if(a.name.startsWith('class:')) {
           n.className += ' ' + a.name.substring(6);
         } else n.attributes[a.name] = a.value;
@@ -360,6 +362,10 @@ Node.prototype.getAttribute = function(n) {
   if(n == 'id') return this.id;
   return this.attributes[n];
 };
+
+Node.prototype.hasAttribute = function(n) {
+  return n in this.attributes;
+}
 
 Node.prototype.appendChild = function(n) {
   n.parentElement = this;

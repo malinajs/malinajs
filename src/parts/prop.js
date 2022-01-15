@@ -41,6 +41,7 @@ export function bindProp(prop, node, element, requireCD) {
         // spread operator
         name = name.substring(3);
         assert(detectExpressionType(name) == 'identifier');
+        this.detectDependency(name);
         return node.spreading.push(`...${name}`);
       } else {
         prop.value = prop.name;
