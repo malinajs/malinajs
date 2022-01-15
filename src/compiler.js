@@ -229,7 +229,8 @@ function loadConfig(filename, option) {
 
   if(localConfig) {
     const confFn = require(localConfig);
-    result = confFn(result, filename);
+    if(typeof(confFn) == 'function') result = confFn(result, filename);
+    else result = confFn;
   }
   if(!result.path) result.path = filename;
   if(!result.name) result.name = filename.match(/([^/\\]+)\.\w+$/)[1];

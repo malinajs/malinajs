@@ -89,7 +89,7 @@ export function parse() {
         };
       }
       if(begin) {
-        if(a.match(/[\da-zA-Z^]/)) {
+        if(a.match(/[\da-zA-Z^\-]/)) {
           name += a;
           continue;
         } else {

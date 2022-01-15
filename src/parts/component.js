@@ -61,7 +61,7 @@ export function makeComponent(node, requireCD) {
       assert(isSimpleName(slot.name));
 
       let props;
-      let rx = slot.value && slot.value.match(/^#slot\S*\s+(.*)$/);
+      let rx = slot.value && slot.value.match(/^#slot\S*\s+(.*)$/s);
       if(rx) {
         props = rx[1].trim().split(/[\s,]+/);
         assert(props.length);
