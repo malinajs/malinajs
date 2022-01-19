@@ -21,7 +21,7 @@ import { attachPortal } from './parts/portal.js';
 import { makeEventProp } from './event-prop.js';
 
 
-export const version = '0.7.0a2';
+export const version = '0.7.0-a3';
 
 
 export async function compile(source, config = {}) {
@@ -251,20 +251,8 @@ function makeComponentFn() {
       body: n.body
     });
 
-    if(this.glob.apply.value) {
+    if(this.glob.apply.value || this.glob.rootCD.value || ctx.inuse.$cd || ctx.inuse.$component || ctx.inuse.$context || ctx.inuse.blankApply) {
       ctx.add(this.glob.componentFn);
-      ctx.write('$runtime.makeComponent(');
-      component.args.push('$$apply');
-      ctx.add(component);
-      ctx.write(', $runtime.$base);', true);
-    } else if(this.glob.rootCD.value || ctx.inuse.$cd || ctx.inuse.$component || ctx.inuse.$context || ctx.inuse.blankApply) {
-      ctx.add(this.glob.componentFn);
-      if(ctx.inuse.blankApply) {
-        component.body[0].body.unshift(xNode('block', (ctx) => {
-          ctx.writeLine('let $$apply = $runtime.noop;');
-        }));
-      }
-
       ctx.write('$runtime.makeComponent(');
       ctx.add(component);
       ctx.write(');', true);

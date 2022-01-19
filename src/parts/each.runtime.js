@@ -1,13 +1,13 @@
 import { $$removeElements, childNodes, firstChild, iterNodes } from '../runtime/base';
-import { $watch, $$compareArray, isArray, cd_attach, cd_new, cd_destroy } from '../runtime/cd';
-import * as cdruntime from '../runtime/cd';
+import { $watch, $$compareArray, isArray, cd_attach, cd_attach2, cd_new, cd_destroy } from '../runtime/cd';
+import * as share from '../runtime/share';
+import { safeCall, safeGroupCall } from '../runtime/utils';
 
 
 export const makeEachBlock = (fr, fn) => {
   return (item, index) => {
-    let $dom = fr.cloneNode(true), $cd = cd_new();
-    let rebind = fn($cd, $dom, item, index);
-    return { $cd, $dom, rebind };
+    let $dom = fr.cloneNode(true);
+    return [$dom, fn($dom, item, index)];
   };
 };
 
@@ -30,14 +30,21 @@ export const makeEachSingleBlock = (fn) => {
 };
 
 
-export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, bind) {
+export function $$eachBlock(label, onlyChild, fn, getKey, bind) {
   let eachCD = cd_new();
-  cd_attach($parentCD, eachCD);
+  cd_attach(eachCD);
 
   let mapping = new Map();
   let lastNode, vi = 0;
 
-  $watch(eachCD, fn, (array) => {
+  const destroyAll = () => {
+    safeCall(() => mapping.forEach(ctx => ctx.d.forEach(fn => fn())));
+    mapping.clear();
+  }
+
+  share.$onDestroy(destroyAll);
+
+  $watch(fn, (array) => {
     if(!array) array = [];
     if(typeof (array) == 'number') array = [...Array(array)].map((_, i) => i + 1);
     else if(!isArray(array)) array = [];
@@ -64,48 +71,45 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, bind) {
       }
 
       if(!count && lastNode) {
-        cdruntime.destroyResults = [];
-        eachCD.children.forEach(cd => cd_destroy(cd, false));
+        share.destroyResults = [];
         eachCD.children.length = 0;
-        mapping.forEach(ctx => ctx.destroy?.());
-        mapping.clear();
+        destroyAll();
 
-        if(cdruntime.destroyResults.length) {
+        if(share.destroyResults.length) {
           let removedNodes = [];
           iterNodes(onlyChild ? label.firstChild : label.nextSibling, lastNode, n => {
             n.$$removing = true;
             removedNodes.push(n);
           });
-          Promise.allSettled(cdruntime.destroyResults).then(() => removedNodes.forEach(n => n.remove()));
+          Promise.allSettled(share.destroyResults).then(() => removedNodes.forEach(n => n.remove()));
         } else {
           if(onlyChild) label.textContent = '';
           else $$removeElements(label.nextSibling, lastNode);
         }
 
-        cdruntime.destroyResults = null;
+        share.destroyResults = null;
       } else if(count < mapping.size) {
         eachCD.children = [];
-        cdruntime.destroyResults = [];
+        share.destroyResults = [];
         let removedNodes = [];
         mapping.forEach(ctx => {
           if(ctx.a == vi) {
             ctx.$cd && eachCD.children.push(ctx.$cd);
             return;
           }
-          ctx.$cd && cd_destroy(ctx.$cd, false);
-          ctx.destroy?.();
+          safeGroupCall(ctx.d);
           iterNodes(ctx.first, ctx.last, n => {
             n.$$removing = true;
             removedNodes.push(n);
           });
         });
 
-        if(cdruntime.destroyResults.length) {
-          Promise.allSettled(cdruntime.destroyResults).then(() => removedNodes.forEach(n => n.remove()));
+        if(share.destroyResults.length) {
+          Promise.allSettled(share.destroyResults).then(() => removedNodes.forEach(n => n.remove()));
         } else {
           removedNodes.forEach(n => n.remove());
         }
-        cdruntime.destroyResults = null;
+        share.destroyResults = null;
       }
     }
 
@@ -144,9 +148,17 @@ export function $$eachBlock($parentCD, label, onlyChild, fn, getKey, bind) {
         }
         ctx.rebind?.(i, item);
       } else {
-        let $dom;
-        ({ $dom, ...ctx } = bind(item, i));
-        cd_attach(eachCD, ctx.$cd);
+        let $dom, rebind,
+          d = share.current_destroyList = [],
+          $cd = share.current_cd = cd_new();
+        try {
+          ([ $dom, rebind ] = bind(item, i));
+        } finally {
+          share.current_destroyList = null;
+          share.current_cd = null;
+        }
+        ctx = {$cd, d, rebind};
+        cd_attach2(eachCD, $cd);
         if($dom.nodeType == 11) {
           ctx.first = $dom[firstChild];
           ctx.last = $dom.lastChild;

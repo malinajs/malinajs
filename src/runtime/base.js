@@ -2,7 +2,9 @@ import {
   $watch, $watchReadOnly, $$deepComparator, cloneDeep, $$cloneDeep, cd_new, $digest,
   $$compareDeep, cd_onDestroy, addEvent, fire, keyComparator, cd_attach, cd_destroy, cd_component
 } from './cd';
-import { __app_onerror, safeCall, isFunction, isObject } from './utils';
+import { __app_onerror, safeCall, isFunction, isObject, safeGroupCall } from './utils';
+import * as share from './share.js';
+import { $onDestroy } from './share.js';
 
 let templatecache = {};
 let templatecacheSvg = {};
@@ -135,15 +137,11 @@ export function $$addEventForComponent(list, event, fn) {
 
 
 export let current_component, $context;
-
-export const $onDestroy = fn => current_component._d.push(fn);
 export const $onMount = fn => current_component._m.push(fn);
 
 
-export const $base = ($component) => {
-  let $cd = cd_new();
-  $cd.component = $component;
-  $onDestroy(() => $cd.destroy());
+export const makeApply = () => {
+  let $cd = current_component.$cd = share.current_cd = cd_new();
 
   let planned;
   let apply = r => {
@@ -159,35 +157,35 @@ export const $base = ($component) => {
     return r;
   };
 
-  $component.$cd = $cd;
-  $component.apply = apply;
-  $component.push = apply;
+  current_component.apply = apply;
+  current_component.push = apply;
   apply();
-};
+  return apply;
+}
 
 
-export const makeComponent = (init, $base) => {
+export const makeComponent = (init) => {
   return ($option = {}) => {
-    let prev = current_component;
     $context = $option.context || {};
-    let $component = current_component = {
-      $option,
-      destroy: () => $component._d.map(safeCall),
-      context: $context,
-      exported: {},
-      _d: [],
-      _m: []
-    };
-    $base?.($component);
+    let prev_component = current_component,
+      prev_cd = share.current_cd,
+      $component = current_component = {
+        $option,
+        context: $context,
+        exported: {},
+        _m: []
+      };
+    share.current_cd = null;
 
     try {
-      $component.$dom = init($option, $component.apply);
+      $component.$dom = init($option);
     } finally {
-      current_component = prev;
+      current_component = prev_component;
       $context = null;
+      share.current_cd = prev_cd;
     }
 
-    $component._d.push(...$component._m.map(safeCall));
+    $component._m.forEach(fn => $onDestroy(safeCall(fn)));
     return $component;
   };
 };
@@ -279,7 +277,7 @@ export const autoSubscribe = (...list) => {
   list.forEach(i => {
     if(isFunction(i.subscribe)) {
       let unsub = i.subscribe(current_component.apply);
-      if(isFunction(unsub)) cd_onDestroy(current_component, unsub);
+      if(isFunction(unsub)) $onDestroy(current_component, unsub);
     }
   });
 };
@@ -297,8 +295,8 @@ export const addStyles = (id, content) => {
 export const addClass = (el, className) => el.classList.add(className);
 
 
-export const bindClass = (cd, element, fn, className) => {
-  $watch(cd, fn, value => {
+export const bindClass = (element, fn, className) => {
+  $watch(fn, value => {
     if(value) addClass(element, className);
     else element.classList.remove(className);
   }, { ro: true, value: false });
@@ -308,20 +306,20 @@ export const bindClass = (cd, element, fn, className) => {
 export const setClassToElement = (element, value) => bindAttributeBase(element, 'class', value);
 
 
-export const bindClassExp = (cd, element, fn) => {
-  $watch(cd, fn, value => setClassToElement(element, value), { ro: true, value: '' });
+export const bindClassExp = (element, fn) => {
+  $watch(fn, value => setClassToElement(element, value), { ro: true, value: '' });
 };
 
 
-export const bindText = (cd, element, fn) => {
-  $watchReadOnly(cd, () => '' + fn(), value => {
+export const bindText = (element, fn) => {
+  $watchReadOnly(() => '' + fn(), value => {
     element.textContent = value;
   });
 };
 
 
-export const bindStyle = (cd, element, name, fn) => {
-  $watchReadOnly(cd, fn, (value) => {
+export const bindStyle = (element, name, fn) => {
+  $watchReadOnly(fn, (value) => {
     element.style[name] = value;
   });
 };
@@ -333,41 +331,40 @@ export const bindAttributeBase = (element, name, value) => {
 };
 
 
-export const bindAttribute = (cd, element, name, fn) => {
-  $watchReadOnly(cd, () => {
+export const bindAttribute = (element, name, fn) => {
+  $watchReadOnly(() => {
     let v = fn();
     return v == null ? v : '' + v;
   }, value => bindAttributeBase(element, name, value));
 };
 
 
-export const bindAction = (cd, element, action, fn, subscribe) => {
-  $tick(() => {
-    let handler, value;
-    if(fn) {
-      value = fn();
-      handler = action.apply(null, [element].concat(value));
-    } else handler = action(element);
-    cd_onDestroy(cd, handler?.destroy);
-    subscribe?.(cd, fn, handler, value);
-  });
+export const bindAction = (element, action, fn, subscribe) => {
+  let handler, value;
+  if(fn) {
+    value = fn();
+    handler = action.apply(null, [element].concat(value));
+  } else handler = action(element);
+  $onDestroy(handler?.destroy);
+  subscribe?.(fn, handler, value);
+  handler.init && $tick(handler.init);
 };
 
 
-export const __bindActionSubscribe = (cd, fn, handler, value) => {
+export const __bindActionSubscribe = (fn, handler, value) => {
   if(handler?.update && fn) {
-    $watch(cd, fn, args => {
+    $watch(fn, args => {
       handler.update.apply(handler, args);
     }, { cmp: $$deepComparator(1), value: cloneDeep(value, 1) });
   }
 };
 
 
-export const bindInput = (cd, element, name, get, set) => {
-  let w = $watchReadOnly(cd, name == 'checked' ? () => !!get() : get, value => {
+export const bindInput = (element, name, get, set) => {
+  let w = $watchReadOnly(name == 'checked' ? () => !!get() : get, value => {
     element[name] = value == null ? '' : value;
   });
-  addEvent(cd, element, 'input', () => {
+  addEvent(element, 'input', () => {
     set(w.value = element[name]);
   });
 };
@@ -425,7 +422,7 @@ export const attachAnchor = ($option, $cd, el, name) => {
 };
 
 
-export const spreadAttributes = (cd, el, fn) => {
+export const spreadAttributes = (el, fn) => {
   const props = Object.getOwnPropertyDescriptors(el.__proto__);
   let prev = {};
   const set = (k, v) => {
@@ -448,7 +445,7 @@ export const spreadAttributes = (cd, el, fn) => {
       }
     }
   };
-  $watch(cd, fn, apply, {
+  $watch(fn, apply, {
     cmp: (_, state) => {
       apply(state);
       return 0;
@@ -490,15 +487,15 @@ export const exportFragment = (childCD, name, fn) => {
 };
 
 
-export const prefixPush = ($cd, fn) => {
-  $cd.prefix.push(fn);
+export const prefixPush = fn => {
+  share.current_cd.prefix.push(fn);
   fn();
 };
 
 
-export const unwrapProps = (cd, props, fn) => {
+export const unwrapProps = (props, fn) => {
   if(props) {
-    if(isFunction(props)) prefixPush(cd, () => fn(props()));
+    if(isFunction(props)) prefixPush(() => fn(props()));
     else fn(props);
   }
 };
@@ -506,9 +503,9 @@ export const unwrapProps = (cd, props, fn) => {
 
 export const makeBlock = (fr, fn) => {
   return (v) => {
-    let $dom = fr.cloneNode(true), $cd = cd_new();
-    fn($cd, $dom, v);
-    return { $cd, $dom };
+    let $dom = fr.cloneNode(true);
+    fn($dom, v);
+    return $dom;
   };
 };
 
@@ -534,19 +531,17 @@ export const makeStaticBlock = (fr, fn) => {
   };
 };
 
-export const attachBlock = (cdo, label, block) => {
+export const attachBlock = (label, block) => {
   if(!block) return;
-  cd_onDestroy(cdo, block.destroy);
-  cd_attach(cdo, block.$cd);
+  // cd_onDestroy(cdo, block.destroy);
+  // cd_attach(cdo, block.$cd);
   insertAfter(label, block.$dom);
 };
-
 
 export const mergeEvents = (...callbacks) => {
   callbacks = callbacks.filter(i => i);
   return (e) => callbacks.forEach(cb => cb(e));
 };
-
 
 export const makeRootEvent = (root) => {
   let events = {}, nodes = [];
@@ -581,3 +576,21 @@ export const makeRootEvent = (root) => {
     target[key] = callback;
   };
 };
+
+export const mount = (label, component, option) => {
+  let app, first, last, destroyList = share.current_destroyList = [];
+  try {
+    app = component(option);
+    first = app.$dom.firstChild
+    last = app.$dom.lastChild;
+    label.appendChild(app.$dom);
+  } finally {
+    share.current_destroyList = null;
+  }
+  return {
+    destroy: () => {
+      safeGroupCall(destroyList);
+      $$removeElements(first, last);
+    }
+  }
+}

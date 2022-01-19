@@ -1,7 +1,8 @@
 import { __app_onerror, safeCall, isObject } from './utils';
+import * as share from './share.js';
+import { $onDestroy } from './share.js';
 
-
-function WatchObject(fn, cb) {
+export function WatchObject(fn, cb) {
   this.fn = fn;
   this.cb = cb;
   this.value = NaN;
@@ -9,28 +10,22 @@ function WatchObject(fn, cb) {
   this.cmp = null;
 }
 
-
-export const cd_watchObject = (fn, cb, option) => {
-  let w = new WatchObject(fn, cb);
+export function $watch(fn, callback, option) {
+  let w = new WatchObject(fn, callback);
   option && Object.assign(w, option);
-  return w;
-};
-
-
-export function $watch(cd, fn, callback, w) {
-  w = cd_watchObject(fn, callback, w);
-  cd.watchers.push(w);
+  share.current_cd.watchers.push(w);
   return w;
 }
 
-export function $watchReadOnly(cd, fn, callback) {
-  return $watch(cd, fn, callback, { ro: true });
+export function $watchReadOnly(fn, callback) {
+  return $watch(fn, callback, { ro: true });
 }
 
-export function addEvent(cd, el, event, callback) {
+export function addEvent(el, event, callback) {
   if(!callback) return;
   el.addEventListener(event, callback);
-  cd_onDestroy(cd, () => {
+
+  $onDestroy(() => {
     el.removeEventListener(event, callback);
   });
 }
@@ -48,19 +43,8 @@ function $ChangeDetector(parent) {
   this.parent = parent;
   this.children = [];
   this.watchers = [];
-  this._d = [];
   this.prefix = [];
 }
-
-$ChangeDetector.prototype.new = function() {
-  let cd = new $ChangeDetector(this);
-  this.children.push(cd);
-  return cd;
-};
-
-$ChangeDetector.prototype.destroy = function(option) {
-  cd_destroy(this, option);
-};
 
 export const cd_component = cd => {
   while(cd.parent) cd = cd.parent;
@@ -69,14 +53,14 @@ export const cd_component = cd => {
 
 export const cd_new = () => new $ChangeDetector();
 
-export const cd_attach = (parent, cd) => {
+export const cd_attach2 = (parent, cd) => {
   if(cd) {
     cd.parent = parent;
     parent.children.push(cd);
   }
 };
 
-export let destroyResults = null;
+export const cd_attach = (cd) => cd_attach2(share.current_cd, cd);
 
 export const cd_destroy = (cd, option) => {
   if(option !== false && cd.parent) $$removeItem(cd.parent.children, cd);
@@ -87,9 +71,11 @@ export const cd_destroy = (cd, option) => {
     p && destroyResults && destroyResults.push(p);
   });
   cd._d.length = 0;
-  cd.children.map(cd => cd.destroy(false));
+  cd.children.map(cd => cd_destroy(cd, false));
   cd.children.length = 0;
 };
+
+export const cd_detach = cd => $$removeItem(cd.parent.children, cd);
 
 export const isArray = (a) => Array.isArray(a);
 

@@ -81,7 +81,7 @@ export function bindProp(prop, node, element, requireCD) {
           }, (ctx, data) => {
             ctx.writeLine('for(let event in $events)');
             ctx.goIndent(() => {
-              ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, event, $events[event]);`);
+              ctx.writeLine(`$runtime.addEvent(${data.el}, event, $events[event]);`);
             });
           })
         };
@@ -92,7 +92,7 @@ export function bindProp(prop, node, element, requireCD) {
           event: prop.name.substring(2),
           el: element.bindName()
         }, (ctx, n) => {
-          ctx.writeLine(`$events.${n.event} && $runtime.addEvent($cd, ${n.el}, '${n.event}', $events.${n.event});`);
+          ctx.writeLine(`$events.${n.event} && $runtime.addEvent(${n.el}, '${n.event}', $events.${n.event});`);
         })
       };
     }
@@ -109,7 +109,7 @@ export function bindProp(prop, node, element, requireCD) {
         rootModifier
       }, (ctx, n) => {
         if(n.rootModifier) ctx.write(true, `$$addRootEvent(${n.el}, '${n.event}', `);
-        else ctx.write(true, `$runtime.addEvent($cd, ${n.el}, '${n.event}', `);
+        else ctx.write(true, `$runtime.addEvent(${n.el}, '${n.event}', `);
         ctx.build(n.fn);
         ctx.write(');');
       })
@@ -154,7 +154,7 @@ export function bindProp(prop, node, element, requireCD) {
       bind: xNode('bindInput', {
         el: element.bindName()
       }, (ctx, n) => {
-        ctx.writeLine(`$runtime.bindInput($cd, ${n.el}, '${attr}', () => ${exp}, ${argName} => {${exp} = ${argName}; $$apply();});`);
+        ctx.writeLine(`$runtime.bindInput(${n.el}, '${attr}', () => ${exp}, ${argName} => {${exp} = ${argName}; $$apply();});`);
       })
     };
   } else if(name == 'style' && arg) {
@@ -197,7 +197,7 @@ export function bindProp(prop, node, element, requireCD) {
         }, (ctx, n) => {
           if(n.hasElement) ctx.writeLine(`let $element=${n.el};`);
           if(ctx.inuse.apply) {
-            ctx.writeLine(`$runtime.bindStyle($cd, ${n.el}, '${n.styleName}', () => (${n.exp}));`);
+            ctx.writeLine(`$runtime.bindStyle(${n.el}, '${n.styleName}', () => (${n.exp}));`);
           } else {
             ctx.writeLine(`${n.el}.style.${n.styleName} = ${n.exp};`);
           }
@@ -218,9 +218,9 @@ export function bindProp(prop, node, element, requireCD) {
           el: element.bindName()
         }, (ctx, n) => {
           if(ctx.inuse.apply && n.args) {
-            ctx.writeLine(`$runtime.bindAction($cd, ${n.el}, ${n.name}${n.args}, $runtime.__bindActionSubscribe);`);
+            ctx.writeLine(`$runtime.bindAction(${n.el}, ${n.name}${n.args}, $runtime.__bindActionSubscribe);`);
           } else {
-            ctx.writeLine(`$runtime.bindAction($cd, ${n.el}, ${n.name}${n.args});`);
+            ctx.writeLine(`$runtime.bindAction(${n.el}, ${n.name}${n.args});`);
           }
         })
       };
@@ -311,14 +311,14 @@ export function bindProp(prop, node, element, requireCD) {
         if(ctx.inuse.resolveClass) {
           if(ctx.inuse.apply) {
             n.requireCD.$value(true);
-            ctx.write(true, `$runtime.bindClassExp($cd, ${n.el}, () => $$resolveClass((${n.exp})${base}))`);
+            ctx.write(true, `$runtime.bindClassExp(${n.el}, () => $$resolveClass((${n.exp})${base}))`);
           } else {
             ctx.write(true, `$runtime.setClassToElement(${n.el}, $$resolveClass((${n.exp})${base}));`);
           }
         } else {
           if(ctx.inuse.apply) {
             n.requireCD.$value(true);
-            ctx.write(true, `$runtime.bindClassExp($cd, ${n.el}, () => (${n.exp})${base})`);
+            ctx.write(true, `$runtime.bindClassExp(${n.el}, () => (${n.exp})${base})`);
           } else {
             ctx.write(true, `$runtime.setClassToElement(${n.el}, ${n.exp}${base});`);
           }
@@ -354,7 +354,7 @@ export function bindProp(prop, node, element, requireCD) {
             }
             if(this.glob.apply.value) {
               n.requireCD.$value(true);
-              ctx.writeLine(`$runtime.bindClass($cd, ${n.el}, () => !!(${n.exp}), '${n.className}');`);
+              ctx.writeLine(`$runtime.bindClass(${n.el}, () => !!(${n.exp}), '${n.className}');`);
             } else {
               ctx.writeLine(`(${n.exp}) && $runtime.addClass(${n.el}, '${n.className}');`);
             }
@@ -376,7 +376,7 @@ export function bindProp(prop, node, element, requireCD) {
         name: name.slice(1) || 'default',
         el: element.bindName()
       }, (ctx, n) => {
-        ctx.write(true, `$runtime.attachAnchor($option, $cd, ${n.el}`);
+        ctx.write(true, `$runtime.attachAnchor($option, ${n.el}`);
         if(n.name == 'default') ctx.write(');');
         else ctx.write(`, '${n.name}');`);
       })
@@ -414,14 +414,14 @@ export function bindProp(prop, node, element, requireCD) {
           let propName = propList[name] === true ? name : propList[name];
           if(ctx.inuse.apply) {
             requireCD.$value(true);
-            ctx.writeLine(`$watchReadOnly($cd, () => (${data.exp}), (value) => {${data.el}.${propName} = value;});`);
+            ctx.writeLine(`$watchReadOnly(() => (${data.exp}), (value) => {${data.el}.${propName} = value;});`);
           } else {
             ctx.writeLine(`${data.el}.${propName} = ${data.exp};`);
           }
         } else {
           if(ctx.inuse.apply) {
             requireCD.$value(true);
-            ctx.writeLine(`$runtime.bindAttribute($cd, ${data.el}, '${data.name}', () => (${data.exp}));`);
+            ctx.writeLine(`$runtime.bindAttribute(${data.el}, '${data.name}', () => (${data.exp}));`);
           } else {
             ctx.writeLine(`$runtime.bindAttributeBase(${data.el}, '${data.name}', ${data.exp});`);
           }

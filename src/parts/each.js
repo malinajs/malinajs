@@ -45,7 +45,7 @@ export function makeEachBlock(data, option) {
       if(this.script.readOnly) ctx.writeLine(`let ${n.exp} = $$item;`);
       else {
         ctx.writeLine(`let ${n.keywords.join(', ')};`);
-        ctx.writeLine(`$runtime.prefixPush($cd, () => (${n.exp} = $$item));`);
+        ctx.writeLine(`$runtime.prefixPush(() => (${n.exp} = $$item));`);
       }
     });
   } else {
@@ -126,7 +126,7 @@ export function makeEachBlock(data, option) {
     keyFunction,
     block: itemBlock
   }, (ctx, n) => {
-    ctx.writeLine(`$runtime.$$eachBlock($cd, ${option.elName}, ${option.onlyChild ? 1 : 0}, () => (${arrayName}),`);
+    ctx.writeLine(`$runtime.$$eachBlock(${option.elName}, ${option.onlyChild ? 1 : 0}, () => (${arrayName}),`);
     ctx.indent++;
     ctx.write(true);
     if(n.keyFunction === 'noop') ctx.write('$runtime.noop');

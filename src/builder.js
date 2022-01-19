@@ -3,7 +3,16 @@ import { xNode } from './xnode.js';
 
 
 export function buildRuntime() {
+  this.module.head.push(xNode('apply', (ctx) => {
+    if(this.glob.apply.value) {
+      ctx.writeLine('const $$apply = $runtime.makeApply();');
+    } else if(this.inuse.blankApply) {
+      ctx.writeLine('const $$apply = $runtime.noop;');
+    }
+  }));
+
   let runtime = xNode('block', { scope: true, $compile: [] });
+  this.module.body.push(runtime);
 
   let rootCD = this.glob.rootCD;
   rootCD.$handler = (ctx, n) => {
@@ -56,8 +65,6 @@ export function buildRuntime() {
     if(this.glob.componentFn.value == 'thin') ctx.writeLine('return {$dom: $parentElement};');
     else ctx.writeLine('return $parentElement;');
   }));
-
-  this.module.body.push(runtime);
 
   if(!this.script.readOnly && this.css.active() && this.css.containsExternal()) this.require('apply', '$cd');
 
@@ -198,7 +205,7 @@ export function buildBlock(data, option = {}) {
             }, (ctx, n) => {
               if(this.glob.apply.value) {
                 requireCD.$value(true);
-                ctx.writeLine(`$runtime.bindText($cd, ${n.el}, () => ${n.exp});`);
+                ctx.writeLine(`$runtime.bindText(${n.el}, () => ${n.exp});`);
               } else ctx.writeLine(`${n.el}.textContent = ${n.exp};`);
             });
             binds.push(bindText);
@@ -248,7 +255,7 @@ export function buildBlock(data, option = {}) {
                 component: component.bind,
                 el: el.bindName()
               }, (ctx, n) => {
-                ctx.write(true, `$runtime.attachBlock($cd, ${n.el}, `);
+                ctx.write(true, `$runtime.attachBlock(${n.el}, `);
                 ctx.add(n.component);
                 ctx.write(')');
               }));
@@ -314,7 +321,7 @@ export function buildBlock(data, option = {}) {
             el: el.bindName(),
             props: n.spreading
           }, (ctx, n) => {
-            ctx.writeLine(`$runtime.spreadAttributes($cd, ${n.el}, () => ({${n.props.join(', ')}}));`);
+            ctx.writeLine(`$runtime.spreadAttributes(${n.el}, () => ({${n.props.join(', ')}}));`);
           }));
         }
         let bindTail = [];
@@ -481,11 +488,11 @@ export function buildBlock(data, option = {}) {
       ctx.add(n.tpl);
       if(!ctx.isEmpty(n.innerBlock)) {
         if(n.each) {
-          if(n.requireCD.value) ctx.write(`, ($cd, ${n.parentElement}, ${n.each.itemName}, ${n.each.indexName}) => {`, true);
+          if(n.requireCD.value) ctx.write(`, (${n.parentElement}, ${n.each.itemName}, ${n.each.indexName}) => {`, true);
           else ctx.write(`, (${n.parentElement}, ${n.each.itemName}, ${n.each.indexName}) => {`, true);
         } else {
           let extra = option.extraArguments ? ', ' + option.extraArguments.join(', ') : '';
-          if(n.requireCD.value) ctx.write(`, ($cd, ${n.parentElement}${extra}) => {`, true);
+          if(n.requireCD.value) ctx.write(`, (${n.parentElement}${extra}) => {`, true);
           else ctx.write(`, (${n.parentElement}${extra}) => {`, true);
         }
         ctx.indent++;

@@ -51,7 +51,7 @@ export function makeFragment(node, requireCD) {
       if(n.props?.length) {
         if(this.glob.apply.value) {
           ctx.writeLine('let ' + n.props.join(', ') + ';');
-          ctx.writeLine(`$runtime.unwrapProps($cd, $props, ($$) => ({${n.props.join(', ')}} = $$));`);
+          ctx.writeLine(`$runtime.unwrapProps($props, ($$) => ({${n.props.join(', ')}} = $$));`);
         } else {
           ctx.writeLine('let ' + n.props.join(', ') + ';');
           ctx.writeLine(`$props && ({${n.props.join(', ')}} = ($runtime.isFunction($props) ? $props() : $props));`);

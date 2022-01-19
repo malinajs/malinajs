@@ -40,7 +40,7 @@ export function makeifBlock(data, element, requireCD) {
   }, (ctx, n) => {
     if(this.glob.apply.value) {
       n.requireCD.$value(true);
-      ctx.write(true, `$runtime.ifBlock($cd, ${n.el}, () => !!(${n.exp}),`);
+      ctx.write(true, `$runtime.ifBlock(${n.el}, () => !!(${n.exp}),`);
     } else {
       this.glob.component.$value(true);
       ctx.write(true, `$runtime.ifBlockReadOnly($component, ${n.el}, () => !!(${n.exp}),`);
