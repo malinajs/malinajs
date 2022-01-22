@@ -4,8 +4,8 @@ import { xNode } from '../xnode.js';
 export function makeHtmlBlock(exp, label, requireCD) {
   this.detectDependency(exp);
   this.require('$cd');
-  const result = xNode('block', {
-    $deps: [this.glob.apply],
+  return xNode('block', {
+    $require: [this.glob.apply],
     el: label.bindName(),
     exp,
     requireCD
@@ -17,7 +17,4 @@ export function makeHtmlBlock(exp, label, requireCD) {
     } else cd = 'null';
     ctx.write(true, `$runtime.$$htmlBlock(${cd}, ${n.el}, () => (${n.exp}));`);
   });
-
-  requireCD.$depends(result);
-  return result;
 }

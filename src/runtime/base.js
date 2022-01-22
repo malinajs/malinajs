@@ -578,19 +578,20 @@ export const makeRootEvent = (root) => {
 };
 
 export const mount = (label, component, option) => {
-  let app, first, last, destroyList = share.current_destroyList = [];
+  let app, $dom, first, last, destroyList = share.current_destroyList = [];
   try {
-    app = component(option);
-    first = app.$dom.firstChild
-    last = app.$dom.lastChild;
-    label.appendChild(app.$dom);
+    ({$dom, ...app} = component(option));
+    if($dom.nodeType == 11) {
+      first = $dom.firstChild;
+      last = $dom.lastChild;
+    } else first = last = $dom;
+    label.appendChild($dom);
   } finally {
     share.current_destroyList = null;
   }
-  return {
-    destroy: () => {
-      safeGroupCall(destroyList);
-      $$removeElements(first, last);
-    }
+  app.destroy = () => {
+    safeGroupCall(destroyList);
+    $$removeElements(first, last);
   }
+  return app;
 }

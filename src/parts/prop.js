@@ -2,7 +2,7 @@ import { assert, detectExpressionType, isSimpleName, unwrapExp, last, toCamelCas
 import { xNode } from '../xnode.js';
 
 
-export function bindProp(prop, node, element, requireCD) {
+export function bindProp(prop, node, element) {
   let name, arg;
 
   if(prop.content.startsWith('{*')) {
@@ -72,7 +72,6 @@ export function bindProp(prop, node, element, requireCD) {
   } else if(name == 'event') {
     if(prop.name.startsWith('@@')) {
       assert(!prop.value);
-      requireCD.$value(true);
       this.require('$events');
       if(prop.name == '@@') {
         return {
@@ -99,7 +98,6 @@ export function bindProp(prop, node, element, requireCD) {
 
     let { event, fn, rootModifier } = this.makeEventProp(prop, () => element.bindName());
     if(rootModifier) this.require('rootEvent');
-    else requireCD.$value(true);
 
     return {
       bind: xNode('bindEvent', {
@@ -120,7 +118,6 @@ export function bindProp(prop, node, element, requireCD) {
       return;
     }
 
-    requireCD.$value(true);
     this.require('apply');
     let exp;
     arg = arg.split(/[:|]/);
@@ -206,13 +203,13 @@ export function bindProp(prop, node, element, requireCD) {
     };
   } else if(name == 'use') {
     if(arg) {
-      requireCD.$value(true);
       assert(isSimpleName(arg), 'Wrong name: ' + arg);
       this.checkRootName(arg);
       let args = prop.value ? `, () => [${getExpression()}]` : '';
       this.detectDependency(args);
       return {
         bind: xNode('action', {
+          $require: [this.glob.apply],
           name: arg,
           args,
           el: element.bindName()
@@ -265,10 +262,13 @@ export function bindProp(prop, node, element, requireCD) {
         classes = [prop.name.slice(6)];
       }
       return this.config.passClass && classes.some(name => {
-        if(this.css.isExternalClass(name)) compound = true;
-        else if(name[0] == '$') {
+        if(this.css.isExternalClass(name)) {
+          compound = true;
+          this.require('apply');
+        } else if(name[0] == '$') {
           this.css.markAsExternal(name.substring(1));
           compound = true;
+          this.require('apply');
         }
       });
     });
@@ -289,10 +289,10 @@ export function bindProp(prop, node, element, requireCD) {
         }
       }).join(') + \' \' + (');
       const bind = xNode('compound-class', {
+        $require: [this.glob.apply],
         el: element.bindName(),
         exp,
-        classes,
-        requireCD
+        classes
       }, (ctx, n) => {
         let base = '';
         if(n.classes.length) {
@@ -310,21 +310,18 @@ export function bindProp(prop, node, element, requireCD) {
 
         if(ctx.inuse.resolveClass) {
           if(ctx.inuse.apply) {
-            n.requireCD.$value(true);
             ctx.write(true, `$runtime.bindClassExp(${n.el}, () => $$resolveClass((${n.exp})${base}))`);
           } else {
             ctx.write(true, `$runtime.setClassToElement(${n.el}, $$resolveClass((${n.exp})${base}));`);
           }
         } else {
           if(ctx.inuse.apply) {
-            n.requireCD.$value(true);
             ctx.write(true, `$runtime.bindClassExp(${n.el}, () => (${n.exp})${base})`);
           } else {
             ctx.write(true, `$runtime.setClassToElement(${n.el}, ${n.exp}${base});`);
           }
         }
       });
-      requireCD.$depends(bind);
       return { bind };
     } else {
       let bind = xNode('block');
@@ -340,12 +337,11 @@ export function bindProp(prop, node, element, requireCD) {
           this.detectDependency(exp);
 
           let n = xNode('bindClass', {
-            $deps: [this.glob.apply],
+            $require: [this.glob.apply],
             el: element.bindName(),
             className,
             exp,
-            $element: exp.includes('$element'),
-            requireCD
+            $element: exp.includes('$element')
           }, (ctx, n) => {
             if(n.$element) {
               ctx.writeLine('{');
@@ -353,7 +349,6 @@ export function bindProp(prop, node, element, requireCD) {
               ctx.writeLine(`let $element = ${n.el};`);
             }
             if(this.glob.apply.value) {
-              n.requireCD.$value(true);
               ctx.writeLine(`$runtime.bindClass(${n.el}, () => !!(${n.exp}), '${n.className}');`);
             } else {
               ctx.writeLine(`(${n.exp}) && $runtime.addClass(${n.el}, '${n.className}');`);
@@ -363,14 +358,12 @@ export function bindProp(prop, node, element, requireCD) {
               ctx.writeLine('}');
             }
           });
-          requireCD.$depends(n);
           bind.push(n);
         }
       });
       return { bind: bind.body.length ? bind : null };
     }
   } else if(name[0] == '^') {
-    requireCD.$value(true);
     return {
       bindTail: xNode('bindAnchor', {
         name: name.slice(1) || 'default',
@@ -403,31 +396,28 @@ export function bindProp(prop, node, element, requireCD) {
       };
 
       let n = xNode('bindAttribute', {
+        $require: [this.glob.apply],
         name,
         exp,
         hasElement,
-        el: element.bindName(),
-        requireCD
+        el: element.bindName()
       }, (ctx, data) => {
         if(data.hasElement) ctx.writeLine(`let $element=${data.el};`);
         if(propList[name]) {
           let propName = propList[name] === true ? name : propList[name];
           if(ctx.inuse.apply) {
-            requireCD.$value(true);
             ctx.writeLine(`$watchReadOnly(() => (${data.exp}), (value) => {${data.el}.${propName} = value;});`);
           } else {
             ctx.writeLine(`${data.el}.${propName} = ${data.exp};`);
           }
         } else {
           if(ctx.inuse.apply) {
-            requireCD.$value(true);
             ctx.writeLine(`$runtime.bindAttribute(${data.el}, '${data.name}', () => (${data.exp}));`);
           } else {
             ctx.writeLine(`$runtime.bindAttributeBase(${data.el}, '${data.name}', ${data.exp});`);
           }
         }
       });
-      requireCD.$depends(n);
 
       return {
         bind: xNode('block', {

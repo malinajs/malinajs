@@ -22,13 +22,13 @@ export function attachPortal(node, requireCD) {
 
   const result = xNode('portal', {
     $compile: [bb.source],
-    $deps: [bb.requireCD],
+    $require: [bb.requireCD],
     mount,
     source: bb.source,
     template: bb.template,
     requireCD
   }, (ctx, n) => {
-    if(n.$deps[0].value) n.requireCD.$value(true);
+    if(n.$require[0].value) n.requireCD.$value(true);
     let label = n.mount || 'document.body';
     ctx.writeLine('{');
     ctx.indent++;
@@ -36,11 +36,10 @@ export function attachPortal(node, requireCD) {
     ctx.add(n.source);
     ctx.writeLine('let $$first = $parentElement[$runtime.firstChild];');
     ctx.writeLine('let $$last = $parentElement.lastChild;');
-    ctx.writeLine(`$runtime.cd_onDestroy(${n.$deps[0].value ? '$cd' : '$component'}, () => $runtime.$$removeElements($$first, $$last));`);
+    ctx.writeLine(`$runtime.cd_onDestroy(${n.$require[0].value ? '$cd' : '$component'}, () => $runtime.$$removeElements($$first, $$last));`);
     ctx.writeLine(`$tick(() => ${label}.appendChild($parentElement));`);
     ctx.indent--;
     ctx.writeLine('}');
   });
-  requireCD.$depends(result);
   return result;
 }

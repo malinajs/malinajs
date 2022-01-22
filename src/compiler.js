@@ -71,10 +71,10 @@ export async function compile(source, config = {}) {
 
     inuse: {},
     glob: {
+      $component: xNode('$component', false),
+      rootCD: xNode('root-cd', false),
       apply: xNode('apply', false),
-      component: xNode('$component', false),
-      componentFn: xNode('componentFn', false),
-      rootCD: xNode('root-cd', false)
+      componentFn: xNode('componentFn', {$require: ['apply', 'rootCD', '$component']}, false)
     },
     require: function(...args) {
       for(let name of args) {
@@ -85,13 +85,10 @@ export async function compile(source, config = {}) {
         ctx.inuse[name]++;
         if(!deps) continue;
         if(name == 'apply') ctx.glob.apply.$value(true);
-        if(name == '$component') ctx.glob.component.$value(true);
+        if(name == '$component') ctx.glob.$component.$value(true);
         if(name == '$attributes') ctx.require('$props');
         if(name == '$props' && !ctx.script.readOnly) ctx.require('apply', '$cd');
-        if(name == '$cd') {
-          ctx.glob.rootCD.$value(true);
-          ctx.require('$component');
-        }
+        if(name == '$cd') ctx.glob.rootCD.$value(true);
         if(name == '$onDestroy') ctx.require('$component');
         if(name == '$onMount') ctx.require('$component');
       }
@@ -127,6 +124,8 @@ export async function compile(source, config = {}) {
       return xBuild(ctx, node);
     }
   };
+
+  setup.call(ctx);
 
   await hook(ctx, 'dom:before');
   ctx.parseHTML();
@@ -176,7 +175,15 @@ export async function compile(source, config = {}) {
     result.push('import { $$htmlToFragment } from \'malinajs/runtime.js\';');
   }
   result.push(ctx.module.top);
-  result.push(makeComponentFn.call(ctx));
+  result.push(xNode('componentFn-wrapper', {
+    $compile: [ctx.module.head, ctx.module.code, ctx.module.body, ctx.glob.rootCD],
+    name: config.name,
+    componentFn: ctx.glob.componentFn
+  }, (ctx, n) => {
+    if(config.exportDefault) ctx.write(true, 'export default ');
+    else ctx.write(true, `const ${n.name} = `);
+    ctx.add(n.componentFn);
+  }));
 
   ctx.result = xBuild(ctx, result);
 
@@ -239,11 +246,15 @@ function loadConfig(filename, option) {
 }
 
 
-function makeComponentFn() {
-  let componentFn = xNode('componentFn', {
-    $deps: [this.glob.apply, this.glob.rootCD],
-    body: [this.module.head, this.module.code, this.module.body]
-  }, (ctx, n) => {
+function setup() {
+  for(let k in this.glob) {
+    let n = this.glob[k];
+    if(!n.$require) continue;
+    n.$require = n.$require.map(n => this.glob[n]);
+  }
+
+  this.glob.componentFn.body = [this.module.head, this.module.code, this.module.body];
+  this.glob.componentFn.$handler = (ctx, n) => {
     let component = xNode('function', {
       args: ['$option'],
       inline: true,
@@ -252,30 +263,16 @@ function makeComponentFn() {
     });
 
     if(this.glob.apply.value || this.glob.rootCD.value || ctx.inuse.$cd || ctx.inuse.$component || ctx.inuse.$context || ctx.inuse.blankApply) {
-      ctx.add(this.glob.componentFn);
       ctx.write('$runtime.makeComponent(');
       ctx.add(component);
       ctx.write(');', true);
     } else {
       this.glob.componentFn.$value('thin');
-      ctx.add(this.glob.componentFn);
       ctx.write('($option={}) => {', true);
       ctx.goIndent(() => {
         ctx.add(xNode('block', { body: n.body }));
       });
       ctx.write(true, '}');
     }
-  });
-
-  return xNode('block', {
-    $compile: [this.module.head, this.module.code, this.module.body],
-    name: this.config.name,
-    componentFn
-  }, (ctx, n) => {
-    ctx.writeIndent();
-    if(this.config.exportDefault) ctx.write('export default ');
-    else ctx.write(`const ${n.name} = `);
-    ctx.add(this.glob.apply);
-    ctx.add(n.componentFn);
-  });
+  };
 }

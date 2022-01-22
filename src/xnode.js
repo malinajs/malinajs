@@ -1,4 +1,4 @@
-import { last, assert, htmlEntitiesToText } from './utils.js';
+import { last, assert, htmlEntitiesToText, isFunction } from './utils.js';
 
 
 function I(value = 0) {
@@ -57,8 +57,8 @@ export function xBuild(ctx, node) {
     });
     if(!n.$done) {
       let ready = true;
-      if(n.$deps?.length) {
-        if(n.$deps.some(i => i != null && !i.$done)) {
+      if(n.$require?.length) {
+        if(n.$require.some(i => i != null && !i.$done)) {
           pending++;
           ready = false;
         }
@@ -133,11 +133,23 @@ const noop = () => {};
 
 export function xNode(_type, _data, _handler) {
   /*
-        xNode(type, data, handler)
-        xNode(type, handler)
-        xNode(data, handler)
-        xNode(handler)
-    */
+    xNode(type, data, handler)
+    xNode(type, handler)
+    xNode(data, handler)
+    xNode(handler)
+    xNode(xNode, data, handler)
+  */
+  if(_type instanceof xNode) {
+    let n = _type;
+    if(isFunction(_handler)) {
+      Object.assign(n, _data);
+      n.$handler = _handler;
+    } else {
+      assert(!_handler && isFunction(_data), 'Wrong xNode usage');
+      n.$handler = _data;
+    }
+    return n;
+  }
   if(!(this instanceof xNode)) return new xNode(_type, _data, _handler);
 
   let type, data, handler;
@@ -146,6 +158,9 @@ export function xNode(_type, _data, _handler) {
     if(_data === false && !_handler) {
       handler = noop;
       data = null;
+    } else if(_handler === false && typeof(_data) == 'object') {
+      handler = noop;
+      data = _data;
     } else if(typeof _data == 'function') {
       assert(!_handler);
       handler = _data;
@@ -177,11 +192,15 @@ export function xNode(_type, _data, _handler) {
   this.$done = false;
   this.$inserted = false;
   this.$result = [];
-  this.$depends = function(n) {
-    assert(!this.$done, 'Attempt to add dependecy, but node is already resolved');
-    if(!this.$deps) this.$deps = [];
-    this.$deps.push(n);
-  };
+
+  if(this.$hold) {
+    this.$hold.forEach(n => {
+      assert(!n.$done, 'Attempt to add dependecy, but node is already resolved');
+      if(!n.$require) n.$require = [];
+      n.$require.push(this);
+    });
+    delete this.$hold;
+  }
   this.$value = function(value) {
     assert(!this.$done, 'Attempt to set active, depends node is already resolved');
     this.value = value === undefined ? true : value;

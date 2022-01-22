@@ -243,3 +243,5 @@ export const htmlEntitiesToText = (text) => {
   });
   return text;
 };
+
+export const isFunction = fn => typeof fn == 'function';

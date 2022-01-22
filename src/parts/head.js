@@ -29,7 +29,8 @@ export function attachHead(n, requireCD) {
     });
 
     let d = {
-      $deps: [this.glob.apply],
+      $require: [this.glob.apply],
+      $hold: [requireCD],
       requireCD
     };
     if(title?.body?.[0]) {
@@ -55,7 +56,7 @@ export function attachHead(n, requireCD) {
       d.blockCD = bb.requireCD;
 
       d.$compile = [d.source];
-      d.$deps.push(d.blockCD);
+      d.$require.push(d.blockCD);
 
       this.require('$onDestroy');
     }
@@ -82,7 +83,6 @@ export function attachHead(n, requireCD) {
         ctx.writeLine('}');
       }
     });
-    requireCD.$depends(result);
     return result;
   } else throw 'Wrong tag';
 }

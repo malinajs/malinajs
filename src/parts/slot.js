@@ -21,10 +21,10 @@ export function attachSlot(slotName, node, requireCD) {
   if(node.body?.length) placeholder = this.buildBlock(node).block;
 
   this.require('$context');
-  this.glob.component.$value(true);
+  this.glob.$component.$value(true);
 
   let result = xNode('slot', {
-    $deps: [this.glob.apply],
+    $require: [this.glob.apply],
     name: slotName,
     props,
     staticProps,
@@ -63,6 +63,5 @@ export function attachSlot(slotName, node, requireCD) {
     }
     ctx.write(')');
   });
-  requireCD.$depends(result);
   return result;
 }

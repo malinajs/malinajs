@@ -57,11 +57,9 @@ export function ifBlock(label, fn, build, buildElse) {
 }
 
 
-export function ifBlockReadOnly(component, label, fn, build, buildElse) {
+export function ifBlockReadOnly(label, fn, build, buildElse) {
   function createBlock(builder) {
-    let { destroy, $dom } = builder();
-    cd_onDestroy(component, destroy);
-    insertAfter(label, $dom);
+    insertAfter(label, builder());
   }
 
   if(fn()) createBlock(build);

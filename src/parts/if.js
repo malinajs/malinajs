@@ -2,7 +2,7 @@ import { assert } from '../utils.js';
 import { xNode } from '../xnode.js';
 
 
-export function makeifBlock(data, element, requireCD) {
+export function makeifBlock(data, element) {
   let r = data.value.match(/^#if (.*)$/s);
   let exp = r[1];
   assert(exp, 'Wrong binding: ' + data.value);
@@ -30,19 +30,17 @@ export function makeifBlock(data, element, requireCD) {
     mainBlock = getBlock(this.buildBlock(data, { protectLastTag: true, allowSingleBlock: true }));
   }
 
-  const result = xNode('if:bind', {
-    $deps: [this.glob.apply],
-    requireCD,
+  return xNode('if:bind', {
+    $require: [this.glob.apply],
     el: element.bindName(),
     exp,
     mainBlock: mainBlock,
     elseBlock: elseBlock
   }, (ctx, n) => {
     if(this.glob.apply.value) {
-      n.requireCD.$value(true);
       ctx.write(true, `$runtime.ifBlock(${n.el}, () => !!(${n.exp}),`);
     } else {
-      this.glob.component.$value(true);
+      this.glob.$component.$value(true);
       ctx.write(true, `$runtime.ifBlockReadOnly($component, ${n.el}, () => !!(${n.exp}),`);
     }
 
@@ -56,7 +54,4 @@ export function makeifBlock(data, element, requireCD) {
     ctx.indent--;
     ctx.write(true, ');', true);
   });
-  requireCD.$depends(result);
-  this.glob.component.$depends(result);
-  return result;
 }

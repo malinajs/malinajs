@@ -3,27 +3,16 @@ import { xNode } from './xnode.js';
 
 
 export function buildRuntime() {
-  this.module.head.push(xNode('apply', (ctx) => {
-    if(this.glob.apply.value) {
-      ctx.writeLine('const $$apply = $runtime.makeApply();');
-    } else if(this.inuse.blankApply) {
-      ctx.writeLine('const $$apply = $runtime.noop;');
-    }
+  this.module.head.push(xNode(this.glob.$component, (ctx, n) => {
+    if(n.value) ctx.write(true, 'const $component = $runtime.current_component;');
+  }));
+
+  this.module.head.push(xNode(this.glob.apply, (ctx, n) => {
+    if(n.value) ctx.writeLine('const $$apply = $runtime.makeApply();');
   }));
 
   let runtime = xNode('block', { scope: true, $compile: [] });
   this.module.body.push(runtime);
-
-  let rootCD = this.glob.rootCD;
-  rootCD.$handler = (ctx, n) => {
-    n.$value(!!n.$deps[0].value);
-    if(n.value) {
-      ctx.writeLine('let $cd = $component.$cd;');
-      this.glob.component.$value(true);
-    }
-  };
-  runtime.push(rootCD);
-  this.glob.component.$depends(rootCD);
 
   let bb = this.buildBlock(this.DOM, {
     inline: true,
@@ -32,7 +21,6 @@ export function buildRuntime() {
       cloneNode: true
     }
   });
-  bb.requireCD && rootCD.$depends(bb.requireCD);
   runtime.push(bb.template);
   runtime.push(xNode('root-event', (ctx) => {
     if(!this.inuse.rootEvent) return;
@@ -60,7 +48,7 @@ export function buildRuntime() {
   }));
 
   runtime.push(xNode('bind-component-element', {
-    $deps: [this.glob.componentFn]
+    $require: [this.glob.componentFn]
   }, (ctx) => {
     if(this.glob.componentFn.value == 'thin') ctx.writeLine('return {$dom: $parentElement};');
     else ctx.writeLine('return $parentElement;');
@@ -199,17 +187,15 @@ export function buildBlock(data, option = {}) {
           } else {
             textNode = tpl.push(' ');
             let bindText = xNode('bindText', {
-              $deps: [this.glob.apply],
+              $require: [this.glob.apply],
               el: textNode.bindName(),
               exp: pe.result
             }, (ctx, n) => {
-              if(this.glob.apply.value) {
-                requireCD.$value(true);
+              if(this.inuse.apply) {
                 ctx.writeLine(`$runtime.bindText(${n.el}, () => ${n.exp});`);
               } else ctx.writeLine(`${n.el}.textContent = ${n.exp};`);
             });
             binds.push(bindText);
-            requireCD.$depends(bindText);
           }
 
           pe.parts.forEach(p => {
@@ -248,9 +234,9 @@ export function buildBlock(data, option = {}) {
 
             if(n.name == 'component') {
               // dyn-component
-              binds.push(this.makeComponentDyn(n, requireCD, el));
+              binds.push(this.makeComponentDyn(n, el));
             } else {
-              let component = this.makeComponent(n, requireCD);
+              let component = this.makeComponent(n);
               binds.push(xNode('attach-component', {
                 component: component.bind,
                 el: el.bindName()
@@ -281,7 +267,7 @@ export function buildBlock(data, option = {}) {
           let slot = this.attachSlot(slotName, n, requireCD);
 
           binds.push(xNode('attach-slot', {
-            $deps: [requireCD],
+            $require: [requireCD],
             $compile: [slot],
             el: el.bindName(),
             slot,
@@ -326,7 +312,7 @@ export function buildBlock(data, option = {}) {
         }
         let bindTail = [];
         n.attributes.forEach(p => {
-          let b = this.bindProp(p, n, el, requireCD);
+          let b = this.bindProp(p, n, el);
           if(b) {
             if(b.bind) binds.push(b.bind);
             if(b.bindTail) bindTail.push(b.bindTail);
@@ -358,7 +344,6 @@ export function buildBlock(data, option = {}) {
           go(n, false, el);
         }
       } else if(n.type === 'each') {
-        requireCD.$value(true);
         if(data.type == 'node' && data.body.length == 1) {
           lastStatic = null;
           let eachBlock = this.makeEachBlock(n, {
@@ -376,7 +361,7 @@ export function buildBlock(data, option = {}) {
         }
       } else if(n.type === 'if') {
         if(isRoot) requireFragment = true;
-        binds.push(this.makeifBlock(n, placeLabel(n.value), requireCD));
+        binds.push(this.makeifBlock(n, placeLabel(n.value)));
         return;
       } else if(n.type === 'systag') {
         let r = n.value.match(/^@(\w+)\s+(.*)$/s);
@@ -418,7 +403,6 @@ export function buildBlock(data, option = {}) {
 
   let innerBlock = null;
   if(binds.body.length) {
-    binds.push(requireCD);
     innerBlock = xNode('block');
     if(!option.oneElement) {
       innerBlock.push(xNode('bindNodes', {
@@ -455,7 +439,6 @@ export function buildBlock(data, option = {}) {
       result.source = innerBlock;
     }
   } else {
-    result.requireCD.$done = true;
     result.name = '$runtime.noop';
     result.source = null;
   }
@@ -470,30 +453,24 @@ export function buildBlock(data, option = {}) {
     else template.inline = true;
 
     result.block = xNode('block', {
-      $compile: [innerBlock, requireCD],
-      $deps: [requireCD],
-      requireCD,
+      $compile: [innerBlock],
       innerBlock,
       tpl: template,
       each: option.each,
       parentElement: option.parentElement
     }, (ctx, n) => {
       if(n.each && !ctx.isEmpty(n.innerBlock)) {
-        if(n.requireCD.value) ctx.write('$runtime.makeEachBlock(');
-        else ctx.write('$runtime.makeStaticEachBlock(');
+        ctx.write('$runtime.makeEachBlock(');
       } else {
-        if(n.requireCD.value) ctx.write('$runtime.makeBlock(');
-        else ctx.write('$runtime.makeStaticBlock(');
+        ctx.write('$runtime.makeBlock(');
       }
       ctx.add(n.tpl);
       if(!ctx.isEmpty(n.innerBlock)) {
         if(n.each) {
-          if(n.requireCD.value) ctx.write(`, (${n.parentElement}, ${n.each.itemName}, ${n.each.indexName}) => {`, true);
-          else ctx.write(`, (${n.parentElement}, ${n.each.itemName}, ${n.each.indexName}) => {`, true);
+          ctx.write(`, (${n.parentElement}, ${n.each.itemName}, ${n.each.indexName}) => {`, true);
         } else {
           let extra = option.extraArguments ? ', ' + option.extraArguments.join(', ') : '';
-          if(n.requireCD.value) ctx.write(`, (${n.parentElement}${extra}) => {`, true);
-          else ctx.write(`, (${n.parentElement}${extra}) => {`, true);
+          ctx.write(`, (${n.parentElement}${extra}) => {`, true);
         }
         ctx.indent++;
         ctx.add(n.innerBlock);

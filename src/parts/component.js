@@ -2,13 +2,12 @@ import { assert, detectExpressionType, isSimpleName, unwrapExp, trimEmptyNodes }
 import { xNode } from '../xnode.js';
 
 
-export function makeComponent(node, requireCD) {
+export function makeComponent(node) {
   this.require('apply');
 
   let propList = node.attributes;
 
   this.require('$context');
-  requireCD.$value(true); // FIX
 
   let reference = null;
   let propsFn = [], propsSetter = [], $class = [], staticProps = true;
@@ -85,12 +84,11 @@ export function makeComponent(node, requireCD) {
       }
 
       if(props) this.require('apply');
-      requireCD.$value(true); // FIXME
 
       let block = this.buildBlock(slot, { inline: true });
 
       slotBlocks.push(xNode('slot', {
-        $deps: [this.glob.apply],
+        $require: [this.glob.apply],
         name: slot.name,
         template: block.template,
         bind: block.source,
@@ -126,11 +124,11 @@ export function makeComponent(node, requireCD) {
 
       anchorBlocks.push(xNode('anchor', {
         $compile: [block],
-        $deps: [bb.requireCD],
+        $require: [bb.requireCD],
         name,
         block
       }, (ctx, n) => {
-        let useCD = n.$deps[0].value;
+        let useCD = n.$require[0].value;
         if(useCD) ctx.write(`${n.name}: {$: ($cd, el) => {`);
         else ctx.write(`${n.name}: (el) => {`);
         ctx.indent++;
@@ -355,7 +353,7 @@ export function makeComponent(node, requireCD) {
   return { bind: result };
 }
 
-export function makeComponentDyn(node, requireCD, element) {
+export function makeComponentDyn(node, element) {
   let dynamicComponent;
 
   if(node.elArg) {
@@ -371,9 +369,8 @@ export function makeComponentDyn(node, requireCD, element) {
 
   assert(dynamicComponent);
   this.detectDependency(dynamicComponent);
-  requireCD.$value(true);
 
-  let component = this.makeComponent(node, requireCD).bind;
+  let component = this.makeComponent(node).bind;
 
   component.componentName = '$ComponentConstructor';
   return xNode('dyn-component', {

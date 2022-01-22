@@ -32,7 +32,7 @@ export function makeFragment(node, requireCD) {
 
   return xNode('fragment', {
     $compile: [block.source, this.glob.apply],
-    $deps: [block.requireCD],
+    $require: [block.requireCD],
     name,
     props,
     external,
@@ -121,7 +121,7 @@ export function attachFragment(node) {
 
   return xNode('call-fragment', {
     $compile: [slot?.source],
-    $deps: [this.glob.apply],
+    $require: [this.glob.apply],
     forwardAllEvents,
     name,
     events,
@@ -217,7 +217,7 @@ export function attchExportedFragment(node, label, componentName, requireCD) {
   if(body.length) {
     data.slot = this.buildBlock({ body }, { inline: true });
     data.$compile = [data.slot.source];
-    data.$deps = [data.slot.requireCD];
+    data.$require = [data.slot.requireCD];
     // assert(!data.slot.template.svg, 'SVG is not supported for exported fragment');
   }
 

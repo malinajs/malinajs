@@ -306,11 +306,6 @@ export function transform() {
     resultBody.push(n);
   });
 
-  this.glob.component.$handler = (ctx, n) => {
-    if(this.inuse.$component || n.value) ctx.writeLine('const $component = $runtime.current_component;');
-  };
-  this.module.head.push(this.glob.component);
-
   let header = [];
   header.push(rawNode(() => {
     if(this.inuse.$events) return 'const $events = $option.events || {};';
