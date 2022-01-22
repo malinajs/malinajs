@@ -39,9 +39,10 @@ export function buildRuntime() {
   }));
 
   this.module.head.push(xNode(this.glob.apply, {
-    $hold: ['componentFn']
+    $hold: ['componentFn'],
+    $wait: ['rootCD']
   }, (ctx, n) => {
-    if(n.value) {
+    if(n.value || this.inuse.rootCD) {
       this.require('componentFn');
       if(n.value == 'readOnly') ctx.writeLine('const $$apply = $runtime.noop;');
       else ctx.writeLine('const $$apply = $runtime.makeApply();');

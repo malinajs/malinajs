@@ -120,7 +120,7 @@ export async function compile(source, config = {}) {
     }
   };
 
-  setup.call(ctx);
+  use_context(ctx, () => setup.call(ctx));
 
   await hook(ctx, 'dom:before');
   ctx.parseHTML();

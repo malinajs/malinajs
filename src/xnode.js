@@ -50,7 +50,7 @@ function xWriter(node) {
 
 
 export function xBuild(node) {
-  let pending = 0;
+  let pending, trace;
   const resolve = n => {
     n.$compile?.forEach(c => {
       c != null && resolve(c);
@@ -61,6 +61,7 @@ export function xBuild(node) {
         const allDone = n.$wait.every(i => {
           if(i == null) return true;
           assert(i instanceof xNode, '$wait supports only xNode');
+          if(!i.$done) trace.push(`${n.$type} -> ${i.$type}`);
           return i.$done;
         });
         if(!allDone) {
@@ -84,10 +85,14 @@ export function xBuild(node) {
   let depth;
   for(depth = 10; depth > 0; depth--) {
     pending = 0;
+    trace = [];
     resolve(node);
     if(!pending) break;
   }
-  if(!depth) throw new Error('xNode: Circular dependency');
+  if(!depth) {
+    trace.forEach(i => get_context().warning(` * ${i}`))
+    throw new Error('xNode: Circular dependency');
+  }
 
   let result = [];
 
@@ -153,6 +158,7 @@ export function xNode(_type, _data, _handler) {
       assert(!_handler && isFunction(_data), 'Wrong xNode usage');
       n.$handler = _data;
     }
+    resolveDependecies(n);
     return n;
   }
   if(!(this instanceof xNode)) return new xNode(_type, _data, _handler);
@@ -198,8 +204,17 @@ export function xNode(_type, _data, _handler) {
   this.$inserted = false;
   this.$result = [];
 
-  if(this.$wait) {
-    this.$wait = this.$wait.map(n => {
+  this.$value = function(value) {
+    assert(!this.$done, 'Attempt to set active, depends node is already resolved');
+    this.value = value === undefined ? true : value;
+  };
+  resolveDependecies(this);
+  return this;
+}
+
+const resolveDependecies = node => {
+  if(node.$wait) {
+    node.$wait = node.$wait.map(n => {
       if(typeof(n) == 'string') {
         const context = get_context();
         assert(context.glob[n], `Wrong dependency '${n}'`);
@@ -209,8 +224,8 @@ export function xNode(_type, _data, _handler) {
     });
   }
 
-  if(this.$hold) {
-    this.$hold.forEach(n => {
+  if(node.$hold) {
+    node.$hold.forEach(n => {
       if(typeof(n) == 'string') {
         const context = get_context();
         assert(context.glob[n], `Wrong dependency '${n}'`);
@@ -218,15 +233,10 @@ export function xNode(_type, _data, _handler) {
       }
       assert(!n.$done, 'Attempt to add dependecy, but node is already resolved');
       if(!n.$wait) n.$wait = [];
-      n.$wait.push(this);
+      n.$wait.push(node);
     });
-    delete this.$hold;
+    delete node.$hold;
   }
-  this.$value = function(value) {
-    assert(!this.$done, 'Attempt to set active, depends node is already resolved');
-    this.value = value === undefined ? true : value;
-  };
-  return this;
 }
 
 xNode.init = {
