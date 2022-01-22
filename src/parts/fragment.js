@@ -31,8 +31,8 @@ export function makeFragment(node, requireCD) {
   }
 
   return xNode('fragment', {
-    $compile: [block.source, this.glob.apply],
-    $require: [block.requireCD],
+    $compile: [block.source],
+    $wait: [block.requireCD, 'apply'],
     name,
     props,
     external,
@@ -49,7 +49,7 @@ export function makeFragment(node, requireCD) {
       if(n.block.requireCD.value) ctx.write(true, 'let $cd = $runtime.cd_new();');
 
       if(n.props?.length) {
-        if(this.glob.apply.value) {
+        if(this.inuse.apply) {
           ctx.writeLine('let ' + n.props.join(', ') + ';');
           ctx.writeLine(`$runtime.unwrapProps($props, ($$) => ({${n.props.join(', ')}} = $$));`);
         } else {
@@ -121,7 +121,7 @@ export function attachFragment(node) {
 
   return xNode('call-fragment', {
     $compile: [slot?.source],
-    $require: [this.glob.apply],
+    $wait: ['apply'],
     forwardAllEvents,
     name,
     events,
@@ -138,7 +138,7 @@ export function attachFragment(node) {
 
       const writeProps = () => ctx.write('{' + n.props.map(p => p.name == p.value ? p.name : `${p.name}: ${p.value}`).join(', ') + '}');
 
-      if(n.staticProps || !this.glob.apply.value) writeProps();
+      if(n.staticProps || !this.inuse.apply) writeProps();
       else {
         ctx.write('() => (');
         writeProps();
@@ -217,7 +217,7 @@ export function attchExportedFragment(node, label, componentName, requireCD) {
   if(body.length) {
     data.slot = this.buildBlock({ body }, { inline: true });
     data.$compile = [data.slot.source];
-    data.$require = [data.slot.requireCD];
+    data.$wait = [data.slot.requireCD];
     // assert(!data.slot.template.svg, 'SVG is not supported for exported fragment');
   }
 

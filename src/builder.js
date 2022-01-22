@@ -8,28 +8,28 @@ export function buildRuntime() {
   }));
 
   this.module.head.push(xNode(this.glob.$component, {
-    $hold: [this.glob.componentFn]
+    $hold: ['componentFn']
   }, (ctx, n) => {
     if(n.value) {
-      this.glob.componentFn.$value(true);
+      this.require('componentFn');
       ctx.write(true, 'const $component = $runtime.current_component;');
     }
   }));
 
   this.module.head.push(xNode('$context', {
-    $hold: [this.glob.componentFn],
+    $hold: ['componentFn'],
   }, (ctx) => {
     if(this.inuse.$context) {
-      this.glob.componentFn.$value(true);
+      this.require('componentFn');
       ctx.write(true, 'const $context = $runtime.$context;');
     }
   }));
 
   this.module.top.push(xNode(this.glob.$onMount, {
-    $hold: [this.glob.componentFn]
+    $hold: ['componentFn']
   }, (ctx, n) => {
     if(n.value) {
-      this.glob.componentFn.$value(true);
+      this.require('componentFn');
       ctx.write(true, `import { $onMount } from 'malinajs/runtime.js';`);
     }
   }));
@@ -39,10 +39,10 @@ export function buildRuntime() {
   }));
 
   this.module.head.push(xNode(this.glob.apply, {
-    $hold: [this.glob.componentFn]
+    $hold: ['componentFn']
   }, (ctx, n) => {
     if(n.value) {
-      this.glob.componentFn.$value(true);
+      this.require('componentFn');
       if(n.value == 'readOnly') ctx.writeLine('const $$apply = $runtime.noop;');
       else ctx.writeLine('const $$apply = $runtime.makeApply();');
     }
@@ -99,13 +99,13 @@ export function buildRuntime() {
   }));
 
   runtime.push(xNode('bind-component-element', {
-    $require: [this.glob.componentFn]
+    $wait: ['componentFn']
   }, (ctx) => {
-    if(this.glob.componentFn.value) ctx.writeLine('return $parentElement;');
+    if(this.inuse.componentFn) ctx.writeLine('return $parentElement;');
     else ctx.writeLine('return {$dom: $parentElement};');
   }));
 
-  if(!this.script.readOnly && this.css.active() && this.css.containsExternal()) this.require('apply', '$cd');
+  if(!this.script.readOnly && this.css.active() && this.css.containsExternal()) this.require('apply', 'rootCD');
 
   this.module.head.push(xNode('resolveClass', (ctx) => {
     if(!this.inuse.resolveClass) return;
@@ -238,7 +238,7 @@ export function buildBlock(data, option = {}) {
           } else {
             textNode = tpl.push(' ');
             let bindText = xNode('bindText', {
-              $require: ['apply'],
+              $wait: ['apply'],
               el: textNode.bindName(),
               exp: pe.result
             }, (ctx, n) => {
@@ -318,7 +318,7 @@ export function buildBlock(data, option = {}) {
           let slot = this.attachSlot(slotName, n, requireCD);
 
           binds.push(xNode('attach-slot', {
-            $require: [requireCD],
+            $wait: [requireCD],
             $compile: [slot],
             el: el.bindName(),
             slot,

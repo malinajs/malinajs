@@ -29,7 +29,7 @@ export function attachHead(n, requireCD) {
     });
 
     let d = {
-      $require: [this.glob.apply],
+      $wait: ['apply'],
       $hold: [requireCD],
       requireCD
     };
@@ -56,7 +56,7 @@ export function attachHead(n, requireCD) {
       d.blockCD = bb.requireCD;
 
       d.$compile = [d.source];
-      d.$require.push(d.blockCD);
+      d.$wait.push(d.blockCD);
 
       this.require('$onDestroy');
     }
@@ -65,7 +65,7 @@ export function attachHead(n, requireCD) {
       if(n.blockCD.value) n.requireCD.$value(true);
       if(n.title != null) ctx.writeLine(`document.title = ${n.title};`);
       if(n.dynTitle) {
-        if(this.glob.apply.value) {
+        if(this.inuse.apply) {
           n.requireCD.$value(true);
           ctx.writeLine(`$watchReadOnly($cd, () => (${n.dynTitle}), (value) => {document.title = value;});`);
         } else ctx.writeLine(`document.title = ${n.dynTitle};`);

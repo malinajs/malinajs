@@ -88,7 +88,7 @@ export function makeComponent(node) {
       let block = this.buildBlock(slot, { inline: true });
 
       slotBlocks.push(xNode('slot', {
-        $require: [this.glob.apply],
+        $wait: ['apply'],
         name: slot.name,
         template: block.template,
         bind: block.source,
@@ -105,7 +105,7 @@ export function makeComponent(node) {
           if(n.props) ctx.write(true, `let {${n.props.join(', ')}} = $localProps;`);
           ctx.add(n.bind);
 
-          if(n.props && this.glob.apply.value) ctx.write(true, `return ($localProps) => ({${n.props.join(', ')}} = $localProps, $$apply());`);
+          if(n.props && this.inuse.apply) ctx.write(true, `return ($localProps) => ({${n.props.join(', ')}} = $localProps, $$apply());`);
           ctx.indent--;
           ctx.writeLine('})');
         } else {
@@ -124,11 +124,11 @@ export function makeComponent(node) {
 
       anchorBlocks.push(xNode('anchor', {
         $compile: [block],
-        $require: [bb.requireCD],
+        $wait: [bb.requireCD],  // FIXME
         name,
         block
       }, (ctx, n) => {
-        let useCD = n.$require[0].value;
+        let useCD = n.$wait[0].value;
         if(useCD) ctx.write(`${n.name}: {$: ($cd, el) => {`);
         else ctx.write(`${n.name}: (el) => {`);
         ctx.indent++;

@@ -361,7 +361,7 @@ export function transform() {
 
   if(this.scriptNodes[0] && this.scriptNodes[0].attributes.some(a => a.name == 'property')) {
     result.props.forEach(p => {
-      this.require('$cd');
+      this.require('rootCD');
       resultBody.push(rawNode(`$runtime.makeExternalProperty($component, '${p.name}', () => ${p.name}, _${p.name} => ${p.name} = _${p.name});`));
     });
   }

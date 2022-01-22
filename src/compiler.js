@@ -88,8 +88,7 @@ export async function compile(source, config = {}) {
         ctx.inuse[name]++;
         if(!deps) continue;
         if(name == '$attributes') ctx.require('$props');
-        if(name == '$props' && !ctx.script.readOnly) ctx.require('apply', '$cd');
-        if(name == '$cd') ctx.glob.rootCD.$value(true);
+        if(name == '$props' && !ctx.script.readOnly) ctx.require('apply', 'rootCD');
         if(['apply', '$onMount', '$component', 'componentFn', 'rootCD'].includes(name)) ctx.glob[name].$value(true);
       }
     },
@@ -246,7 +245,7 @@ function loadConfig(filename, option) {
 
 function setup() {
   this.glob.componentFn = xNode(this.glob.componentFn, {
-    $require: [this.glob.rootCD],
+    $wait: [this.glob.rootCD],
     body: [this.module.head, this.module.code, this.module.body]
   }, (ctx, n) => {
     if(n.value || this.glob.rootCD.value) {

@@ -209,7 +209,7 @@ export function bindProp(prop, node, element) {
       this.detectDependency(args);
       return {
         bind: xNode('action', {
-          $require: [this.glob.apply],
+          $wait: ['apply'],
           name: arg,
           args,
           el: element.bindName()
@@ -289,7 +289,7 @@ export function bindProp(prop, node, element) {
         }
       }).join(') + \' \' + (');
       const bind = xNode('compound-class', {
-        $require: [this.glob.apply],
+        $wait: ['apply'],
         el: element.bindName(),
         exp,
         classes
@@ -337,7 +337,7 @@ export function bindProp(prop, node, element) {
           this.detectDependency(exp);
 
           let n = xNode('bindClass', {
-            $require: [this.glob.apply],
+            $wait: ['apply'],
             el: element.bindName(),
             className,
             exp,
@@ -348,7 +348,7 @@ export function bindProp(prop, node, element) {
               ctx.indent++;
               ctx.writeLine(`let $element = ${n.el};`);
             }
-            if(this.glob.apply.value) {
+            if(this.inuse.apply) {
               ctx.writeLine(`$runtime.bindClass(${n.el}, () => !!(${n.exp}), '${n.className}');`);
             } else {
               ctx.writeLine(`(${n.exp}) && $runtime.addClass(${n.el}, '${n.className}');`);
@@ -396,7 +396,7 @@ export function bindProp(prop, node, element) {
       };
 
       let n = xNode('bindAttribute', {
-        $require: [this.glob.apply],
+        $wait: ['apply'],
         name,
         exp,
         hasElement,

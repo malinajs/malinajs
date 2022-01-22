@@ -30,15 +30,15 @@ export function makeifBlock(data, element) {
   }
 
   return xNode('if:bind', {
-    $hold: [this.glob.rootCD],
-    $require: [this.glob.apply],
+    $hold: ['rootCD'],
+    $wait: ['apply'],
     el: element.bindName(),
     exp,
     mainBlock: mainBlock,
     elseBlock: elseBlock
   }, (ctx, n) => {
-    if(this.glob.apply.value) {
-      this.require('$cd');
+    if(this.inuse.apply) {
+      this.require('rootCD');
       ctx.write(true, `$runtime.ifBlock(${n.el}, () => !!(${n.exp}),`);
     } else {
       ctx.write(true, `$runtime.ifBlockReadOnly(${n.el}, () => !!(${n.exp}),`);

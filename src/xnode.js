@@ -57,10 +57,10 @@ export function xBuild(node) {
     });
     if(!n.$done) {
       let ready = true;
-      if(n.$require?.length) {
-        const allDone = n.$require.every(i => {
+      if(n.$wait?.length) {
+        const allDone = n.$wait.every(i => {
           if(i == null) return true;
-          assert(i instanceof xNode, '$require supports only xNode');
+          assert(i instanceof xNode, '$wait supports only xNode');
           return i.$done;
         });
         if(!allDone) {
@@ -198,8 +198,8 @@ export function xNode(_type, _data, _handler) {
   this.$inserted = false;
   this.$result = [];
 
-  if(this.$require) {
-    this.$require = this.$require.map(n => {
+  if(this.$wait) {
+    this.$wait = this.$wait.map(n => {
       if(typeof(n) == 'string') {
         const context = get_context();
         assert(context.glob[n], `Wrong dependency '${n}'`);
@@ -217,8 +217,8 @@ export function xNode(_type, _data, _handler) {
         n = context.glob[n];
       }
       assert(!n.$done, 'Attempt to add dependecy, but node is already resolved');
-      if(!n.$require) n.$require = [];
-      n.$require.push(this);
+      if(!n.$wait) n.$wait = [];
+      n.$wait.push(this);
     });
     delete this.$hold;
   }

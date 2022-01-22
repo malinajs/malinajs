@@ -3,15 +3,15 @@ import { xNode } from '../xnode.js';
 
 export function makeHtmlBlock(exp, label, requireCD) {
   this.detectDependency(exp);
-  this.require('$cd');
+  this.require('rootCD');
   return xNode('block', {
-    $require: [this.glob.apply],
+    $wait: ['apply'],
     el: label.bindName(),
     exp,
     requireCD
   }, (ctx, n) => {
     let cd;
-    if(this.glob.apply.value) {
+    if(this.inuse.apply) {
       n.requireCD.$value(true);
       cd = '$cd';
     } else cd = 'null';

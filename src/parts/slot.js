@@ -21,17 +21,17 @@ export function attachSlot(slotName, node, requireCD) {
   if(node.body?.length) placeholder = this.buildBlock(node).block;
 
   this.require('$context');
-  this.glob.$component.$value(true);
+  this.require('$component');
 
   let result = xNode('slot', {
-    $require: [this.glob.apply],
+    $wait: ['apply'],
     name: slotName,
     props,
     staticProps,
     placeholder,
     requireCD
   }, (ctx, n) => {
-    let dynamicProps = this.glob.apply.value && !n.staticProps;
+    let dynamicProps = this.inuse.apply && !n.staticProps;
 
     if(dynamicProps) n.requireCD.$value(true);
 
