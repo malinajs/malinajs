@@ -1,5 +1,5 @@
 import { $$removeElements, childNodes, firstChild, iterNodes } from '../runtime/base';
-import { $watch, $$compareArray, isArray, cd_attach, cd_attach2, cd_new, cd_destroy } from '../runtime/cd';
+import { $watch, $$compareArray, isArray, cd_attach, cd_attach2, cd_new } from '../runtime/cd';
 import * as share from '../runtime/share';
 import { safeCall, safeGroupCall } from '../runtime/utils';
 
@@ -12,20 +12,10 @@ export const makeEachBlock = (fr, fn) => {
 };
 
 
-export const makeStaticEachBlock = (fr, fn) => {
-  return (item, index) => {
-    let $dom = fr.cloneNode(true);
-    let rebind = fn($dom, item, index);
-    return { $dom, rebind };
-  };
-};
-
-
 export const makeEachSingleBlock = (fn) => {
   return (item, index) => {
     let [rebind, component] = fn(item, index);
-    let { $cd, destroy, $dom } = component;
-    return { $cd, destroy, $dom, rebind };
+    return [component.$dom, rebind];
   };
 };
 
