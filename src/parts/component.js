@@ -109,7 +109,7 @@ export function makeComponent(node) {
           ctx.indent--;
           ctx.writeLine('})');
         } else {
-          ctx.write(true, `${n.name}: $runtime.makeStaticBlock(`);
+          ctx.write(true, `${n.name}: $runtime.makeBlock(`);
           ctx.add(n.template);
           ctx.write(')');
         }

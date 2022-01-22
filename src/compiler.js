@@ -74,23 +74,24 @@ export async function compile(source, config = {}) {
       $component: xNode('$component', false),
       rootCD: xNode('root-cd', false),
       apply: xNode('apply', false),
-      componentFn: xNode('componentFn', {$require: ['apply', 'rootCD', '$component']}, false)
+      componentFn: xNode('componentFn', false),
+      $onMount: xNode('$onMount', false)
     },
     require: function(...args) {
       for(let name of args) {
         let deps = true;
         if(name == '$props:no-deps') { name = '$props'; deps = false; }
-        if(name == 'apply' && ctx.script.readOnly) name = 'blankApply';
+        if(name == 'apply' && ctx.script.readOnly) {
+          ctx.glob.apply.$value('readOnly');
+          continue;
+        }
         if(ctx.inuse[name] == null) ctx.inuse[name] = 0;
         ctx.inuse[name]++;
         if(!deps) continue;
-        if(name == 'apply') ctx.glob.apply.$value(true);
-        if(name == '$component') ctx.glob.$component.$value(true);
         if(name == '$attributes') ctx.require('$props');
         if(name == '$props' && !ctx.script.readOnly) ctx.require('apply', '$cd');
         if(name == '$cd') ctx.glob.rootCD.$value(true);
-        if(name == '$onDestroy') ctx.require('$component');
-        if(name == '$onMount') ctx.require('$component');
+        if(['apply', '$onMount', '$component', 'componentFn', 'rootCD'].includes(name)) ctx.glob[name].$value(true);
       }
     },
     detectDependency,
@@ -163,7 +164,6 @@ export async function compile(source, config = {}) {
   await hook(ctx, 'runtime:before');
   ctx.buildRuntime();
   await hook(ctx, 'runtime');
-
 
   await hook(ctx, 'build:before');
   const result = ctx.result = xNode('block');
@@ -247,32 +247,23 @@ function loadConfig(filename, option) {
 
 
 function setup() {
-  for(let k in this.glob) {
-    let n = this.glob[k];
-    if(!n.$require) continue;
-    n.$require = n.$require.map(n => this.glob[n]);
-  }
-
-  this.glob.componentFn.body = [this.module.head, this.module.code, this.module.body];
-  this.glob.componentFn.$handler = (ctx, n) => {
-    let component = xNode('function', {
-      args: ['$option'],
-      inline: true,
-      arrow: true,
-      body: n.body
-    });
-
-    if(this.glob.apply.value || this.glob.rootCD.value || ctx.inuse.$cd || ctx.inuse.$component || ctx.inuse.$context || ctx.inuse.blankApply) {
-      ctx.write('$runtime.makeComponent(');
-      ctx.add(component);
-      ctx.write(');', true);
+  this.glob.componentFn = xNode(this.glob.componentFn, {
+    $require: [this.glob.rootCD],
+    body: [this.module.head, this.module.code, this.module.body]
+  }, (ctx, n) => {
+    if(n.value || this.glob.rootCD.value) {
+      n.value = true;
+      ctx.write('$runtime.makeComponent($option => {');
+      ctx.indent++;
+      ctx.add(xNode('block', { body: n.body }));
+      ctx.indent--;
+      ctx.write(true, '});', true);
     } else {
-      this.glob.componentFn.$value('thin');
       ctx.write('($option={}) => {', true);
-      ctx.goIndent(() => {
-        ctx.add(xNode('block', { body: n.body }));
-      });
+      ctx.indent++;
+      ctx.add(xNode('block', { body: n.body }));
+      ctx.indent--;
       ctx.write(true, '}');
     }
-  };
+  });
 }

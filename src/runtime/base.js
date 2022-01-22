@@ -110,7 +110,7 @@ export function $tick(fn) {
 
 export function $makeEmitter(option) {
   return (name, detail) => {
-    let fn = option.events[name];
+    let fn = option.events?.[name];
     if(!fn) return;
     let e = document.createEvent('CustomEvent');
     e.initCustomEvent(name, false, false, detail);
@@ -277,7 +277,7 @@ export const autoSubscribe = (...list) => {
   list.forEach(i => {
     if(isFunction(i.subscribe)) {
       let unsub = i.subscribe(current_component.apply);
-      if(isFunction(unsub)) $onDestroy(current_component, unsub);
+      if(isFunction(unsub)) $onDestroy(unsub);
     }
   });
 };
@@ -504,7 +504,7 @@ export const unwrapProps = (props, fn) => {
 export const makeBlock = (fr, fn) => {
   return (v) => {
     let $dom = fr.cloneNode(true);
-    fn($dom, v);
+    fn?.($dom, v);
     return $dom;
   };
 };
@@ -522,14 +522,6 @@ export const makeBlockBound = (parentCD, fr, fn) => {
   };
 };
 
-
-export const makeStaticBlock = (fr, fn) => {
-  return () => {
-    let $dom = fr.cloneNode(true);
-    fn?.($dom);
-    return { $dom };
-  };
-};
 
 export const attachBlock = (label, block) => {
   if(!block) return;

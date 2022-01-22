@@ -39,7 +39,7 @@ export function makeFragment(node, requireCD) {
     block
   }, (ctx, n) => {
     if(ctx.isEmpty(n.block.source)) {
-      ctx.write(true, `let $fragment_${n.name} = $runtime.makeStaticBlock(`);
+      ctx.write(true, `let $fragment_${n.name} = $runtime.makeBlock(`);
       ctx.add(n.block.template);
       ctx.write(');');
     } else {
@@ -172,7 +172,7 @@ export function attachFragment(node) {
       ctx.write(missed, ',', true);
       missed = '';
       if(ctx.isEmpty(n.slot.source)) {
-        ctx.write('$runtime.makeStaticBlock(');
+        ctx.write('$runtime.makeBlock(');
         ctx.add(n.slot.template);
         ctx.write(')');
       } else {
@@ -233,7 +233,7 @@ export function attchExportedFragment(node, label, componentName, requireCD) {
       ctx.write(',', true);
 
       if(ctx.isEmpty(n.slot.source)) {
-        ctx.write('$runtime.makeStaticBlock(');
+        ctx.write('$runtime.makeBlock(');
         ctx.add(n.slot.template);
         ctx.write(')');
       } else {

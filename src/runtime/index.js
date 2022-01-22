@@ -1,5 +1,6 @@
 export * from './base';
 export * from './cd';
+export * from './share';
 export { $$htmlBlock } from '../parts/html.runtime';
 export { ifBlock, ifBlockReadOnly } from '../parts/if.runtime';
 export { $$awaitBlock } from '../parts/await.runtime';

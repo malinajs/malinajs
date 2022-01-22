@@ -3,13 +3,65 @@ import { xNode } from './xnode.js';
 
 
 export function buildRuntime() {
-  this.module.head.push(xNode(this.glob.$component, (ctx, n) => {
-    if(n.value) ctx.write(true, 'const $component = $runtime.current_component;');
+  this.module.head.push(xNode('$events', (ctx) => {
+    if(this.inuse.$events) ctx.write(true, 'const $events = $option.events || {};');
   }));
 
-  this.module.head.push(xNode(this.glob.apply, (ctx, n) => {
-    if(n.value) ctx.writeLine('const $$apply = $runtime.makeApply();');
+  this.module.head.push(xNode(this.glob.$component, {
+    $hold: [this.glob.componentFn]
+  }, (ctx, n) => {
+    if(n.value) {
+      this.glob.componentFn.$value(true);
+      ctx.write(true, 'const $component = $runtime.current_component;');
+    }
   }));
+
+  this.module.head.push(xNode('$context', {
+    $hold: [this.glob.componentFn],
+  }, (ctx) => {
+    if(this.inuse.$context) {
+      this.glob.componentFn.$value(true);
+      ctx.write(true, 'const $context = $runtime.$context;');
+    }
+  }));
+
+  this.module.top.push(xNode(this.glob.$onMount, {
+    $hold: [this.glob.componentFn]
+  }, (ctx, n) => {
+    if(n.value) {
+      this.glob.componentFn.$value(true);
+      ctx.write(true, `import { $onMount } from 'malinajs/runtime.js';`);
+    }
+  }));
+
+  this.module.top.push(xNode('$onDestroy', (ctx) => {
+    if(this.inuse.$onDestroy) ctx.write(true, `import { $onDestroy } from 'malinajs/runtime.js';`);
+  }));
+
+  this.module.head.push(xNode(this.glob.apply, {
+    $hold: [this.glob.componentFn]
+  }, (ctx, n) => {
+    if(n.value) {
+      this.glob.componentFn.$value(true);
+      if(n.value == 'readOnly') ctx.writeLine('const $$apply = $runtime.noop;');
+      else ctx.writeLine('const $$apply = $runtime.makeApply();');
+    }
+  }));
+
+  this.module.head.push(xNode('$emit', (ctx) => {
+    if(this.inuse.$emit) ctx.write(true, 'const $emit = $runtime.$makeEmitter($option);');
+  }));
+
+  if(this.config.autoSubscribe && !this.script.readOnly) {
+    this.module.head.push(xNode('autoSubscribe', {
+      $hold: [this.glob.apply],
+      names: this.script.autosubscribeNames
+    }, (ctx, n) => {
+      if(!n.names.length) return;
+      this.require('apply');
+      ctx.write(true, `$runtime.autoSubscribe(${n.names.join(', ')});`);
+    }));
+  }
 
   let runtime = xNode('block', { scope: true, $compile: [] });
   this.module.body.push(runtime);
@@ -50,8 +102,8 @@ export function buildRuntime() {
   runtime.push(xNode('bind-component-element', {
     $require: [this.glob.componentFn]
   }, (ctx) => {
-    if(this.glob.componentFn.value == 'thin') ctx.writeLine('return {$dom: $parentElement};');
-    else ctx.writeLine('return $parentElement;');
+    if(this.glob.componentFn.value) ctx.writeLine('return $parentElement;');
+    else ctx.writeLine('return {$dom: $parentElement};');
   }));
 
   if(!this.script.readOnly && this.css.active() && this.css.containsExternal()) this.require('apply', '$cd');

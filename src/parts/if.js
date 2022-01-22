@@ -7,7 +7,6 @@ export function makeifBlock(data, element) {
   let exp = r[1];
   assert(exp, 'Wrong binding: ' + data.value);
   this.detectDependency(exp);
-  this.require('$cd');
 
   let mainBlock, elseBlock;
 
@@ -31,6 +30,7 @@ export function makeifBlock(data, element) {
   }
 
   return xNode('if:bind', {
+    $hold: [this.glob.rootCD],
     $require: [this.glob.apply],
     el: element.bindName(),
     exp,
@@ -38,10 +38,10 @@ export function makeifBlock(data, element) {
     elseBlock: elseBlock
   }, (ctx, n) => {
     if(this.glob.apply.value) {
+      this.require('$cd');
       ctx.write(true, `$runtime.ifBlock(${n.el}, () => !!(${n.exp}),`);
     } else {
-      this.glob.$component.$value(true);
-      ctx.write(true, `$runtime.ifBlockReadOnly($component, ${n.el}, () => !!(${n.exp}),`);
+      ctx.write(true, `$runtime.ifBlockReadOnly(${n.el}, () => !!(${n.exp}),`);
     }
 
     ctx.indent++;

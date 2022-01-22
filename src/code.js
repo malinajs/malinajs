@@ -307,9 +307,6 @@ export function transform() {
   });
 
   let header = [];
-  header.push(rawNode(() => {
-    if(this.inuse.$events) return 'const $events = $option.events || {};';
-  }));
 
   if(lastPropIndex != null) {
     header.push(rawNode(() => {
@@ -359,32 +356,6 @@ export function transform() {
         if(!constantProps && !this.script.readOnly) code.push('$runtime.current_component.push = () => $attributes = $option.props || {};');
       }
       return code;
-    }));
-  }
-
-  header.push(rawNode(() => {
-    if(this.inuse.$context) return 'const $context = $runtime.$context;';
-  }));
-
-
-  imports.push(rawNode(() => {
-    if(this.inuse.$onMount) return 'import {$onMount} from \'malinajs/runtime.js\';';
-  }));
-
-  header.push(rawNode(() => {
-    if(this.inuse.$onDestroy) return 'const $onDestroy = fn => $component._d.push(fn);';
-  }));
-
-  if(this.config.autoSubscribe && result.autosubscribeNames.length) {
-    if(!this.script.readOnly) this.require('$cd', 'apply');
-      header.push(rawNode(() => {
-        if(this.inuse.apply) return `$runtime.autoSubscribe(${result.autosubscribeNames.join(', ')});`;
-    }));
-  }
-
-  if(!rootFunctions.$emit) {
-    header.push(rawNode(() => {
-      if(this.inuse.$emit) return 'const $emit = $runtime.$makeEmitter($option);';
     }));
   }
 
