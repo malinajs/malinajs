@@ -1,4 +1,4 @@
-import { last, assert, htmlEntitiesToText, isFunction } from './utils.js';
+import { last, assert, htmlEntitiesToText, isFunction, get_context, Q } from './utils.js';
 
 
 function I(value = 0) {
@@ -6,8 +6,8 @@ function I(value = 0) {
 }
 
 
-function xWriter(ctx, node) {
-  this._ctx = ctx;
+function xWriter(node) {
+  const ctx = get_context();
   this.inuse = ctx.inuse;
 
   this.indent = 0;
@@ -49,7 +49,7 @@ function xWriter(ctx, node) {
 }
 
 
-export function xBuild(ctx, node) {
+export function xBuild(node) {
   let pending = 0;
   const resolve = n => {
     n.$compile?.forEach(c => {
@@ -64,7 +64,7 @@ export function xBuild(ctx, node) {
         }
       }
       if(ready) {
-        let w = new xWriter(ctx, n);
+        let w = new xWriter(n);
         n.$handler(w, n);
         n.$done = true;
       }
@@ -195,6 +195,11 @@ export function xNode(_type, _data, _handler) {
 
   if(this.$hold) {
     this.$hold.forEach(n => {
+      if(typeof(n) == 'string') {
+        const ctx = get_context();
+        assert(ctx.glob[n], `Wrong dependency '${n}'`);
+        n = ctx.glob[n];
+      }
       assert(!n.$done, 'Attempt to add dependecy, but node is already resolved');
       if(!n.$require) n.$require = [];
       n.$require.push(this);
@@ -282,7 +287,6 @@ xNode.init = {
         }
         assert(n instanceof xNode);
         this.children.push(n);
-        n._ctx = this._ctx;
         return n;
       };
     },
@@ -307,7 +311,7 @@ xNode.init = {
 
         let className = {};
         node.class.forEach(sel => {
-          if(sel.$selector) sel = ctx._ctx.css.resolve(sel);
+          if(sel.$selector) sel = get_context().css.resolve(sel);
           className[sel] = true;
         });
         className = Object.keys(className).join(' ');
@@ -324,7 +328,7 @@ xNode.init = {
       }
     },
     bindName: function() {
-      if(!this._boundName) this._boundName = `el${this._ctx.uniqIndex++}`;
+      if(!this._boundName) this._boundName = `el${get_context().uniqIndex++}`;
       return this._boundName;
     }
   },
@@ -341,12 +345,13 @@ xNode.init = {
       node.bindName = xNode.init.node.bindName;
     },
     handler: (ctx, node) => {
-      if(ctx._ctx.config.debug && ctx._ctx.config.debugLabel) ctx.write(`<!-- ${node.value} -->`);
+      const context = get_context();
+      if(context.config.debug && context.config.debugLabel) ctx.write(`<!-- ${node.value} -->`);
       else ctx.write('<!---->');
     }
   },
   template: (ctx, node) => {
-    let template = ctx._ctx.xBuild(node.body);
+    let template = xBuild(node.body);
     let convert, cloneNode = node.cloneNode;
     if(node.svg) {
       convert = '$runtime.svgToFragment';
@@ -360,16 +365,16 @@ xNode.init = {
       template = template.replace(/<!---->/g, '<>');
     }
     if(node.raw) {
-      ctx.write(ctx._ctx.Q(template));
+      ctx.write(Q(template));
     } else if(node.inline) {
-      ctx.write(`${convert}(\`${ctx._ctx.Q(template)}\``);
+      ctx.write(`${convert}(\`${Q(template)}\``);
       if(cloneNode || node.requireFragment) {
         let opt = (cloneNode ? 1 : 0) + (node.requireFragment ? 2 : 0);
         ctx.write(`, ${opt})`);
       } else ctx.write(')');
     } else {
       assert(node.name);
-      ctx.write(true, `const ${node.name} = ${convert}(\`${ctx._ctx.Q(template)}\``);
+      ctx.write(true, `const ${node.name} = ${convert}(\`${Q(template)}\``);
       if(cloneNode || node.requireFragment) {
         let opt = (cloneNode ? 1 : 0) + (node.requireFragment ? 2 : 0);
         ctx.write(`, ${opt});`);

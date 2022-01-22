@@ -1,4 +1,4 @@
-import { assert, detectExpressionType, isSimpleName, unwrapExp, last, toCamelCase, replaceElementKeyword } from '../utils.js';
+import { assert, detectExpressionType, isSimpleName, unwrapExp, last, toCamelCase, replaceElementKeyword, Q } from '../utils.js';
 import { xNode } from '../xnode.js';
 
 
@@ -173,7 +173,7 @@ export function bindProp(prop, node, element) {
               name: styleName,
               value: prop.value
             }, (ctx, n) => {
-              ctx.writeLine(`${n.el}.style.${n.name} = \`${this.Q(n.value)}\`;`);
+              ctx.writeLine(`${n.el}.style.${n.name} = \`${Q(n.value)}\`;`);
             })
           };
         }
@@ -285,7 +285,7 @@ export function bindProp(prop, node, element) {
           assert(className);
           let exp = prop.value ? unwrapExp(prop.value) : className;
           this.detectDependency(exp);
-          return `(${exp}) ? \`${this.Q(className)}\` : ''`;
+          return `(${exp}) ? \`${Q(className)}\` : ''`;
         }
       }).join(') + \' \' + (');
       const bind = xNode('compound-class', {
@@ -427,7 +427,7 @@ export function bindProp(prop, node, element) {
       };
     }
 
-    if(node.spreading) return node.spreading.push(`${name}: \`${this.Q(prop.value)}\``);
+    if(node.spreading) return node.spreading.push(`${name}: \`${Q(prop.value)}\``);
 
     element.attributes.push({
       name: prop.name,

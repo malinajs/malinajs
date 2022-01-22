@@ -1,4 +1,4 @@
-import { assert } from './utils.js';
+import { assert, use_context } from './utils.js';
 import { xNode, xBuild } from './xnode.js';
 import { compactDOM } from './compact.js';
 import { parse as parseHTML, parseText } from './parser';
@@ -48,7 +48,6 @@ export async function compile(source, config = {}) {
     uniqIndex: 0,
     warning: config.warning || (w => console.warn('!', w.message || w)),
 
-    Q: config.inlineTemplate ? utils.Q2 : utils.Q,
     buildBlock,
     bindProp,
     makeEachBlock,
@@ -119,10 +118,6 @@ export async function compile(source, config = {}) {
       head: xNode('block'),
       code: xNode('block'),
       body: xNode('block')
-    },
-
-    xBuild: node => {
-      return xBuild(ctx, node);
     }
   };
 
@@ -162,30 +157,33 @@ export async function compile(source, config = {}) {
   await hook(ctx, 'css');
 
   await hook(ctx, 'runtime:before');
-  ctx.buildRuntime();
+  use_context(ctx, () => ctx.buildRuntime());
   await hook(ctx, 'runtime');
 
   await hook(ctx, 'build:before');
-  const result = ctx.result = xNode('block');
-  result.push('import * as $runtime from \'malinajs/runtime.js\';');
-  result.push('import { $watch, $watchReadOnly, $tick } from \'malinajs/runtime.js\';');
-  if(config.hideLabel) {
-    result.push('import { $$htmlToFragmentClean as $$htmlToFragment } from \'malinajs/runtime.js\';');
-  } else {
-    result.push('import { $$htmlToFragment } from \'malinajs/runtime.js\';');
-  }
-  result.push(ctx.module.top);
-  result.push(xNode('componentFn-wrapper', {
-    $compile: [ctx.module.head, ctx.module.code, ctx.module.body, ctx.glob.rootCD],
-    name: config.name,
-    componentFn: ctx.glob.componentFn
-  }, (ctx, n) => {
-    if(config.exportDefault) ctx.write(true, 'export default ');
-    else ctx.write(true, `const ${n.name} = `);
-    ctx.add(n.componentFn);
-  }));
 
-  ctx.result = xBuild(ctx, result);
+  use_context(ctx, () => {
+    const result = ctx.result = xNode('block');
+    result.push('import * as $runtime from \'malinajs/runtime.js\';');
+    result.push('import { $watch, $watchReadOnly, $tick } from \'malinajs/runtime.js\';');
+    if(config.hideLabel) {
+      result.push('import { $$htmlToFragmentClean as $$htmlToFragment } from \'malinajs/runtime.js\';');
+    } else {
+      result.push('import { $$htmlToFragment } from \'malinajs/runtime.js\';');
+    }
+    result.push(ctx.module.top);
+    result.push(xNode('componentFn-wrapper', {
+      $compile: [ctx.module.head, ctx.module.code, ctx.module.body, ctx.glob.rootCD],
+      name: config.name,
+      componentFn: ctx.glob.componentFn
+    }, (ctx, n) => {
+      if(config.exportDefault) ctx.write(true, 'export default ');
+      else ctx.write(true, `const ${n.name} = `);
+      ctx.add(n.componentFn);
+    }));
+  
+    ctx.result = xBuild(result);
+  });
 
   await hook(ctx, 'build');
   return ctx;

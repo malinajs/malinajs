@@ -1,6 +1,22 @@
 import acorn from 'acorn';
 import astring from 'astring';
 
+let current_context;
+
+export const get_context = () => {
+  assert(current_context, 'Out of context');
+  return current_context;
+}
+
+export const use_context = (context, fn) => {
+  let prev = current_context;
+  try {
+    current_context = context;
+    fn();
+  } finally {
+    current_context = prev;
+  }
+}
 
 let _svgElements = 'animate,animateMotion,animateTransform,circle,clipPath,color-profile,defs,desc,discard,ellipse,feBlend,feColorMatrix,feComponentTransfer,feComposite,feConvolveMatrix,feDiffuseLighting,feDisplacementMap,feDistantLight,feDropShadow,feFlood,feFuncA,feFuncB,feFuncG,feFuncR,feGaussianBlur,feImage,feMerge,feMergeNode,feMorphology,feOffset,fePointLight,feSpecularLighting,feSpotLight,feTile,feTurbulence,filter,g,hatch,hatchpath,image,line,linearGradient,marker,mask,mesh,meshgradient,meshpatch,meshrow,metadata,mpath,path,pattern,polygon,polyline,radialGradient,rect,set,solidcolor,stop,switch,symbol,text,textPath,tspan,unknown,use,view';
 let svgElements = {};
@@ -28,11 +44,8 @@ export function toCamelCase(name) {
 }
 
 export function Q(s) {
+  if(get_context().config.inlineTemplate) return s.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\n/g, '\\n'); 
   return s.replace(/\\/g, '\\\\').replace(/`/g, '\\`');
-}
-
-export function Q2(s) {
-  return s.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\n/g, '\\n');
 }
 
 export function unwrapExp(e) {

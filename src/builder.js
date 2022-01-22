@@ -1,4 +1,4 @@
-import { svgElements, last, replaceElementKeyword, assert } from './utils.js';
+import { svgElements, last, replaceElementKeyword, assert, Q } from './utils.js';
 import { xNode } from './xnode.js';
 
 
@@ -54,7 +54,7 @@ export function buildRuntime() {
 
   if(this.config.autoSubscribe && !this.script.readOnly) {
     this.module.head.push(xNode('autoSubscribe', {
-      $hold: [this.glob.apply],
+      $hold: ['apply'],
       names: this.script.autosubscribeNames
     }, (ctx, n) => {
       if(!n.names.length) return;
@@ -90,12 +90,11 @@ export function buildRuntime() {
     if(!this.css.active()) return;
     let style = this.css.getContent();
     if(!style) return;
-    let config = ctx._ctx.config;
-    if(config.css) {
-      if(typeof config.css == 'function') config.css(style, config.path, ctx._ctx, ctx);
-      else ctx.writeLine(`$runtime.addStyles('${this.css.id}', \`${this.Q(style)}\`);`);
+    if(this.config.css) {
+      if(typeof this.config.css == 'function') this.config.css(style, this.config.path, this, ctx);
+      else ctx.writeLine(`$runtime.addStyles('${this.css.id}', \`${Q(style)}\`);`);
     } else {
-      ctx._ctx.css.result = style;
+      this.css.result = style;
     }
   }));
 
@@ -133,7 +132,7 @@ export function buildRuntime() {
 
 
 export function buildBlock(data, option = {}) {
-  let rootTemplate = xNode('node', { inline: true, _ctx: this });
+  let rootTemplate = xNode('node', { inline: true });
   let rootSVG = false, requireFragment = option.template?.requireFragment;
   let binds = xNode('block');
   let result = {};
@@ -377,7 +376,7 @@ export function buildBlock(data, option = {}) {
           binds.push(xNode('bindAttributes', { el }, (ctx, n) => {
             let elName = n.el.bindName();
             n.el.attributes.forEach(a => {
-              ctx.writeLine(`${elName}.setAttribute('${a.name}', \`${this.Q(a.value)}\`);`);
+              ctx.writeLine(`${elName}.setAttribute('${a.name}', \`${Q(a.value)}\`);`);
             });
           }));
           binds.push(xNode('bindClasses', { el }, (ctx, n) => {

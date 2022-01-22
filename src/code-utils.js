@@ -1,4 +1,4 @@
-import { unwrapExp, toCamelCase, assert, isNumber } from './utils.js';
+import { unwrapExp, toCamelCase, assert, isNumber, Q } from './utils.js';
 
 
 export function inspectProp(prop) {
@@ -40,7 +40,7 @@ export function inspectProp(prop) {
     if(!statical) value = pe.result;
   } else if(value) {
     rawValue = value;
-    value = '`' + this.Q(value) + '`';
+    value = '`' + Q(value) + '`';
     statical = true;
   } else {
     rawValue = true;
