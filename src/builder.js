@@ -238,7 +238,7 @@ export function buildBlock(data, option = {}) {
           } else {
             textNode = tpl.push(' ');
             let bindText = xNode('bindText', {
-              $require: [this.glob.apply],
+              $require: ['apply'],
               el: textNode.bindName(),
               exp: pe.result
             }, (ctx, n) => {
