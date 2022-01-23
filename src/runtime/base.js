@@ -523,11 +523,9 @@ export const makeBlockBound = (parentCD, fr, fn) => {
 };
 
 
-export const attachBlock = (label, block) => {
-  if(!block) return;
-  // cd_onDestroy(cdo, block.destroy);
-  // cd_attach(cdo, block.$cd);
-  insertAfter(label, block.$dom);
+export const attachBlock = (label, $dom) => {
+  if(!$dom) return;
+  insertAfter(label, $dom);
 };
 
 export const mergeEvents = (...callbacks) => {

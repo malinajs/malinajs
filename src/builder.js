@@ -137,7 +137,6 @@ export function buildBlock(data, option = {}) {
   let rootSVG = false, requireFragment = option.template?.requireFragment;
   let binds = xNode('block');
   let result = {};
-  let requireCD = result.requireCD = xNode('require-cd', false);
   let inuse = Object.assign({}, this.inuse);
 
   if(!option.parentElement) option.parentElement = '$parentElement';
@@ -147,9 +146,8 @@ export function buildBlock(data, option = {}) {
   if(option.allowSingleBlock && data.body.length == 1) {
     let n = data.body[0];
     if(n.type == 'node' && n.name.match(/^[A-Z]/)) {
-      let component = this.makeComponent(n, requireCD);
+      let component = this.makeComponent(n);
       return {
-        requireCD,
         singleBlock: component.bind
       };
     }
@@ -161,7 +159,7 @@ export function buildBlock(data, option = {}) {
       if(n.type == 'comment' && !this.config.preserveComments) return false;
       if(n.type == 'fragment') {
         try {
-          let f = this.makeFragment(n, requireCD);
+          let f = this.makeFragment(n);
           f && binds.push(f);
         } catch (e) {
           wrapException(e, n);
@@ -273,8 +271,8 @@ export function buildBlock(data, option = {}) {
       } else if(n.type === 'node') {
         if(n.name == 'malina' && !option.malinaElement) {
           let b;
-          if(n.elArg == 'portal') b = this.attachPortal(n, requireCD);
-          else b = this.attachHead(n, requireCD);
+          if(n.elArg == 'portal') b = this.attachPortal(n);
+          else b = this.attachHead(n);
           b && binds.push(b);
           return;
         }
@@ -300,7 +298,7 @@ export function buildBlock(data, option = {}) {
             }
           } else {
             let el = placeLabel(`exported ${n.elArg}`);
-            let b = this.attchExportedFragment(n, el, n.name, requireCD);
+            let b = this.attchExportedFragment(n, el, n.name);
             b && binds.push(b);
           }
           return;
@@ -310,16 +308,15 @@ export function buildBlock(data, option = {}) {
           if(!slotName) {
             if(option.context == 'fragment') {
               let el = placeLabel('fragment-slot');
-              binds.push(this.attachFragmentSlot(el, requireCD));
+              binds.push(this.attachFragmentSlot(el));
               return;
             } else slotName = 'default';
           }
 
           let el = placeLabel(slotName);
-          let slot = this.attachSlot(slotName, n, requireCD);
+          let slot = this.attachSlot(slotName, n);
 
           binds.push(xNode('attach-slot', {
-            $wait: [requireCD],
             $compile: [slot],
             el: el.bindName(),
             slot,
@@ -333,14 +330,13 @@ export function buildBlock(data, option = {}) {
           return;
         }
         if(n.name == 'fragment') {
-          requireCD.$value(true);
           assert(n.elArg, 'Fragment name is required');
           let el = placeLabel(`fragment ${n.elArg}`);
           binds.push(xNode('attach-fragment', {
             el: el.bindName(),
             fragment: this.attachFragment(n)
           }, (ctx, n) => {
-            ctx.write(true, `$runtime.attachBlock($cd, ${n.el}, `);
+            ctx.write(true, `$runtime.attachBlock(${n.el}, `);
             ctx.add(n.fragment);
             ctx.write(')');
           }));
@@ -353,8 +349,8 @@ export function buildBlock(data, option = {}) {
         lastStatic = el;
 
         if(n.attributes.some(a => a.name.startsWith('{...'))) {
+          this.require('rootCD');
           n.spreading = [];
-          requireCD.$value(true);
           binds.push(xNode('spread-to-element', {
             el: el.bindName(),
             props: n.spreading
@@ -423,12 +419,11 @@ export function buildBlock(data, option = {}) {
         if(name == 'html') {
           if(isRoot) requireFragment = true;
           let el = placeLabel('html');
-          binds.push(this.makeHtmlBlock(exp, el, requireCD));
+          binds.push(this.makeHtmlBlock(exp, el));
           return;
         } else throw 'Wrong tag';
       } else if(n.type === 'await') {
         if(isRoot) requireFragment = true;
-        requireCD.$value(true);
         let el = placeLabel(n.value);
         let r = this.makeAwaitBlock(n, el);
         r && binds.push(r);

@@ -2,7 +2,7 @@ import { assert, isSimpleName, trimEmptyNodes } from '../utils';
 import { xNode } from '../xnode.js';
 
 
-export function makeFragment(node, requireCD) {
+export function makeFragment(node) {
   let rx = node.value.match(/#fragment:(\S+)(.*)$/s);
   assert(rx);
   let name = rx[1], external = false;
@@ -18,8 +18,6 @@ export function makeFragment(node, requireCD) {
     });
   }
 
-  if(external) requireCD.$value(true);
-
   let block;
   if(node.body && node.body.length) {
     block = this.buildBlock({ body: trimEmptyNodes(node.body) }, { inline: true, context: 'fragment', parentElement: '$dom' });
@@ -32,7 +30,6 @@ export function makeFragment(node, requireCD) {
 
   return xNode('fragment', {
     $compile: [block.source],
-    $wait: [block.requireCD, 'apply'],
     name,
     props,
     external,
@@ -46,8 +43,6 @@ export function makeFragment(node, requireCD) {
       ctx.write(true, `function $fragment_${n.name}($props, $events={}, $$fragmentSlot) {`);
       ctx.indent++;
 
-      if(n.block.requireCD.value) ctx.write(true, 'let $cd = $runtime.cd_new();');
-
       if(n.props?.length) {
         if(this.inuse.apply) {
           ctx.writeLine('let ' + n.props.join(', ') + ';');
@@ -59,17 +54,17 @@ export function makeFragment(node, requireCD) {
       }
 
       ctx.write(true, 'let $dom = ');
+      n.block.template.cloneNode = true;
       ctx.add(n.block.template);
       ctx.write(';');
 
       ctx.add(n.block.source);
-      if(n.block.requireCD.value) ctx.write(true, 'return {$cd, $dom};');
-      else ctx.write(true, 'return {$dom};');
+      ctx.write(true, 'return $dom;');
 
       ctx.indent--;
       ctx.writeLine('}');
     }
-    if(n.external) ctx.writeLine(`$runtime.exportFragment($cd, '${n.name}', $fragment_${n.name});`);
+    if(n.external) ctx.writeLine(`$runtime.exportFragment('${n.name}', $fragment_${n.name});`);
   });
 }
 
@@ -121,7 +116,6 @@ export function attachFragment(node) {
 
   return xNode('call-fragment', {
     $compile: [slot?.source],
-    $wait: ['apply'],
     forwardAllEvents,
     name,
     events,
@@ -178,7 +172,7 @@ export function attachFragment(node) {
       } else {
         ctx.write('$runtime.makeBlock(');
         ctx.add(n.slot.template);
-        ctx.write(', ($cd, $parentElement) => {', true);
+        ctx.write(', ($parentElement) => {', true);
         ctx.indent++;
         ctx.add(n.slot.source);
         ctx.indent--;
@@ -193,20 +187,16 @@ export function attachFragment(node) {
 }
 
 
-export function attachFragmentSlot(label, requireCD) {
-  requireCD.$value(true);
-
+export function attachFragmentSlot(label) {
   return xNode('fragment-slot', {
     el: label.bindName()
   }, (ctx, n) => {
-    ctx.write(true, `$runtime.attachBlock($cd, ${n.el}, $$fragmentSlot?.())`);
+    ctx.write(true, `$runtime.attachBlock(${n.el}, $$fragmentSlot?.())`);
   });
 }
 
 
-export function attchExportedFragment(node, label, componentName, requireCD) {
-  requireCD.$value(true);
-
+export function attchExportedFragment(node, label, componentName) {
   let data = {
     name: node.elArg,
     componentName,
