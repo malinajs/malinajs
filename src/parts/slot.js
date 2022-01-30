@@ -1,7 +1,7 @@
 import { xNode } from '../xnode.js';
 
 
-export function attachSlot(slotName, node, requireCD) {
+export function attachSlot(slotName, node) {
   let props = [], staticProps = true;
 
   if(node.attributes && node.attributes.length) {
@@ -29,11 +29,8 @@ export function attachSlot(slotName, node, requireCD) {
     props,
     staticProps,
     placeholder,
-    requireCD
   }, (ctx, n) => {
     let dynamicProps = this.inuse.apply && !n.staticProps;
-
-    if(dynamicProps) n.requireCD.$value(true);
 
     let missed = '', slotName = n.name == 'default' ? 'null' : n.name;
     if(dynamicProps) ctx.write(`$runtime.invokeSlot($component, ${slotName}, $context`);

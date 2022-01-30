@@ -38,7 +38,7 @@ export function buildRuntime() {
     if(this.inuse.$onDestroy) ctx.write(true, `import { $onDestroy } from 'malinajs/runtime.js';`);
   }));
 
-  this.module.head.push(xNode(this.glob.apply, {
+  this.module.head.unshift(xNode(this.glob.apply, {
     $hold: ['componentFn'],
     $wait: ['rootCD']
   }, (ctx, n) => {
@@ -287,13 +287,13 @@ export function buildBlock(data, option = {}) {
               binds.push(this.makeComponentDyn(n, el));
             } else {
               let component = this.makeComponent(n);
-              binds.push(xNode('attach-component', {
+              binds.push(xNode('insert-component', {
                 component: component.bind,
                 el: el.bindName()
               }, (ctx, n) => {
-                ctx.write(true, `$runtime.attachBlock(${n.el}, `);
+                ctx.write(true, `$runtime.insertAfter(${n.el}, `);
                 ctx.add(n.component);
-                ctx.write(')');
+                ctx.write('.$dom);');
               }));
             }
           } else {
@@ -319,11 +319,9 @@ export function buildBlock(data, option = {}) {
           binds.push(xNode('attach-slot', {
             $compile: [slot],
             el: el.bindName(),
-            slot,
-            requireCD
+            slot
           }, (ctx, n) => {
-            if(n.requireCD.value) ctx.write(true, `$runtime.attachBlock($cd, ${n.el}, `);
-            else ctx.write(true, `$runtime.attachBlock($component, ${n.el}, `);
+            ctx.write(true, `$runtime.attachBlock(${n.el}, `);
             ctx.add(n.slot);
             ctx.write(');', true);
           }));

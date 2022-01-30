@@ -347,13 +347,13 @@ export function transform() {
       let code = [];
       if(this.inuse.$props && this.inuse.$attributes) {
         code.push('let $props = $option.props || {}, $attributes = $props;');
-        if(!constantProps && !this.script.readOnly) code.push('$runtime.current_component.push = () => $props = $option.props || {}, $attributes = $props;');
+        if(!this.script.readOnly) code.push('$runtime.current_component.push = () => $props = $option.props || {}, $attributes = $props;');
       } else if(this.inuse.$props) {
         code.push('let $props = $option.props || {};');
-        if(!constantProps && !this.script.readOnly) code.push('$runtime.current_component.push = () => $props = $option.props || {};');
+        if(!this.script.readOnly) code.push('$runtime.current_component.push = () => $props = $option.props || {};');
       } else if(this.inuse.$attributes) {
         code.push('let $attributes = $option.props || {};');
-        if(!constantProps && !this.script.readOnly) code.push('$runtime.current_component.push = () => $attributes = $option.props || {};');
+        if(!this.script.readOnly) code.push('$runtime.current_component.push = () => $attributes = $option.props || {};');
       }
       return code;
     }));

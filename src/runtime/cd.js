@@ -2,11 +2,11 @@ import { __app_onerror, safeCall, isObject } from './utils';
 import * as share from './share.js';
 import { $onDestroy } from './share.js';
 
-export function WatchObject(fn, cb) {
+export function WatchObject(fn, cb, ro) {
   this.fn = fn;
   this.cb = cb;
+  this.ro = ro || false;
   this.value = NaN;
-  this.ro = false;
   this.cmp = null;
 }
 

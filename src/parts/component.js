@@ -96,9 +96,9 @@ export function makeComponent(node) {
         props
       }, (ctx, n) => {
         if(n.bind) {
-          ctx.write(true, `${n.name}: $runtime.makeSlot($cd, `);
+          ctx.write(true, `${n.name}: $runtime.makeSlot(`);
           ctx.add(n.template);
-          ctx.write(`, ($cd, $parentElement, $context, $instance_${n.componentName}`);
+          ctx.write(`, ($parentElement, $context, $instance_${n.componentName}`);
           if(n.props) ctx.write(', $localProps');
           ctx.write(') => {', true);
           ctx.indent++;
@@ -124,18 +124,14 @@ export function makeComponent(node) {
 
       anchorBlocks.push(xNode('anchor', {
         $compile: [block],
-        $wait: [bb.requireCD],  // FIXME
         name,
         block
       }, (ctx, n) => {
-        let useCD = n.$wait[0].value;
-        if(useCD) ctx.write(`${n.name}: {$: ($cd, el) => {`);
-        else ctx.write(`${n.name}: (el) => {`);
+        ctx.write(`${n.name}: $runtime.makeAnchor((el) => {`);
         ctx.indent++;
         ctx.build(n.block);
         ctx.indent--;
-        if(useCD) ctx.write(true, '}}');
-        else ctx.write(true, '}');
+        ctx.write(true, '})');
       }));
     });
   }

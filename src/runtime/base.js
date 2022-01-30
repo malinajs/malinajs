@@ -1,6 +1,6 @@
 import {
   $watch, $watchReadOnly, $$deepComparator, cloneDeep, $$cloneDeep, cd_new, $digest,
-  $$compareDeep, cd_onDestroy, addEvent, fire, keyComparator, cd_attach, cd_destroy, cd_component
+  $$compareDeep, cd_onDestroy, addEvent, fire, keyComparator, cd_attach, cd_attach2, cd_detach, cd_destroy, cd_component, WatchObject
 } from './cd';
 import { __app_onerror, safeCall, isFunction, isObject, safeGroupCall } from './utils';
 import * as share from './share.js';
@@ -142,6 +142,7 @@ export const $onMount = fn => current_component._m.push(fn);
 
 export const makeApply = () => {
   let $cd = current_component.$cd = share.current_cd = cd_new();
+  $cd.component = current_component;
 
   let planned;
   let apply = r => {
@@ -193,12 +194,11 @@ export const makeComponent = (init) => {
 
 export const callComponent = (context, component, option = {}, propFn, cmp, setter, classFn) => {
   option.context = { ...context };
-  let $component, parentWatch, childWatch, cd;
+  let $component, parentWatch, childWatch, parentCD = share.current_cd;
 
   if(propFn) {
     if(cmp) {
-      cd = cd_new();
-      parentWatch = $watch(cd, propFn, value => {
+      parentWatch = $watch(propFn, value => {
         option.props = value;
         if($component) {
           $component.push?.();
@@ -211,43 +211,25 @@ export const callComponent = (context, component, option = {}, propFn, cmp, sett
   }
 
   if(classFn) {
-    cd = cd || cd_new();
-    fire($watch(cd, classFn, value => {
+    fire($watch(classFn, value => {
       option.$class = value;
       $component?.apply?.();
     }, { ro: true, value: {}, cmp: keyComparator }));
   }
 
-  let anchors = option.anchor;
-  if(anchors) {
-    for(let name in anchors) {
-      let a = anchors[name];
-      let fn = a.$;
-      if(fn) {
-        cd = cd || cd_new();
-        anchors[name] = el => {
-          let $cd = cd_new();
-          cd_attach(cd, $cd);
-          fn($cd, el);
-          return () => cd_destroy($cd);
-        };
-      }
-    }
-  }
-
   $component = safeCall(() => component(option));
   if(setter && $component?.exportedProps) {
-    childWatch = $watch($component.$cd, $component.exportedProps, value => {
+    let w = new WatchObject($component.exportedProps, value => {
       setter(value);
-      cd_component(cd).apply();
-    }, { ro: true, idle: true, value: parentWatch.value, cmp });
+      cd_component(parentCD).apply();
+      option.props = parentWatch.fn();
+      $component.push();
+    });
+    Object.assign(w, {ro: true, idle: true, cmp, value: parentWatch.value});
+    $component.$cd.watchers.push(w);
   }
-  return {
-    $cd: cd,
-    $dom: $component.$dom,
-    destroy: $component.destroy,
-    $component
-  };
+
+  return $component;
 };
 
 
@@ -416,10 +398,24 @@ export const makeExternalProperty = ($component, name, getter, setter) => {
 export const eachDefaultKey = (item, index, array) => isObject(array[0]) ? item : index;
 
 
-export const attachAnchor = ($option, $cd, el, name) => {
-  let fn = $option.anchor?.[name || 'default'];
-  if(fn) cd_onDestroy($cd, fn(el));
+export const attachAnchor = ($option, el, name) => {
+  $option.anchor?.[name || 'default']?.(el);
 };
+
+
+export const makeAnchor = (fn) => {
+  let parentCD = share.current_cd;
+  return ($dom) => {
+    let prev = share.current_cd, $cd = share.current_cd = cd_new();
+    cd_attach2(parentCD, $cd);
+    $onDestroy(() => cd_detach($cd));
+    try {
+      fn($dom);
+    } finally {
+      share.current_cd = prev;
+    }
+  }
+}
 
 
 export const spreadAttributes = (el, fn) => {
@@ -525,7 +521,7 @@ export const makeBlockBound = (parentCD, fr, fn) => {
 
 export const attachBlock = (label, $dom) => {
   if(!$dom) return;
-  insertAfter(label, $dom);
+  insertAfter(label, $dom.$dom || $dom);
 };
 
 export const mergeEvents = (...callbacks) => {

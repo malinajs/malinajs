@@ -251,6 +251,11 @@ xNode.init = {
         if(typeof child == 'string') child = xNode('raw', { value: child });
         this.body.push(child);
       };
+      node.unshift = function(child) {
+        assert(arguments.length == 1, 'Wrong xNode');
+        if(typeof child == 'string') child = xNode('raw', { value: child });
+        this.body.unshift(child);
+      };
     },
     handler: (ctx, node) => {
       if(node.scope) {
