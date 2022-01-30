@@ -297,6 +297,7 @@ export function buildBlock(data, option = {}) {
               }));
             }
           } else {
+            if(isRoot) requireFragment = true;
             let el = placeLabel(`exported ${n.elArg}`);
             let b = this.attchExportedFragment(n, el, n.name);
             b && binds.push(b);
@@ -304,6 +305,7 @@ export function buildBlock(data, option = {}) {
           return;
         }
         if(n.name == 'slot') {
+          if(isRoot) requireFragment = true;
           let slotName = n.elArg;
           if(!slotName) {
             if(option.context == 'fragment') {

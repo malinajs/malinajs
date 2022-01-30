@@ -233,23 +233,33 @@ export const callComponent = (context, component, option = {}, propFn, cmp, sett
 };
 
 
-export const attachDynComponent = (parentCD, label, exp, bind) => {
-  let active, $cd, $dom, destroy, finalLabel = getFinalLabel(label);
-  cd_onDestroy(parentCD, () => destroy?.());
-  $watch(parentCD, exp, (component) => {
-    destroy?.();
-    if($cd) cd_destroy($cd);
+export const attachDynComponent = (label, exp, bind) => {
+  let parentCD = share.current_cd;
+  let active, destroyList, $cd, $dom, finalLabel = getFinalLabel(label);
+  const destroy = () => destroyList && safeGroupCall(destroyList);
+  $onDestroy(destroy);
+
+  $watch(exp, (component) => {
+    destroy();
+    if($cd) cd_detach($cd);
     if(active) removeElementsBetween(label, finalLabel);
 
     if(component) {
-      ({ $cd, $dom, destroy } = bind(component));
-      cd_attach(parentCD, $cd);
+      destroyList = share.current_destroyList = [];
+      $cd = share.current_cd = cd_new();
+      try {
+        $dom = bind(component).$dom;
+      } finally {
+        share.current_destroyList = null;
+        share.current_cd = null;
+      }
+      cd_attach2(parentCD, $cd);
       insertAfter(label, $dom);
       active = true;
     } else {
-      destroy = null;
       $cd = null;
       active = false;
+      destroyList = null;
     }
   });
 };
@@ -451,34 +461,35 @@ export const spreadAttributes = (el, fn) => {
 
 
 export const callExportedFragment = (childComponent, name, slot, events, props, cmp) => {
-  let $cd, r;
+  let push, $dom;
   if(cmp) {
-    $cd = cd_new();
-    let fn = props, result;
-    props = () => result;
-    let w = $watch($cd, fn, (props) => {
-      result = props;
-      r?.push();
+    let result;
+    let w = $watch(props, (value) => {
+      result = value;
+      push?.();
     }, { value: {}, cmp });
     fire(w);
+    props = () => result;
   }
   let fn = childComponent.exported[name];
-  r = fn(props, events, slot);
-  r.$cd = $cd;
-  return r;
+  ([$dom, push] = fn(props, events, slot));
+  return $dom;
 };
 
 
-export const exportFragment = (childCD, name, fn) => {
+export const exportFragment = (name, fn) => {
+  let childCD = share.current_cd;
   cd_component(childCD).exported[name] = (props, events, slot) => {
-    let { $cd, $dom } = fn(props, events || {}, slot);
-    cd_attach(childCD, $cd);
+    let prev = share.current_cd, $cd = share.current_cd = cd_new();
+    cd_attach2(childCD, $cd);
+    $onDestroy(() => cd_detach($cd));
     let apply = cd_component(childCD).apply;
-    return {
-      $dom,
-      destroy: () => $cd.destroy(),
-      push: () => apply?.()
-    };
+    apply();
+    try {
+      return [fn(props, events || {}, slot), apply];
+    } finally {
+      share.current_cd = prev;
+    }
   };
 };
 
@@ -506,16 +517,19 @@ export const makeBlock = (fr, fn) => {
 };
 
 
-export const makeBlockBound = (parentCD, fr, fn) => {
+export const makeBlockBound = (fr, fn) => {
+  let parentCD = share.current_cd;
   return () => {
-    let $dom = fr.cloneNode(true), $cd = cd_new();
-    fn($cd, $dom);
-    cd_attach(parentCD, $cd);
-    return {
-      $dom,
-      destroy: () => cd_destroy($cd)
-    };
-  };
+    let $dom = fr.cloneNode(true), prev = share.current_cd, $cd = share.current_cd = cd_new();
+    cd_attach2(parentCD, $cd);
+    share.$onDestroy(() => cd_detach($cd));
+    try {
+      fn($dom);
+      return $dom;
+    } finally {
+      share.current_cd = prev;
+    }
+  }
 };
 
 

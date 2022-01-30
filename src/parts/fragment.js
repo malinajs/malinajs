@@ -215,7 +215,7 @@ export function attchExportedFragment(node, label, componentName) {
   data = { ...pa, ...data };
 
   return xNode('attach-exported-fragment', data, (ctx, n) => {
-    ctx.write(true, `$runtime.attachBlock($cd, ${n.label}, $runtime.callExportedFragment($instance_${n.componentName}, '${n.name}'`);
+    ctx.write(true, `$runtime.attachBlock(${n.label}, $runtime.callExportedFragment($instance_${n.componentName}, '${n.name}'`);
     ctx.indent++;
     let missed = '';
 
@@ -227,9 +227,9 @@ export function attchExportedFragment(node, label, componentName) {
         ctx.add(n.slot.template);
         ctx.write(')');
       } else {
-        ctx.write('$runtime.makeBlockBound($cd, ');
+        ctx.write('$runtime.makeBlockBound(');
         ctx.add(n.slot.template);
-        ctx.write(', ($cd, $parentElement) => {', true);
+        ctx.write(', ($parentElement) => {', true);
         ctx.indent++;
         ctx.add(n.slot.source);
         ctx.indent--;

@@ -374,7 +374,7 @@ export function makeComponentDyn(node, element) {
     exp: dynamicComponent,
     component
   }, (ctx, n) => {
-    ctx.write(true, `$runtime.attachDynComponent($cd, ${n.el}, () => ${n.exp}, ($ComponentConstructor) => `);
+    ctx.write(true, `$runtime.attachDynComponent(${n.el}, () => ${n.exp}, ($ComponentConstructor) => `);
     ctx.add(n.component);
     ctx.write(')');
   });
