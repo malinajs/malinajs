@@ -30,10 +30,6 @@ export function addEvent(el, event, callback) {
   });
 }
 
-export function cd_onDestroy(cd, fn) {
-  if(fn) cd._d.push(fn);
-}
-
 export function $$removeItem(array, item) {
   let i = array.indexOf(item);
   if(i >= 0) array.splice(i, 1);
@@ -61,19 +57,6 @@ export const cd_attach2 = (parent, cd) => {
 };
 
 export const cd_attach = (cd) => cd_attach2(share.current_cd, cd);
-
-export const cd_destroy = (cd, option) => {
-  if(option !== false && cd.parent) $$removeItem(cd.parent.children, cd);
-  cd.watchers.length = 0;
-  cd.prefix.length = 0;
-  cd._d.forEach(fn => {
-    let p = safeCall(fn);
-    p && destroyResults && destroyResults.push(p);
-  });
-  cd._d.length = 0;
-  cd.children.map(cd => cd_destroy(cd, false));
-  cd.children.length = 0;
-};
 
 export const cd_detach = cd => $$removeItem(cd.parent.children, cd);
 

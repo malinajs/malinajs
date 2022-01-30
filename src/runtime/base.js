@@ -1,6 +1,6 @@
 import {
   $watch, $watchReadOnly, $$deepComparator, cloneDeep, $$cloneDeep, cd_new, $digest,
-  $$compareDeep, cd_onDestroy, addEvent, fire, keyComparator, cd_attach, cd_attach2, cd_detach, cd_destroy, cd_component, WatchObject
+  $$compareDeep, addEvent, fire, keyComparator, cd_attach, cd_attach2, cd_detach, cd_component, WatchObject
 } from './cd';
 import { __app_onerror, safeCall, isFunction, isObject, safeGroupCall } from './utils';
 import * as share from './share.js';
