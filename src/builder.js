@@ -17,7 +17,7 @@ export function buildRuntime() {
   }));
 
   this.module.head.push(xNode('$context', {
-    $hold: ['componentFn'],
+    $hold: ['componentFn']
   }, (ctx) => {
     if(this.inuse.$context) {
       this.require('componentFn');
@@ -30,12 +30,12 @@ export function buildRuntime() {
   }, (ctx, n) => {
     if(n.value) {
       this.require('componentFn');
-      ctx.write(true, `import { $onMount } from 'malinajs/runtime.js';`);
+      ctx.write(true, 'import { $onMount } from \'malinajs/runtime.js\';');
     }
   }));
 
   this.module.top.push(xNode('$onDestroy', (ctx) => {
-    if(this.inuse.$onDestroy) ctx.write(true, `import { $onDestroy } from 'malinajs/runtime.js';`);
+    if(this.inuse.$onDestroy) ctx.write(true, 'import { $onDestroy } from \'malinajs/runtime.js\';');
   }));
 
   this.module.head.unshift(xNode(this.glob.apply, {

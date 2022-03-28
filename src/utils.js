@@ -1,12 +1,12 @@
-import acorn from 'acorn';
-import astring from 'astring';
+import * as acorn from 'acorn';
+import * as astring from 'astring';
 
 let current_context;
 
 export const get_context = () => {
   assert(current_context, 'Out of context');
   return current_context;
-}
+};
 
 export const use_context = (context, fn) => {
   let prev = current_context;
@@ -16,7 +16,7 @@ export const use_context = (context, fn) => {
   } finally {
     current_context = prev;
   }
-}
+};
 
 let _svgElements = 'animate,animateMotion,animateTransform,circle,clipPath,color-profile,defs,desc,discard,ellipse,feBlend,feColorMatrix,feComponentTransfer,feComposite,feConvolveMatrix,feDiffuseLighting,feDisplacementMap,feDistantLight,feDropShadow,feFlood,feFuncA,feFuncB,feFuncG,feFuncR,feGaussianBlur,feImage,feMerge,feMergeNode,feMorphology,feOffset,fePointLight,feSpecularLighting,feSpotLight,feTile,feTurbulence,filter,g,hatch,hatchpath,image,line,linearGradient,marker,mask,mesh,meshgradient,meshpatch,meshrow,metadata,mpath,path,pattern,polygon,polyline,radialGradient,rect,set,solidcolor,stop,switch,symbol,text,textPath,tspan,unknown,use,view';
 let svgElements = {};
@@ -44,7 +44,7 @@ export function toCamelCase(name) {
 }
 
 export function Q(s) {
-  if(get_context().config.inlineTemplate) return s.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\n/g, '\\n'); 
+  if(get_context().config.inlineTemplate) return s.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\n/g, '\\n');
   return s.replace(/\\/g, '\\\\').replace(/`/g, '\\`');
 }
 
@@ -72,7 +72,7 @@ export const isNumber = (value) => {
 export function detectExpressionType(name) {
   if(isSimpleName(name)) return 'identifier';
 
-  let ast = acorn.parse(name, { allowReturnOutsideFunction: true });
+  let ast = acorn.parse(name, { allowReturnOutsideFunction: true, ecmaVersion: 13 });
 
   function checkIdentificator(body) {
     if(body.length != 1) return;
@@ -149,7 +149,7 @@ export const genId = () => {
 
 
 export const extractKeywords = (exp) => {
-  let ast = acorn.parse(exp, { sourceType: 'module', ecmaVersion: 12 });
+  let ast = acorn.parse(exp, { sourceType: 'module', ecmaVersion: 13 });
 
   const keys = new Set();
   const rec = (n) => {
@@ -205,7 +205,7 @@ export const replaceElementKeyword = (exp, fn) => {
 
 export const parseJS = (exp, fn) => {
   let result = {};
-  let ast = result.ast = acorn.parse(exp, { sourceType: 'module', ecmaVersion: 12 });
+  let ast = result.ast = acorn.parse(exp, { sourceType: 'module', ecmaVersion: 13 });
 
   const rec = (n, pk) => {
     let self;

@@ -90,7 +90,7 @@ export function xBuild(node) {
     if(!pending) break;
   }
   if(!depth) {
-    trace.forEach(i => get_context().warning(` * ${i}`))
+    trace.forEach(i => get_context().warning(` * ${i}`));
     throw new Error('xNode: Circular dependency');
   }
 
@@ -169,7 +169,7 @@ export function xNode(_type, _data, _handler) {
     if(_data === false && !_handler) {
       handler = noop;
       data = null;
-    } else if(_handler === false && typeof(_data) == 'object') {
+    } else if(_handler === false && typeof (_data) == 'object') {
       handler = noop;
       data = _data;
     } else if(typeof _data == 'function') {
@@ -215,7 +215,7 @@ export function xNode(_type, _data, _handler) {
 const resolveDependecies = node => {
   if(node.$wait) {
     node.$wait = node.$wait.map(n => {
-      if(typeof(n) == 'string') {
+      if(typeof (n) == 'string') {
         const context = get_context();
         assert(context.glob[n], `Wrong dependency '${n}'`);
         n = context.glob[n];
@@ -226,7 +226,7 @@ const resolveDependecies = node => {
 
   if(node.$hold) {
     node.$hold.forEach(n => {
-      if(typeof(n) == 'string') {
+      if(typeof (n) == 'string') {
         const context = get_context();
         assert(context.glob[n], `Wrong dependency '${n}'`);
         n = context.glob[n];
@@ -237,7 +237,7 @@ const resolveDependecies = node => {
     });
     delete node.$hold;
   }
-}
+};
 
 xNode.init = {
   raw: (ctx, node) => {

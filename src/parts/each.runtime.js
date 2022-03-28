@@ -1,6 +1,6 @@
 import { $$removeElements, childNodes, firstChild, iterNodes } from '../runtime/base';
 import { $watch, $$compareArray, isArray, cd_attach, cd_attach2, cd_new } from '../runtime/cd';
-import * as share from '../runtime/share';
+import { share } from '../runtime/share.js';
 import { safeCall, safeGroupCall } from '../runtime/utils';
 
 
@@ -30,7 +30,7 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind) {
   const destroyAll = () => {
     p_destroy && safeCall(() => mapping.forEach(ctx => ctx.d?.forEach(fn => fn())));
     mapping.clear();
-  }
+  };
 
   share.$onDestroy(destroyAll);
 
@@ -142,14 +142,14 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind) {
           d = share.current_destroyList = [],
           $cd = share.current_cd = cd_new();
         try {
-          ([ $dom, rebind ] = bind(item, i));
+          ([$dom, rebind] = bind(item, i));
         } finally {
           share.current_destroyList = null;
           share.current_cd = null;
         }
         if(d.length) p_destroy = 1;
         else d = null;
-        ctx = {$cd, d, rebind};
+        ctx = { $cd, d, rebind };
         cd_attach2(eachCD, $cd);
         if($dom.nodeType == 11) {
           ctx.first = $dom[firstChild];

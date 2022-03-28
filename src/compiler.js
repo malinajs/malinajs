@@ -25,7 +25,9 @@ export const version = '0.7.0-a3';
 
 
 export async function compile(source, config = {}) {
-  if(config.localConfig !== false && config.path) config = loadConfig(config.path, config);
+  if(config.localConfig !== false && config.path && typeof config.loadConfig === 'function') {
+    config = config.loadConfig(config.path, config);
+  }
 
   config = Object.assign({
     name: 'widget',
@@ -180,7 +182,7 @@ export async function compile(source, config = {}) {
       else ctx.write(true, `const ${n.name} = `);
       ctx.add(n.componentFn);
     }));
-  
+
     ctx.result = xBuild(result);
   });
 
@@ -214,34 +216,6 @@ function detectDependency(data) {
     }
   }
 }
-
-
-function loadConfig(filename, option) {
-  const fs = require('fs');
-  let result = Object.assign({}, option);
-  if(result.plugins) result.plugins = result.plugins.slice();
-
-  let localConfig;
-  let parts = filename.split(/[/\\]/);
-  for(let i = parts.length - 1; i > 1; i--) {
-    let local = parts.slice(0, i).join('/') + '/malina.config.js';
-    if(fs.existsSync(local)) {
-      localConfig = local;
-      break;
-    }
-  }
-
-  if(localConfig) {
-    const confFn = require(localConfig);
-    if(typeof(confFn) == 'function') result = confFn(result, filename);
-    else result = confFn;
-  }
-  if(!result.path) result.path = filename;
-  if(!result.name) result.name = filename.match(/([^/\\]+)\.\w+$/)[1];
-
-  return result;
-}
-
 
 function setup() {
   this.glob.componentFn = xNode(this.glob.componentFn, {

@@ -3,8 +3,7 @@ import {
   $$compareDeep, addEvent, fire, keyComparator, cd_attach, cd_attach2, cd_detach, cd_component, WatchObject
 } from './cd';
 import { __app_onerror, safeCall, isFunction, isObject, safeGroupCall } from './utils';
-import * as share from './share.js';
-import { $onDestroy } from './share.js';
+import { share, $onDestroy } from './share.js';
 
 let templatecache = {};
 let templatecacheSvg = {};
@@ -162,7 +161,7 @@ export const makeApply = () => {
   current_component.push = apply;
   apply();
   return apply;
-}
+};
 
 
 export const makeComponent = (init) => {
@@ -225,7 +224,7 @@ export const callComponent = (context, component, option = {}, propFn, cmp, sett
       option.props = parentWatch.fn();
       $component.push();
     });
-    Object.assign(w, {ro: true, idle: true, cmp, value: parentWatch.value});
+    Object.assign(w, { ro: true, idle: true, cmp, value: parentWatch.value });
     $component.$cd.watchers.push(w);
   }
 
@@ -424,8 +423,8 @@ export const makeAnchor = (fn) => {
     } finally {
       share.current_cd = prev;
     }
-  }
-}
+  };
+};
 
 
 export const spreadAttributes = (el, fn) => {
@@ -529,7 +528,7 @@ export const makeBlockBound = (fr, fn) => {
     } finally {
       share.current_cd = prev;
     }
-  }
+  };
 };
 
 
@@ -580,7 +579,7 @@ export const makeRootEvent = (root) => {
 export const mount = (label, component, option) => {
   let app, $dom, first, last, destroyList = share.current_destroyList = [];
   try {
-    ({$dom, ...app} = component(option));
+    ({ $dom, ...app } = component(option));
     if($dom.nodeType == 11) {
       first = $dom.firstChild;
       last = $dom.lastChild;
@@ -592,6 +591,6 @@ export const mount = (label, component, option) => {
   app.destroy = () => {
     safeGroupCall(destroyList);
     $$removeElements(first, last);
-  }
+  };
   return app;
-}
+};

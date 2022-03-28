@@ -1,5 +1,5 @@
-import acorn from 'acorn';
-import astring from 'astring';
+import * as acorn from 'acorn';
+import * as astring from 'astring';
 import { assert, detectExpressionType } from './utils.js';
 import { xNode } from './xnode.js';
 
@@ -33,9 +33,9 @@ export function parse() {
     }
     const onComment = (isBlockComment, value, start, end) => {
       if(isBlockComment) return;
-      this.script.comments.push({start, end, value});
-    }
-    this.script.ast = acorn.parse(source, {sourceType: 'module', ecmaVersion: 12, onComment});
+      this.script.comments.push({ start, end, value });
+    };
+    this.script.ast = acorn.parse(source, { sourceType: 'module', ecmaVersion: 13, onComment });
 
     if(source.includes('$props')) this.require('$props');
     if(source.includes('$attributes')) this.require('$attributes');
@@ -387,7 +387,7 @@ export function build() {
     Raw: function(node, state) {
       state.write(node.value);
     }
-  }, astring.baseGenerator);
+  }, astring.GENERATOR);
   this.script.code = astring.generate(this.script.ast, { generator });
 }
 
@@ -431,7 +431,7 @@ const generator = Object.assign({
       if(statement.type != 'Raw') state.write(lineEnd);
     }
   }
-}, astring.baseGenerator);
+}, astring.GENERATOR);
 
 
 xNode.init.ast = (ctx, node) => {

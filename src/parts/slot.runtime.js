@@ -1,5 +1,5 @@
 import { $watch, WatchObject, cd_new, cd_attach2, fire, cd_detach } from '../runtime/cd.js';
-import * as share from '../runtime/share.js';
+import { share } from '../runtime/share.js';
 
 export const invokeSlotBase = ($component, slotName, $context, props, placeholder) => {
   let $slot = $component.$option.slots?.[slotName || 'default'];
@@ -12,7 +12,7 @@ export const invokeSlot = ($component, slotName, $context, propsFn, placeholder,
   if($slot) {
     let push, $dom,
       w = new WatchObject(propsFn, value => push(value), true);
-    Object.assign(w, {value: {}, cmp, idle: true})
+    Object.assign(w, { value: {}, cmp, idle: true });
     fire(w);
     ([$dom, push] = $slot($component, $context, w.value));
     if(push) share.current_cd.watchers.push(w);

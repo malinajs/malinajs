@@ -1,6 +1,6 @@
 import { $$removeElements, firstChild, insertAfter } from '../runtime/base';
 import { $watch, cd_new, cd_attach2, cd_detach } from '../runtime/cd';
-import * as share from '../runtime/share';
+import { share } from '../runtime/share.js';
 import { safeGroupCall } from '../runtime/utils';
 
 
