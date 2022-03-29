@@ -26,7 +26,7 @@ export const version = '0.7.0-a3';
 
 export async function compile(source, config = {}) {
   if(config.localConfig !== false && config.path && typeof config.loadConfig === 'function') {
-    config = config.loadConfig(config.path, config);
+    config = await config.loadConfig(config.path, config);
   }
 
   config = Object.assign({
