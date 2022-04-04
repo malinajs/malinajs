@@ -318,7 +318,7 @@ export const bindText = (cd, element, fn) => {
 
 export const bindStyle = (cd, element, name, fn) => {
     $watchReadOnly(cd, fn, (value) => {
-        element.style[name] = value;
+        element.style.setProperty(name, value);
     });
 };
 
