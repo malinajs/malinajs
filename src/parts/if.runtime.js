@@ -1,12 +1,12 @@
 import { $$removeElements, firstChild, insertAfter } from '../runtime/base';
 import { $watch, cd_new, cd_attach2, cd_detach } from '../runtime/cd';
-import { share } from '../runtime/share.js';
+import { $onDestroy } from '../runtime/share.js';
 import { safeGroupCall } from '../runtime/utils';
 
 
 export function ifBlock(label, fn, build, buildElse) {
   let first, last, $cd, destroyList, parentCD = share.current_cd;
-  share.$onDestroy(() => safeGroupCall(destroyList));
+  $onDestroy(() => safeGroupCall(destroyList));
 
   function createBlock(builder) {
     let $dom;

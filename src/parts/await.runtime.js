@@ -1,12 +1,12 @@
 import { $$removeElements, firstChild, insertAfter } from '../runtime/base';
 import { $watch, keyComparator, cd_component, cd_new, cd_attach2, cd_detach } from '../runtime/cd';
-import { share } from '../runtime/share.js';
+import { $onDestroy } from '../runtime/share.js';
 import { safeGroupCall } from '../runtime/utils.js';
 
 
 export function $$awaitBlock(label, relation, fn, build_main, build_then, build_catch) {
   let parentCD = share.current_cd, first, last, $cd, promise, destroyList, status = 0;
-  share.$onDestroy(() => safeGroupCall(destroyList));
+  $onDestroy(() => safeGroupCall(destroyList));
 
   function destroyBlock() {
     if(!first) return;

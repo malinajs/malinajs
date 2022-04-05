@@ -1,5 +1,5 @@
 import { $watch, WatchObject, cd_new, cd_attach2, fire, cd_detach } from '../runtime/cd.js';
-import { share } from '../runtime/share.js';
+import { $onDestroy } from '../runtime/share.js';
 
 export const invokeSlotBase = ($component, slotName, $context, props, placeholder) => {
   let $slot = $component.$option.slots?.[slotName || 'default'];
@@ -25,7 +25,7 @@ export const makeSlot = (fr, fn) => {
   return (callerComponent, $context, props) => {
     let $dom = fr.cloneNode(true), prev = share.current_cd, $cd = share.current_cd = cd_new();
     cd_attach2(parentCD, $cd);
-    share.$onDestroy(() => cd_detach($cd));
+    $onDestroy(() => cd_detach($cd));
     try {
       return [$dom, fn($dom, $context, callerComponent, props)];
     } finally {

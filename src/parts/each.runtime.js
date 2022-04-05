@@ -1,6 +1,6 @@
 import { $$removeElements, childNodes, firstChild, iterNodes } from '../runtime/base';
 import { $watch, $$compareArray, isArray, cd_attach, cd_attach2, cd_new } from '../runtime/cd';
-import { share } from '../runtime/share.js';
+import { $onDestroy } from '../runtime/share.js';
 import { safeCall, safeGroupCall } from '../runtime/utils';
 
 
@@ -32,7 +32,7 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind) {
     mapping.clear();
   };
 
-  share.$onDestroy(destroyAll);
+  $onDestroy(destroyAll);
 
   $watch(fn, (array) => {
     if(!array) array = [];

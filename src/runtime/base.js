@@ -3,7 +3,7 @@ import {
   $$compareDeep, addEvent, fire, keyComparator, cd_attach, cd_attach2, cd_detach, cd_component, WatchObject
 } from './cd';
 import { __app_onerror, safeCall, isFunction, isObject, safeGroupCall } from './utils';
-import { share, $onDestroy } from './share.js';
+import { $onDestroy } from './share.js';
 
 let templatecache = {};
 let templatecacheSvg = {};
@@ -521,7 +521,7 @@ export const makeBlockBound = (fr, fn) => {
   return () => {
     let $dom = fr.cloneNode(true), prev = share.current_cd, $cd = share.current_cd = cd_new();
     cd_attach2(parentCD, $cd);
-    share.$onDestroy(() => cd_detach($cd));
+    $onDestroy(() => cd_detach($cd));
     try {
       fn($dom);
       return $dom;

@@ -1,5 +1,5 @@
 import { __app_onerror, safeCall, isObject } from './utils';
-import { share, $onDestroy } from './share.js';
+import { $onDestroy } from './share.js';
 
 export function WatchObject(fn, cb, ro) {
   this.fn = fn;
