@@ -2,7 +2,7 @@ import { assert } from '../utils.js';
 import { xNode } from '../xnode.js';
 
 
-export function attachHead(n, requireCD) {
+export function attachHead(n) {
   if(n.elArg == 'window' || n.elArg == 'body') {
     let name = 'el' + (this.uniqIndex++);
     let block = this.buildBlock({ body: [n] }, { malinaElement: true, inline: true, oneElement: name, bindAttributes: true });
@@ -29,9 +29,7 @@ export function attachHead(n, requireCD) {
     });
 
     let d = {
-      $wait: ['apply'],
-      $hold: [requireCD],
-      requireCD
+      $wait: ['apply']
     };
     if(title?.body?.[0]) {
       assert(title.body[0].type == 'text');
@@ -53,21 +51,16 @@ export function attachHead(n, requireCD) {
       });
       d.source = bb.source;
       d.template = bb.template;
-      d.blockCD = bb.requireCD;
-
       d.$compile = [d.source];
-      d.$wait.push(d.blockCD);
 
       this.require('$onDestroy');
     }
 
     const result = xNode('malina:head', d, (ctx, n) => {
-      if(n.blockCD.value) n.requireCD.$value(true);
       if(n.title != null) ctx.writeLine(`document.title = ${n.title};`);
       if(n.dynTitle) {
         if(this.inuse.apply) {
-          n.requireCD.$value(true);
-          ctx.writeLine(`$watchReadOnly($cd, () => (${n.dynTitle}), (value) => {document.title = value;});`);
+          ctx.writeLine(`$watchReadOnly(() => (${n.dynTitle}), (value) => {document.title = value;});`);
         } else ctx.writeLine(`document.title = ${n.dynTitle};`);
       }
 
