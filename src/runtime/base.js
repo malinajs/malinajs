@@ -397,7 +397,8 @@ export const makeClassResolver = ($option, classMap, metaClass, mainName) => {
 };
 
 
-export const makeExternalProperty = ($component, name, getter, setter) => {
+export const makeExternalProperty = (name, getter, setter) => {
+  let $component = current_component;
   Object.defineProperty($component, name, {
     get: getter,
     set: v => { setter(v); $component.apply(); }
@@ -578,9 +579,11 @@ export const makeRootEvent = (root) => {
 };
 
 export const mount = (label, component, option) => {
-  let app, $dom, first, last, destroyList = share.current_destroyList = [];
+  let app, first, last, destroyList = share.current_destroyList = [];
   try {
-    ({$dom, ...app} = component(option));
+    app = component(option);
+    let $dom = app.$dom;
+    delete app.$dom;
     if($dom.nodeType == 11) {
       first = $dom.firstChild;
       last = $dom.lastChild;
