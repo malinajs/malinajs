@@ -2,7 +2,7 @@ import { trimEmptyNodes, unwrapExp } from '../utils.js';
 import { xNode } from '../xnode.js';
 
 
-export function attachPortal(node, requireCD) {
+export function attachPortal(node) {
   let body = trimEmptyNodes(node.body || []);
   if(!body.length) return;
 
@@ -15,20 +15,15 @@ export function attachPortal(node, requireCD) {
     }
   });
 
-  this.require('$component');
-
   let mount = node.attributes.find(a => a.name == 'mount')?.value;
   if(mount) mount = unwrapExp(mount);
 
   const result = xNode('portal', {
     $compile: [bb.source],
-    $wait: [bb.requireCD],
     mount,
     source: bb.source,
-    template: bb.template,
-    requireCD
+    template: bb.template
   }, (ctx, n) => {
-    if(n.$wait[0].value) n.requireCD.$value(true);
     let label = n.mount || 'document.body';
     ctx.writeLine('{');
     ctx.indent++;
@@ -36,7 +31,7 @@ export function attachPortal(node, requireCD) {
     ctx.add(n.source);
     ctx.writeLine('let $$first = $parentElement[$runtime.firstChild];');
     ctx.writeLine('let $$last = $parentElement.lastChild;');
-    ctx.writeLine(`$runtime.cd_onDestroy(${n.$wait[0].value ? '$cd' : '$component'}, () => $runtime.$$removeElements($$first, $$last));`);
+    ctx.writeLine(`$runtime.$onDestroy(() => $runtime.$$removeElements($$first, $$last));`);
     ctx.writeLine(`$tick(() => ${label}.appendChild($parentElement));`);
     ctx.indent--;
     ctx.writeLine('}');

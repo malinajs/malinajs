@@ -1,20 +1,14 @@
 import { xNode } from '../xnode.js';
 
 
-export function makeHtmlBlock(exp, label, requireCD) {
+export function makeHtmlBlock(exp, label) {
   this.detectDependency(exp);
-  this.require('rootCD');
   return xNode('block', {
     $wait: ['apply'],
     el: label.bindName(),
-    exp,
-    requireCD
+    exp
   }, (ctx, n) => {
-    let cd;
-    if(this.inuse.apply) {
-      n.requireCD.$value(true);
-      cd = '$cd';
-    } else cd = 'null';
-    ctx.write(true, `$runtime.$$htmlBlock(${cd}, ${n.el}, () => (${n.exp}));`);
+    if(this.inuse.apply) ctx.write(true, `$runtime.$$htmlBlock(${n.el}, () => (${n.exp}));`);
+    else ctx.write(true, `$runtime.$$htmlBlockStatic(${n.el}, ${n.exp});`);
   });
 }
