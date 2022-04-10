@@ -1,24 +1,35 @@
-import { $$htmlToFragment, insertAfter, svgToFragment, $$removeElements } from '../runtime/base';
+import { insertAfter, $$removeElements, firstChild } from '../runtime/base';
 import { $watch } from '../runtime/cd';
 
-export function $$htmlBlock($cd, tag, fn) {
+let create = (tag, html) => {
+  let fr;
+  if(tag.parentElement instanceof SVGElement) {
+    let t = document.createElement('template');
+    t.innerHTML = '<svg>' + html + '</svg>';
+    fr = t.content[firstChild];
+  } else {
+    let t = document.createElement('template');
+    t.innerHTML = html;
+    fr = t.content;
+  }
+  let lastElement = fr.lastChild;
+  insertAfter(tag, fr);
+  return lastElement;
+};
+
+export function $$htmlBlock(tag, fn) {
   let lastElement;
-  let create = (html) => {
-    let fr;
-    if(tag.parentElement instanceof SVGElement) fr = svgToFragment(html);
-    else fr = $$htmlToFragment(html, 3);
-    lastElement = fr.lastChild;
-    insertAfter(tag, fr);
-  };
   let destroy = () => {
     if(!lastElement) return;
     $$removeElements(tag.nextSibling, lastElement);
     lastElement = null;
   };
-  if($cd) {
-    $watch($cd, fn, (html) => {
-      destroy();
-      if(html) create(html);
-    }, { ro: true });
-  } else create(fn());
+  $watch(fn, (html) => {
+    destroy();
+    if(html) lastElement = create(tag, html);
+  }, { ro: true });
+}
+
+export function $$htmlBlockStatic(tag, value) {
+  create(tag, value);
 }
