@@ -95,7 +95,7 @@ export function attachSlot(slotName, label, node) {
                 ctx.build(n.placeholder);
             });
             ctx.write(true, '}');
-        } else if(hasDynProps && !this.config.immutable) ctx.write(`, 0`)
+        } else if(hasDynProps && !this.config.immutable) ctx.write(`, null`)
         if(hasDynProps && !this.config.immutable) ctx.write(`, $runtime.$$compareDeep`)
         ctx.write(');\n');
     });
