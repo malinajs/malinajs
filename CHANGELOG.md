@@ -1,6 +1,7 @@
 
 ## 0.6.x
 
+* destruncting for "each" for array and object
 * style's attribute "global"
 * compound classes (handle mix of class and class directives)
 * new passing class
