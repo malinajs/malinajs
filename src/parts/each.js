@@ -1,6 +1,6 @@
 
 import acorn from 'acorn';
-import { assert, isSimpleName, detectExpressionType, xNode, trimEmptyNodes } from '../utils.js'
+import { assert, isSimpleName, detectExpressionType, xNode, trimEmptyNodes, parseJS } from '../utils.js'
 
 
 export function makeEachBlock(data, option) {
@@ -26,28 +26,44 @@ export function makeEachBlock(data, option) {
     right = right.trim();
 
     let itemName, indexName, bind0 = null;
-    if(right[0] == '{') {
-        rx = right.match(/^(\{[^}]+\})(.*)$/s);
-        assert(rx, `Wrong #each expression '${data.value}'`);
-        let exp = rx[1], keywords;
-
+    if(right[0] == '{' || right[0] == '[') {
+        let keywords, unwrap;
         try {
-            keywords = acorn.parse(`(${exp} = $$item)`, {sourceType: 'module', ecmaVersion: 12}).body[0].expression.left.properties.map(p => p.key.name);
+            let exp = `[${right}]`;
+            let e = parseJS(exp);
+            assert(e.ast.body.length == 1);
+
+            itemName = '$$item';
+            let n = e.ast.body[0];
+            let a = n.expression.elements[0];
+            unwrap = exp.substring(a.start, a.end)
+            if(n.expression.elements.length == 1) {
+                indexName = '$index';
+            } else {
+                assert(n.expression.elements.length == 2)
+                let b = n.expression.elements[1];
+                assert(b.type == 'Identifier');
+                indexName = exp.substring(b.start, b.end);
+            }
+
+            e = parseJS(`(${unwrap} = $$item)`);
+            let l = e.ast.body[0].expression.left;
+            if(l.type == 'ArrayPattern') {
+                keywords = l.elements.map(p => p.name);
+            } else {
+                assert(l.type == 'ObjectPattern');
+                keywords = l.properties.map(p => p.key.name);
+            }
         } catch (e) {
             throw new Error('Wrong destructuring in each: ' + data.value);
         }
 
-        itemName = '$$item';
-        indexName = rx[2].trim();
-        if(indexName[0] == ',') indexName = indexName.substring(1).trim();
-        indexName = indexName || '$index';
-
         bind0 = xNode('each:unwrap', {
-            exp,
+            unwrap,
             keywords
         }, (ctx, n) => {
             ctx.writeLine(`let ${n.keywords.join(', ')};`);
-            ctx.writeLine(`$runtime.prefixPush($ctx.cd, () => (${n.exp} = $$item));`);
+            ctx.writeLine(`$runtime.prefixPush($ctx.cd, () => (${n.unwrap} = $$item));`);
         });
     } else {
         rx = right.trim().split(/\s*\,\s*/);
