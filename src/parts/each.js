@@ -15,7 +15,7 @@ export function makeEachBlock(data, option) {
     assert(rx, `Wrong #each expression '${data.value}'`);
     let arrayName = rx[1];
     let right = rx[2];
-    let keyName;
+    let keyName, keyFunction = null;
 
     // get keyName
     rx = right.match(/^(.*)\s*\(\s*([^\(\)]+)\s*\)\s*$/s);
@@ -24,6 +24,21 @@ export function makeEachBlock(data, option) {
         keyName = rx[2];
     }
     right = right.trim();
+
+    const makeKeyFunction = (keyLink) => {
+        const e = parseJS(keyName).transform((n, pk) => {
+            if(n.type != 'Identifier') return;
+            if(pk == 'property') return;
+            let r = keyLink[n.name];
+            if(r) n.name = r;
+        });
+        let exp = e.build(e.ast.body[0].expression);
+        keyFunction = xNode('key-function', {
+            exp
+        }, (ctx, n) => {
+            ctx.write(`($$item, $index) => ${n.exp}`);
+        });
+    }
 
     let itemName, indexName, bind0 = null;
     if(right[0] == '{' || right[0] == '[') {
@@ -50,9 +65,21 @@ export function makeEachBlock(data, option) {
             let l = e.ast.body[0].expression.left;
             if(l.type == 'ArrayPattern') {
                 keywords = l.elements.map(p => p.name);
+
+                if(keyName) {
+                    let keyLink = {};
+                    for(let i in keywords) keyLink[keywords[i]] = `$$item[${i}]`;
+                    makeKeyFunction(keyLink);
+                }
             } else {
                 assert(l.type == 'ObjectPattern');
                 keywords = l.properties.map(p => p.key.name);
+
+                if(keyName) {
+                    let keyLink = {};
+                    for(let k of keywords) keyLink[k] = `$$item.${k}`;
+                    makeKeyFunction(keyLink);
+                }
             }
         } catch (e) {
             throw new Error('Wrong destructuring in each: ' + data.value);
@@ -70,32 +97,13 @@ export function makeEachBlock(data, option) {
         assert(rx.length <= 2, `Wrong #each expression '${data.value}'`);
         itemName = rx[0];
         indexName = rx[1] || '$index';
+        if(keyName) {
+            if(keyName == itemName) keyFunction = 'noop';
+            else makeKeyFunction({[itemName]: '$$item', [indexName]: '$index'});
+        }
     }
     assert(isSimpleName(itemName), `Wrong name '${itemName}'`);
     assert(isSimpleName(indexName), `Wrong name '${indexName}'`);
-
-    let keyFunction = null;
-    if(keyName == itemName) {
-        keyName = null;
-        keyFunction = 'noop';
-    }
-    if(keyName) assert(detectExpressionType(keyName) == 'identifier', `Wrong key '${keyName}'`);
-
-    if(keyName) {
-        this.detectDependency(keyName);
-        keyFunction = xNode('function', {
-            inline: true,
-            arrow: true,
-            args: [itemName, 'i'],
-            body: [xNode('block', {
-                index: indexName,
-                key: keyName
-            }, (ctx, data) => {
-                if(data.key == data.index) ctx.writeLine('return i;');
-                else ctx.writeLine(`return ${data.key};`);
-            })]
-        });
-    };
 
     let bind;
     if(itemData.source) {
