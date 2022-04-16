@@ -222,7 +222,7 @@ export function buildBlock(data, option = {}) {
       return el;
     };
 
-    const bindNode = (n) => {
+    const bindNode = (n, nodeIndex) => {
       if(n.type === 'text') {
         let prev = tpl.getLast();
         if(prev?.$type == 'node:text' && prev._boundName) tpl.push(xNode('node:comment', { label: true }));
@@ -409,7 +409,8 @@ export function buildBlock(data, option = {}) {
         }
       } else if(n.type === 'if') {
         if(isRoot) requireFragment = true;
-        binds.push(this.makeifBlock(n, placeLabel(n.value)));
+        if(nodeIndex == 0 && !isRoot) binds.push(this.makeifBlock(n, tpl, true));
+        else binds.push(this.makeifBlock(n, placeLabel(n.value)));
         return;
       } else if(n.type === 'systag') {
         let r = n.value.match(/^@(\w+)\s+(.*)$/s);
@@ -432,9 +433,9 @@ export function buildBlock(data, option = {}) {
         lastStatic = tpl.push(n.content);
       }
     };
-    body.forEach(node => {
+    body.forEach((node, i) => {
       try {
-        bindNode(node);
+        bindNode(node, i);
       } catch (e) {
         wrapException(e, node);
       }

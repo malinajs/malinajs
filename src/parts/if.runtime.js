@@ -4,7 +4,7 @@ import * as share from '../runtime/share';
 import { safeGroupCall } from '../runtime/utils';
 
 
-export function ifBlock(label, fn, build, buildElse) {
+export function ifBlock(label, fn, build, buildElse, parentLabel) {
   let first, last, $cd, destroyList, parentCD = share.current_cd;
   share.$onDestroy(() => safeGroupCall(destroyList));
 
@@ -23,7 +23,8 @@ export function ifBlock(label, fn, build, buildElse) {
       first = $dom[firstChild];
       last = $dom.lastChild;
     } else first = last = $dom;
-    insertAfter(label, $dom);
+    if(parentLabel) label.appendChild($dom);
+    else insertAfter(label, $dom);
   }
 
   function destroyBlock() {

@@ -2,7 +2,7 @@ import { assert } from '../utils.js';
 import { xNode } from '../xnode.js';
 
 
-export function makeifBlock(data, element) {
+export function makeifBlock(data, element, parentElement) {
   let r = data.value.match(/^#if (.*)$/s);
   let exp = r[1];
   assert(exp, 'Wrong binding: ' + data.value);
@@ -32,10 +32,12 @@ export function makeifBlock(data, element) {
   return xNode('if:bind', {
     $wait: ['apply'],
     el: element.bindName(),
+    parentElement,
     exp,
     mainBlock: mainBlock,
     elseBlock: elseBlock
   }, (ctx, n) => {
+    let missing = '';
     if(this.inuse.apply) {
       ctx.write(true, `$runtime.ifBlock(${n.el}, () => !!(${n.exp}),`);
     } else {
@@ -48,8 +50,10 @@ export function makeifBlock(data, element) {
     if(n.elseBlock) {
       ctx.write(',');
       ctx.add(n.elseBlock);
-    }
+    } else missing = ', null';
     ctx.indent--;
-    ctx.write(true, ');', true);
+    ctx.write(true);
+    if(n.parentElement) ctx.write(missing + ', true');
+    ctx.write(');', true);
   });
 }
