@@ -248,7 +248,7 @@ export const htmlEntitiesToText = (text) => {
     [/&#47;/g, '/'],
     [/&lt;/g, '<'],
     [/&gt;/g, '>'],
-    [/&nbsp;/g, ' '],
+    [/&nbsp;/g, ' '],
     [/&quot;/g, '"']
   ];
   entities.forEach(([k, v]) => {
