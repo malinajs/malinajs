@@ -359,13 +359,6 @@ export function transform() {
     }));
   }
 
-  if(this.scriptNodes[0] && this.scriptNodes[0].attributes.some(a => a.name == 'property')) {
-    result.props.forEach(p => {
-      this.require('apply');
-      resultBody.push(rawNode(`$runtime.makeExternalProperty('${p.name}', () => ${p.name}, _${p.name} => ${p.name} = _${p.name});`));
-    });
-  }
-
   this.script.rootLevel = resultBody;
 
   this.module.top.push(xNode('autoimport', (ctx) => {
@@ -375,6 +368,17 @@ export function transform() {
   this.module.top.push(xNode('ast', { body: imports }));
   this.module.head.push(xNode('ast', { body: header }));
   this.module.code.push(xNode('ast', { body: resultBody }));
+
+  if(this.scriptNodes[0] && this.scriptNodes[0].attributes.some(a => a.name == 'property') && this.script.props.length && !this.script.readOnly) {
+    this.require('apply');
+    this.module.code.push(xNode('external-property', {
+      props: this.script.props
+    }, (ctx, n) => {
+      n.props.forEach(p => {
+        ctx.write(true, `$runtime.makeExternalProperty('${p.name}', () => ${p.name}, _${p.name} => ${p.name} = _${p.name});`);
+      });
+    }));
+  }
 }
 
 export function build() {

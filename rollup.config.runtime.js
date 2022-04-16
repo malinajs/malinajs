@@ -6,7 +6,7 @@ export default {
         format: 'es'
     },
     onwarn(w, warn) {
-        if(w.code == 'ILLEGAL_NAMESPACE_REASSIGNMENT' && (w.id.endsWith('/parts/if.runtime.js') || w.id.endsWith('/parts/each.runtime.js'))) return;
-		warn(w);
-	}
+        if(w.code == 'ILLEGAL_NAMESPACE_REASSIGNMENT' && w.message.includes("'share'")) return;
+        warn(w);
+    }
 }
