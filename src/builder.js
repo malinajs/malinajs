@@ -69,6 +69,7 @@ export function buildRuntime() {
 
   let bb = this.buildBlock(this.DOM, {
     inline: true,
+    protectLastTag: true,
     template: {
       name: '$parentElement',
       cloneNode: true
@@ -138,6 +139,7 @@ export function buildBlock(data, option = {}) {
   let binds = xNode('block');
   let result = {};
   let inuse = Object.assign({}, this.inuse);
+  let lastTagDynamic = false;
 
   if(!option.parentElement) option.parentElement = '$parentElement';
 
@@ -224,6 +226,7 @@ export function buildBlock(data, option = {}) {
 
     const bindNode = (n, nodeIndex) => {
       if(n.type === 'text') {
+        if(isRoot) lastTagDynamic = false;
         let prev = tpl.getLast();
         if(prev?.$type == 'node:text' && prev._boundName) tpl.push(xNode('node:comment', { label: true }));
 
@@ -264,6 +267,7 @@ export function buildBlock(data, option = {}) {
           lastStatic = tpl.push(n.value);
         }
       } else if(n.type === 'template') {
+        if(isRoot) lastTagDynamic = false;
         lastStatic = null;
         tpl.push(n.openTag);
         tpl.push(n.content);
@@ -276,6 +280,7 @@ export function buildBlock(data, option = {}) {
           b && binds.push(b);
           return;
         }
+        if(isRoot) lastTagDynamic = false;
         if(n.name == 'component' || n.name.match(/^[A-Z]/)) {
           if(n.name == 'component' || !n.elArg) {
             // component
@@ -401,14 +406,20 @@ export function buildBlock(data, option = {}) {
           binds.push(eachBlock.source);
           return;
         } else {
-          if(isRoot) requireFragment = true;
+          if(isRoot) {
+            requireFragment = true;
+            lastTagDynamic = true;
+          }
           let element = placeLabel(n.value);
           let eachBlock = this.makeEachBlock(n, { elName: element.bindName() });
           binds.push(eachBlock.source);
           return;
         }
       } else if(n.type === 'if') {
-        if(isRoot) requireFragment = true;
+        if(isRoot) {
+          requireFragment = true;
+          lastTagDynamic = true;
+        }
         if(nodeIndex == 0 && !isRoot) binds.push(this.makeifBlock(n, tpl, true));
         else binds.push(this.makeifBlock(n, placeLabel(n.value)));
         return;
@@ -418,18 +429,25 @@ export function buildBlock(data, option = {}) {
         let exp = r[2];
 
         if(name == 'html') {
-          if(isRoot) requireFragment = true;
+          if(isRoot) {
+            requireFragment = true;
+            lastTagDynamic = true;
+          }
           let el = placeLabel('html');
           binds.push(this.makeHtmlBlock(exp, el));
           return;
         } else throw 'Wrong tag';
       } else if(n.type === 'await') {
-        if(isRoot) requireFragment = true;
+        if(isRoot) {
+          requireFragment = true;
+          lastTagDynamic = true;
+        }
         let el = placeLabel(n.value);
         let r = this.makeAwaitBlock(n, el);
         r && binds.push(r);
         return;
       } else if(n.type === 'comment') {
+        if(isRoot) lastTagDynamic = false;
         lastStatic = tpl.push(n.content);
       }
     };
@@ -442,11 +460,8 @@ export function buildBlock(data, option = {}) {
     });
   };
   go(data, true, rootTemplate);
-  if(option.protectLastTag) {
-    let l = rootTemplate.getLast();
-    if(l?.label) {
-      rootTemplate.push(xNode('node:comment', { value: '' }));
-    }
+  if(option.protectLastTag && lastTagDynamic) {
+    rootTemplate.push(xNode('node:comment', { value: '' }));
   }
 
   let innerBlock = null;
