@@ -306,68 +306,67 @@ export function transform() {
     resultBody.push(n);
   });
 
-  let header = [];
-
   if(lastPropIndex != null) {
-    header.push(rawNode(() => {
-      if(this.inuse.$props) return 'let $props = $option.props || {};';
+    this.module.head.push(xNode('$props', ctx => {
+      if(this.inuse.$props) ctx.write(true, 'let $props = $option.props || {};');
     }));
 
     if(!constantProps && !this.script.readOnly) this.require('apply');
 
-    resultBody.splice(lastPropIndex, 0, rawNode(() => {
-      let code = [];
+    this.module.code.push(xNode('ast', { body: resultBody.slice(0, lastPropIndex) }));
+
+    this.module.code.push(xNode('props', {
+      props: this.script.props,
+      constantProps
+    }, (ctx, n) => {
       if(this.inuse.$attributes) {
-        let pa = result.props.map(p => {
+        let pa = n.props.map(p => {
           if(p.value === void 0) return `${p.name}`;
           return `${p.name}=${p.value}`;
         }).join(', ');
-        code.push(`let {${pa}, ...$attributes} = $props;`);
+        ctx.write(true, `let {${pa}, ...$attributes} = $props;`);
 
-        if(!this.script.readOnly && !constantProps) {
-          code.push(`$runtime.current_component.push = () => ({${result.props.map(p => p.name + '=' + p.name).join(', ')}, ...$attributes} = $props = $option.props || {});`);
-          code.push(`$runtime.current_component.exportedProps = () => ({${result.props.map(p => p.name).join(', ')}});`);
+        if(!this.script.readOnly && !n.constantProps) {
+          ctx.write(true, `$runtime.current_component.push = () => ({${n.props.map(p => p.name + '=' + p.name).join(', ')}, ...$attributes} = $props = $option.props || {});`);
+          ctx.write(true, `$runtime.current_component.exportedProps = () => ({${n.props.map(p => p.name).join(', ')}});`);
         }
       } else if(this.inuse.$props) {
-        let pa = result.props.map(p => {
+        let pa = n.props.map(p => {
           if(p.value === void 0) return `${p.name}`;
           return `${p.name}=${p.value}`;
         }).join(', ');
-        code.push(`let {${pa}} = $props;`);
+        ctx.write(true, `let {${pa}} = $props;`);
 
-        if(!this.script.readOnly && !constantProps) {
-          code.push(`$runtime.current_component.push = () => ({${result.props.map(p => p.name + '=' + p.name).join(', ')}} = $props = $option.props || {});`);
-          code.push(`$runtime.current_component.exportedProps = () => ({${result.props.map(p => p.name).join(', ')}});`);
+        if(!this.script.readOnly && !n.constantProps) {
+          ctx.write(true, `$runtime.current_component.push = () => ({${n.props.map(p => p.name + '=' + p.name).join(', ')}} = $props = $option.props || {});`);
+          ctx.write(true, `$runtime.current_component.exportedProps = () => ({${n.props.map(p => p.name).join(', ')}});`);
         }
       }
-      return code;
     }));
+
+    this.module.code.push(xNode('ast', { body: resultBody.slice(lastPropIndex) }));
   } else {
-    header.push(rawNode(() => {
-      let code = [];
+    this.module.head.push(xNode('no-props', ctx => {
       if(this.inuse.$props && this.inuse.$attributes) {
-        code.push('let $props = $option.props || {}, $attributes = $props;');
-        if(!this.script.readOnly) code.push('$runtime.current_component.push = () => $props = $option.props || {}, $attributes = $props;');
+        ctx.write(true, 'let $props = $option.props || {}, $attributes = $props;');
+        if(!this.script.readOnly) ctx.write(true, '$runtime.current_component.push = () => $props = $option.props || {}, $attributes = $props;');
       } else if(this.inuse.$props) {
-        code.push('let $props = $option.props || {};');
-        if(!this.script.readOnly) code.push('$runtime.current_component.push = () => $props = $option.props || {};');
+        ctx.write(true, 'let $props = $option.props || {};');
+        if(!this.script.readOnly) ctx.write(true, '$runtime.current_component.push = () => $props = $option.props || {};');
       } else if(this.inuse.$attributes) {
-        code.push('let $attributes = $option.props || {};');
-        if(!this.script.readOnly) code.push('$runtime.current_component.push = () => $attributes = $option.props || {};');
+        ctx.write(true, 'let $attributes = $option.props || {};');
+        if(!this.script.readOnly) ctx.write(true, '$runtime.current_component.push = () => $attributes = $option.props || {};');
       }
-      return code;
     }));
-  }
 
-  this.script.rootLevel = resultBody;
+    this.module.code.push(xNode('ast', { body: resultBody }));
+  }
 
   this.module.top.push(xNode('autoimport', (ctx) => {
     Object.values(this.script.autoimport).forEach(l => ctx.writeLine(l));
   }));
 
   this.module.top.push(xNode('ast', { body: imports }));
-  this.module.head.push(xNode('ast', { body: header }));
-  this.module.code.push(xNode('ast', { body: resultBody }));
 
   if(this.scriptNodes[0] && this.scriptNodes[0].attributes.some(a => a.name == 'property') && this.script.props.length && !this.script.readOnly) {
     this.require('apply');
@@ -381,35 +380,8 @@ export function transform() {
   }
 }
 
-export function build() {
-  const generator = Object.assign({
-    ImportExpression: function(node, state) {
-      state.write('import(');
-      this[node.source.type](node.source, state);
-      state.write(')');
-    },
-    Raw: function(node, state) {
-      state.write(node.value);
-    }
-  }, astring.baseGenerator);
-  this.script.code = astring.generate(this.script.ast, { generator });
-}
-
-
-function rawNode(exp, n) {
-  n = n || {};
-  n.type = 'Raw';
-  n.value = exp;
-  return n;
-}
-
 
 const generator = Object.assign({
-  ImportExpression: function(node, state) {
-    state.write('import(');
-    this[node.source.type](node.source, state);
-    state.write(')');
-  },
   Raw: function(node, state) {
     let value = typeof node.value == 'function' ? node.value() : node.value;
     if(value) {

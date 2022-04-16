@@ -102,7 +102,6 @@ export async function compile(source, config = {}) {
     scriptNodes: null,
     js_parse: codelib.parse,
     js_transform: codelib.transform,
-    js_build: codelib.build,
 
     styleNodes: null,
     css: null,
