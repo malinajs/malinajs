@@ -349,7 +349,7 @@ export function transform() {
     this.module.head.push(xNode('no-props', ctx => {
       if(this.inuse.$props && this.inuse.$attributes) {
         ctx.write(true, 'let $props = $option.props || {}, $attributes = $props;');
-        if(!this.script.readOnly) ctx.write(true, '$runtime.current_component.push = () => $props = $option.props || {}, $attributes = $props;');
+        if(!this.script.readOnly) ctx.write(true, '$runtime.current_component.push = () => $props = $attributes = $option.props || {};');
       } else if(this.inuse.$props) {
         ctx.write(true, 'let $props = $option.props || {};');
         if(!this.script.readOnly) ctx.write(true, '$runtime.current_component.push = () => $props = $option.props || {};');
