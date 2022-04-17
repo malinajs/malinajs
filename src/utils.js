@@ -182,7 +182,7 @@ export const extractKeywords = (exp) => {
 
 export const replaceElementKeyword = (exp, fn) => {
   let changed = false;
-  let r = parseJS(exp, (n, pk) => {
+  let r = parseJS(exp).transform((n, pk) => {
     if(n.type != 'Identifier') return;
     if(pk == 'property' || pk == 'params') return;
     if(n.name != '$element') return;
@@ -193,38 +193,42 @@ export const replaceElementKeyword = (exp, fn) => {
 };
 
 
-export const parseJS = (exp, fn) => {
-  let result = {};
-  let ast = result.ast = acorn.parse(exp, { sourceType: 'module', ecmaVersion: 12 });
+export const parseJS = (exp) => {
+  let self = {};
+  self.ast = acorn.parse(exp, { sourceType: 'module', ecmaVersion: 12 });
 
-  const rec = (n, pk) => {
-    let self;
-    if(n.type) {
-      self = n;
-      fn?.(n, pk);
-    }
-
-    for(let k in n) {
-      if(k == '_parent') continue;
-      let v = n[k];
-      if(v == null || typeof (v) != 'object') continue;
-      if(Array.isArray(v)) {
-        v.forEach(i => {
-          i._parent = self || n._parent;
-          rec(i, k);
-        });
-      } else {
-        v._parent = self || n._parent;
-        rec(v, k);
+  self.transform = function(fn) {
+    const rec = (n, pk) => {
+      let self;
+      if(n.type) {
+        self = n;
+        fn?.(n, pk);
+      }
+  
+      for(let k in n) {
+        if(k == '_parent') continue;
+        let v = n[k];
+        if(v == null || typeof(v) != 'object') continue;
+        if(Array.isArray(v)) {
+          v.forEach(i => {
+            i._parent = self || n._parent;
+            rec(i, k);
+          });
+        } else {
+          v._parent = self || n._parent;
+          rec(v, k);
+        }
       }
     }
-  };
-  rec(ast, null);
+    rec(self.ast, null);
 
-  result.build = (data) => {
-    return astring.generate(data || ast);
-  };
-  return result;
+    return self;
+  }
+
+  self.build = function(data) {
+    return astring.generate(data || self.ast);
+  }
+  return self;
 };
 
 
