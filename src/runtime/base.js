@@ -312,7 +312,7 @@ export const bindText = (element, fn) => {
 
 export const bindStyle = (element, name, fn) => {
   $watch(fn, (value) => {
-    element.style[name] = value;
+    element.style.setProperty(name, value);
   });
 };
 
