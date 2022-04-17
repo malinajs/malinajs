@@ -1,5 +1,5 @@
 import {
-  $watch, $watchReadOnly, $$deepComparator, cloneDeep, $$cloneDeep, cd_new, $digest,
+  $watch, $$deepComparator, cloneDeep, $$cloneDeep, cd_new, $digest,
   $$compareDeep, addEvent, fire, keyComparator, cd_attach, cd_attach2, cd_detach, cd_component, WatchObject
 } from './cd';
 import { __app_onerror, safeCall, isFunction, isObject, safeGroupCall } from './utils';
@@ -205,7 +205,7 @@ export const callComponent = (context, component, option = {}, propFn, cmp, sett
           childWatch && (childWatch.idle = true);
           $component.apply?.();
         }
-      }, { ro: true, value: {}, cmp });
+      }, { value: {}, cmp });
       fire(parentWatch);
     } else option.props = propFn();
   }
@@ -214,7 +214,7 @@ export const callComponent = (context, component, option = {}, propFn, cmp, sett
     fire($watch(classFn, value => {
       option.$class = value;
       $component?.apply?.();
-    }, { ro: true, value: {}, cmp: keyComparator }));
+    }, { value: {}, cmp: keyComparator }));
   }
 
   $component = safeCall(() => component(option));
@@ -225,7 +225,7 @@ export const callComponent = (context, component, option = {}, propFn, cmp, sett
       option.props = parentWatch.fn();
       $component.push();
     });
-    Object.assign(w, {ro: true, idle: true, cmp, value: parentWatch.value});
+    Object.assign(w, {idle: true, cmp, value: parentWatch.value});
     $component.$cd.watchers.push(w);
   }
 
@@ -291,7 +291,7 @@ export const bindClass = (element, fn, className) => {
   $watch(fn, value => {
     if(value) addClass(element, className);
     else element.classList.remove(className);
-  }, { ro: true, value: false });
+  }, { value: false });
 };
 
 
@@ -299,19 +299,19 @@ export const setClassToElement = (element, value) => bindAttributeBase(element, 
 
 
 export const bindClassExp = (element, fn) => {
-  $watch(fn, value => setClassToElement(element, value), { ro: true, value: '' });
+  $watch(fn, value => setClassToElement(element, value), { value: '' });
 };
 
 
 export const bindText = (element, fn) => {
-  $watchReadOnly(() => '' + fn(), value => {
+  $watch(() => '' + fn(), value => {
     element.textContent = value;
   });
 };
 
 
 export const bindStyle = (element, name, fn) => {
-  $watchReadOnly(fn, (value) => {
+  $watch(fn, (value) => {
     element.style[name] = value;
   });
 };
@@ -324,7 +324,7 @@ export const bindAttributeBase = (element, name, value) => {
 
 
 export const bindAttribute = (element, name, fn) => {
-  $watchReadOnly(() => {
+  $watch(() => {
     let v = fn();
     return v == null ? v : '' + v;
   }, value => bindAttributeBase(element, name, value));
@@ -347,13 +347,13 @@ export const __bindActionSubscribe = (fn, handler, value) => {
   if(handler?.update && fn) {
     $watch(fn, args => {
       handler.update.apply(handler, args);
-    }, { cmp: $$deepComparator(1), value: cloneDeep(value, 1) });
+    }, { ro: false, cmp: $$deepComparator(1), value: cloneDeep(value, 1) });
   }
 };
 
 
 export const bindInput = (element, name, get, set) => {
-  let w = $watchReadOnly(name == 'checked' ? () => !!get() : get, value => {
+  let w = $watch(name == 'checked' ? () => !!get() : get, value => {
     element[name] = value == null ? '' : value;
   });
   addEvent(element, 'input', () => {

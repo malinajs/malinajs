@@ -58,5 +58,5 @@ export function $$awaitBlock(label, relation, fn, build_main, build_then, build_
         render(build_catch, value);
       });
     }
-  }, { ro: true, value: [], cmp: keyComparator });
+  }, { value: [], cmp: keyComparator });
 }

@@ -2,10 +2,10 @@ import { __app_onerror, safeCall, isObject } from './utils';
 import * as share from './share.js';
 import { $onDestroy } from './share.js';
 
-export function WatchObject(fn, cb, ro) {
+export function WatchObject(fn, cb) {
   this.fn = fn;
   this.cb = cb;
-  this.ro = ro || false;
+  this.ro = true;
   this.value = NaN;
   this.cmp = null;
 }
@@ -15,10 +15,6 @@ export function $watch(fn, callback, option) {
   option && Object.assign(w, option);
   share.current_cd.watchers.push(w);
   return w;
-}
-
-export function $watchReadOnly(fn, callback) {
-  return $watch(fn, callback, { ro: true });
 }
 
 export function addEvent(el, event, callback) {

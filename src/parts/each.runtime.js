@@ -163,5 +163,5 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind) {
     lastNode = prevNode;
     mapping.clear();
     mapping = newMapping;
-  }, { ro: true, cmp: $$compareArray });
+  }, { cmp: $$compareArray });
 }

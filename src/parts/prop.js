@@ -406,7 +406,7 @@ export function bindProp(prop, node, element) {
         if(propList[name]) {
           let propName = propList[name] === true ? name : propList[name];
           if(ctx.inuse.apply) {
-            ctx.writeLine(`$watchReadOnly(() => (${data.exp}), (value) => {${data.el}.${propName} = value;});`);
+            ctx.writeLine(`$watch(() => (${data.exp}), (value) => {${data.el}.${propName} = value;});`);
           } else {
             ctx.writeLine(`${data.el}.${propName} = ${data.exp};`);
           }

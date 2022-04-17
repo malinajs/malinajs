@@ -163,7 +163,7 @@ export async function compile(source, config = {}) {
   use_context(ctx, () => {
     const result = ctx.result = xNode('block');
     result.push('import * as $runtime from \'malinajs/runtime.js\';');
-    result.push('import { $watch, $watchReadOnly, $tick } from \'malinajs/runtime.js\';');
+    result.push('import { $watch, $tick } from \'malinajs/runtime.js\';');
     if(config.hideLabel) {
       result.push('import { $$htmlToFragmentClean as $$htmlToFragment } from \'malinajs/runtime.js\';');
     } else {

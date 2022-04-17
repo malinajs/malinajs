@@ -27,7 +27,7 @@ export function $$htmlBlock(tag, fn) {
   $watch(fn, (html) => {
     destroy();
     if(html) lastElement = create(tag, html);
-  }, { ro: true });
+  });
 }
 
 export function $$htmlBlockStatic(tag, value) {

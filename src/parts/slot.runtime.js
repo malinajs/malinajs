@@ -1,4 +1,4 @@
-import { $watch, WatchObject, cd_new, cd_attach2, fire, cd_detach } from '../runtime/cd.js';
+import { WatchObject, cd_new, cd_attach2, fire, cd_detach } from '../runtime/cd.js';
 import * as share from '../runtime/share.js';
 
 export const invokeSlotBase = ($component, slotName, $context, props, placeholder) => {
@@ -11,7 +11,7 @@ export const invokeSlot = ($component, slotName, $context, propsFn, placeholder,
 
   if($slot) {
     let push, $dom,
-      w = new WatchObject(propsFn, value => push(value), true);
+      w = new WatchObject(propsFn, value => push(value));
     Object.assign(w, {value: {}, cmp, idle: true})
     fire(w);
     ([$dom, push] = $slot($component, $context, w.value));

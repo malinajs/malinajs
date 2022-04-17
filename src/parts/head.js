@@ -60,7 +60,7 @@ export function attachHead(n) {
       if(n.title != null) ctx.writeLine(`document.title = ${n.title};`);
       if(n.dynTitle) {
         if(this.inuse.apply) {
-          ctx.writeLine(`$watchReadOnly(() => (${n.dynTitle}), (value) => {document.title = value;});`);
+          ctx.writeLine(`$watch(() => (${n.dynTitle}), (value) => {document.title = value;});`);
         } else ctx.writeLine(`document.title = ${n.dynTitle};`);
       }
 
