@@ -180,7 +180,8 @@ export function parse() {
       } else continue;
 
       return {
-        value: source.substring(start + 1, index - 1)
+        value: source.substring(start + 1, index - 1),
+        raw: source.substring(start, index)
       };
     }
   };
@@ -196,6 +197,16 @@ export function parse() {
 
   const go = (parent) => {
     let textNode = null;
+
+    const addText = v => {
+      if(!textNode) {
+        textNode = {
+          type: 'text',
+          value: ''
+        }
+      }
+      textNode.value += v;
+    }
 
     const flushText = () => {
       if(!textNode) return;
@@ -262,10 +273,12 @@ export function parse() {
         }
         continue;
       } else if(a === '{') {
-        if(['#', '/', ':', '@'].indexOf(source[index + 1]) >= 0) {
-          flushText();
+        if(['#', '/', ':', '@', '*'].indexOf(source[index + 1]) >= 0) {
           let bind = readBinding();
-          if(bind.value.match(/^@\w+/)) {
+          if(bind.value[0] != '*') flushText();
+          if(bind.value[0] == '*') {
+            addText(bind.raw);
+          } else if(bind.value.match(/^@\w+/)) {
             let tag = {
               type: 'systag',
               value: bind.value
@@ -357,13 +370,7 @@ export function parse() {
         }
       }
 
-      if(!textNode) {
-        textNode = {
-          type: 'text',
-          value: ''
-        };
-      }
-      textNode.value += readNext();
+      addText(readNext());
     }
     flushText();
     assert(parent.type === 'root', 'File ends to early');
