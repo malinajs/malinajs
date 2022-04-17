@@ -3,7 +3,7 @@ import * as share from '../runtime/share.js';
 
 export const invokeSlotBase = ($component, slotName, $context, props, placeholder) => {
   let $slot = $component.$option.slots?.[slotName || 'default'];
-  return $slot ? $slot($component, $context, props)[0] : placeholder?.();
+  return $slot ? $slot($component, $context, props) : placeholder?.();
 };
 
 export const invokeSlot = ($component, slotName, $context, propsFn, placeholder, cmp) => {
