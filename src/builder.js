@@ -530,7 +530,9 @@ export function buildBlock(data, option = {}) {
       ctx.add(n.tpl);
       if(!ctx.isEmpty(n.innerBlock)) {
         if(n.each) {
-          ctx.write(`, (${n.parentElement}, ${n.each.itemName}, ${n.each.indexName}) => {`, true);
+          ctx.write(`, (${n.parentElement}, ${n.each.itemName}`);
+          if(n.each.indexName) ctx.write(`, ${n.each.indexName}`);
+          ctx.write(`) => {`, true);
         } else {
           let extra = option.extraArguments ? ', ' + option.extraArguments.join(', ') : '';
           ctx.write(`, (${n.parentElement}${extra}) => {`, true);

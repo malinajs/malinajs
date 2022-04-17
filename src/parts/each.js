@@ -1,5 +1,4 @@
-import acorn from 'acorn';
-import { assert, isSimpleName, detectExpressionType, trimEmptyNodes, parseJS } from '../utils.js';
+import { assert, isSimpleName, trimEmptyNodes, parseJS } from '../utils.js';
 import { xNode } from '../xnode.js';
 
 
@@ -36,7 +35,7 @@ export function makeEachBlock(data, option) {
     });
   }
 
-  let itemName, indexName, blockPrefix = null;
+  let itemName, indexName = null, blockPrefix = null;
   if(right[0] == '{' || right[0] == '[') {
     let keywords, unwrap;
     try {
@@ -46,12 +45,11 @@ export function makeEachBlock(data, option) {
 
       itemName = '$$item';
       let n = e.ast.body[0];
+      assert(n.expression.elements.length == 1 || n.expression.elements.length == 2);
       let a = n.expression.elements[0];
       unwrap = exp.substring(a.start, a.end);
-      if(n.expression.elements.length == 1) {
-        indexName = '$index';
-      } else {
-        assert(n.expression.elements.length == 2)
+      
+      if(n.expression.elements.length == 2) {
         let b = n.expression.elements[1];
         assert(b.type == 'Identifier');
         indexName = exp.substring(b.start, b.end);
@@ -63,7 +61,8 @@ export function makeEachBlock(data, option) {
         keywords = l.elements.map(p => p.name);
 
         if(keyName) {
-          let keyLink = {[indexName]: '$index'};
+          let keyLink = {};
+          if(indexName) keyLink[indexName] = '$index';
           for(let i in keywords) keyLink[keywords[i]] = `$$item[${i}]`;
           makeKeyFunction(keyLink);
         }
@@ -72,7 +71,8 @@ export function makeEachBlock(data, option) {
         keywords = l.properties.map(p => p.key.name);
 
         if(keyName) {
-          let keyLink = {[indexName]: '$index'};
+          let keyLink = {};
+          if(indexName) keyLink[indexName] = '$index';
           for(let k of keywords) keyLink[k] = `$$item.${k}`;
           makeKeyFunction(keyLink);
         }
@@ -95,23 +95,30 @@ export function makeEachBlock(data, option) {
     rx = right.trim().split(/\s*\,\s*/);
     assert(rx.length <= 2, `Wrong #each expression '${data.value}'`);
     itemName = rx[0];
-    indexName = rx[1] || '$index';
+    indexName = rx[1] || null;
     if(keyName) {
       if(keyName == itemName) keyFunction = 'noop';
-      else makeKeyFunction({[itemName]: '$$item', [indexName]: '$index'});
+      else {
+        let keyLink = {[itemName]: '$$item'};
+        if(indexName) keyLink[indexName] = '$index';
+        makeKeyFunction(keyLink);
+      }
     }
   }
   assert(isSimpleName(itemName), `Wrong name '${itemName}'`);
-  assert(isSimpleName(indexName), `Wrong name '${indexName}'`);
 
   let rebind;
   if(!this.script.readOnly) {
-    rebind = xNode('block', {
-      itemName,
-      indexName
-    }, (ctx, n) => {
-      ctx.write(`(_${n.indexName}, _${n.itemName}) => {${n.indexName}=_${n.indexName}; ${n.itemName}=_${n.itemName};}`);
-    });
+    if(!indexName && keyName == itemName) rebind = null;
+    else {
+      rebind = xNode('block', {
+        itemName,
+        indexName
+      }, (ctx, n) => {
+        if(n.indexName) ctx.write(`(_${n.itemName}, _${n.indexName}) => {${n.itemName}=_${n.itemName}; ${n.indexName}=_${n.indexName};}`);
+        else ctx.write(`(_${n.itemName}) => {${n.itemName}=_${n.itemName};}`);
+      });
+    }
   }
 
   let nodeItems = trimEmptyNodes(data.body);
@@ -135,10 +142,13 @@ export function makeEachBlock(data, option) {
       itemName,
       indexName
     }, (ctx, n) => {
-      ctx.write(`$runtime.makeEachSingleBlock((${n.itemName}, ${n.indexName}) => [`);
+      ctx.write(`$runtime.makeEachSingleBlock((${n.itemName}`);
+      if(n.indexName) ctx.write(`, ${n.indexName}`)
+      ctx.write(`) => [`);
       ctx.indent++;
       ctx.write(true);
-      ctx.add(n.rebind);
+      if(n.rebind) ctx.add(n.rebind);
+      else ctx.write('null')
       ctx.write(',', true);
       ctx.add(n.block);
       ctx.indent--;

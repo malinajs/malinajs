@@ -136,7 +136,7 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind) {
             }
           }
         }
-        ctx.rebind?.(i, item);
+        ctx.rebind?.(item, i);
       } else {
         let $dom, rebind,
           d = share.current_destroyList = [],
