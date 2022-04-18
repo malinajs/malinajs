@@ -66,9 +66,14 @@ export function bindProp(prop, node, element) {
 
   if(name[0] == '#') {
     let target = name.substring(1);
-    assert(isSimpleName(target), target);
-    this.checkRootName(target);
-    return { bind: `${target}=${element.bindName()};` };
+    assert(detectExpressionType(target) == 'identifier', name);
+    return { bind: xNode('reference-to-element', {
+      target,
+      el: element.bindName()
+    }, (ctx, n) => {
+      ctx.write(true, `${n.target} = ${n.el};`);
+      ctx.write(true, `$runtime.$onDestroy(() => ${n.target} = null);`);
+    })};
   } else if(name == 'event') {
     if(prop.name.startsWith('@@')) {
       assert(!prop.value);
