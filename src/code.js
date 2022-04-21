@@ -247,8 +247,8 @@ export function transform() {
           callback
         }, (ctx, n) => {
           if(this.inuse.apply) {
-            if(this.config.immutable) ctx.write(true, `$watch(() => (${n.exp}), ${n.callback}, {ro: false});`);
-            else ctx.write(true, `$watch(() => (${n.exp}), ${n.callback}, {ro: false, cmp: $runtime.$$deepComparator(0)});`);
+            if(this.config.immutable) ctx.write(true, `$watch(() => (${n.exp}), ${n.callback});`);
+            else ctx.write(true, `$watch(() => (${n.exp}), ${n.callback}, {cmp: $runtime.$$deepComparator(0)});`);
           } else {
             ctx.write(true, `(${n.callback})(${n.exp});`);
           }
@@ -265,7 +265,7 @@ export function transform() {
           exp: astring.generate(exp),
           callback
         }, (ctx, n) => {
-          if(this.inuse.apply) ctx.write(true, `$watch(() => ${n.exp}, ($args) => { (${n.callback}).apply(null, $args); }, {ro: false, cmp: $runtime.$$deepComparator(1)});`);
+          if(this.inuse.apply) ctx.write(true, `$watch(() => ${n.exp}, ($args) => { (${n.callback}).apply(null, $args); }, {cmp: $runtime.$$deepComparator(1)});`);
           else ctx.write(true, `(${n.callback}).apply(null, ${n.exp})`);
         }));
       } else throw 'Error';

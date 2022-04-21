@@ -5,7 +5,6 @@ import { $onDestroy } from './share.js';
 export function WatchObject(fn, cb) {
   this.fn = fn;
   this.cb = cb;
-  this.ro = true;
   this.value = NaN;
   this.cmp = null;
 }
@@ -76,7 +75,6 @@ export function $$compareArray(w, value) {
   if(isArray(value)) w.value = value.slice();
   else w.value = value;
   w.cb(w.value);
-  return w.ro ? 0 : 1;
 }
 
 
@@ -134,7 +132,6 @@ export function $$deepComparator(depth) {
     let diff = compareDeep(w.value, value, depth);
     diff && (w.value = cloneDeep(value, depth), !w.idle && w.cb(value));
     w.idle = false;
-    return !w.ro && diff ? 1 : 0;
   };
 }
 
@@ -149,7 +146,6 @@ export const keyComparator = (w, value) => {
   }
   diff && !w.idle && w.cb(value);
   w.idle = false;
-  return !w.ro && diff ? 1 : 0;
 };
 
 
@@ -161,27 +157,26 @@ export const fire = w => {
   }
 };
 
-export function $digest($cd) {
+export function $digest($cd, flag) {
   let loop = 10;
   let w;
   while(loop >= 0) {
-    let changes = 0;
     let index = 0;
     let queue = [];
-    let i, value, cd = $cd;
+    let i, value, cd = $cd, changes = 0;
     while(cd) {
       for(i = 0; i < cd.prefix.length; i++) cd.prefix[i]();
       for(i = 0; i < cd.watchers.length; i++) {
         w = cd.watchers[i];
         value = w.fn();
         if(w.value !== value) {
+          flag[0] = 0;
           if(w.cmp) {
-            changes += w.cmp(w, value);
+            w.cmp(w, value);
           } else {
-            w.value = value;
-            if(!w.ro) changes++;
-            w.cb(w.value);
+            w.cb(w.value = value);
           }
+          changes += flag[0];
         }
       }
       if(cd.children.length) queue.push.apply(queue, cd.children);

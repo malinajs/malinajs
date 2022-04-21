@@ -144,13 +144,14 @@ export const makeApply = () => {
   let $cd = current_component.$cd = share.current_cd = cd_new();
   $cd.component = current_component;
 
-  let planned;
+  let planned, flag = [0];
   let apply = r => {
+    flag[0]++;
     if(planned) return r;
     planned = true;
     $tick(() => {
       try {
-        $digest($cd);
+        $digest($cd, flag);
       } finally {
         planned = false;
       }
@@ -339,7 +340,7 @@ export const bindAction = (element, action, fn, subscribe) => {
   } else handler = action(element);
   $onDestroy(handler?.destroy);
   subscribe?.(fn, handler, value);
-  handler.init && $tick(handler.init);
+  handler?.init && $tick(handler.init);
 };
 
 
@@ -347,7 +348,7 @@ export const __bindActionSubscribe = (fn, handler, value) => {
   if(handler?.update && fn) {
     $watch(fn, args => {
       handler.update.apply(handler, args);
-    }, { ro: false, cmp: $$deepComparator(1), value: cloneDeep(value, 1) });
+    }, { cmp: $$deepComparator(1), value: cloneDeep(value, 1) });
   }
 };
 
