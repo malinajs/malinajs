@@ -84,9 +84,6 @@ export function buildRuntime() {
 
   if(this.script.onMount) runtime.push('$runtime.$onMount(onMount);');
   if(this.script.onDestroy) runtime.push('$runtime.$onDestroy(onDestroy);');
-  if(this.script.watchers.length) {
-    this.script.watchers.forEach(n => runtime.push(n));
-  }
 
   runtime.push(xNode('addStyle', ctx => {
     if(!this.css.active()) return;

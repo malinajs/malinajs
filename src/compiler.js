@@ -146,7 +146,7 @@ export async function compile(source, config = {}) {
   await hook(ctx, 'js:before');
   ctx.js_parse();
   await hook(ctx, 'js');
-  ctx.js_transform();
+  use_context(ctx, () => ctx.js_transform());
   await hook(ctx, 'js:after');
 
   await hook(ctx, 'css:before');

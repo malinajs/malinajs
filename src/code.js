@@ -1,6 +1,6 @@
 import acorn from 'acorn';
 import astring from 'astring';
-import { assert, detectExpressionType } from './utils.js';
+import { assert, detectExpressionType, last } from './utils.js';
 import { xNode } from './xnode.js';
 
 
@@ -8,7 +8,6 @@ export function parse() {
   let source = this.scriptNodes.length ? this.scriptNodes[0].content : null;
   this.script = {
     source,
-    watchers: [],
     imports: [],
     importedNames: [],
     autosubscribeNames: [],
@@ -198,6 +197,8 @@ export function transform() {
     };
   }
 
+  let watchers = xNode('block');
+
   const makeWatch = (n) => {
     function assertExpression(n) {
       if(['Identifier', 'TemplateLiteral', 'Literal'].includes(n.type)) return;
@@ -214,15 +215,22 @@ export function transform() {
         target = ex.left.name;
         if(!(target in rootVariables)) resultBody.push(makeVariable(target));
       } else if(ex.left.type == 'MemberExpression') {
-        target = source.substring(ex.left.start, ex.left.end);
+        target = astring.generate(ex.left);
       } else throw 'Error';
       assertExpression(ex.right);
-      const exp = source.substring(ex.right.start, ex.right.end);
-      result.watchers.push(`$runtime.prefixPush(() => {${target} = ${exp};});`);
+      const exp = astring.generate(ex.right);
+      watchers.push(xNode('watch-assign', {
+        $wait: ['apply'],
+        target,
+        exp
+      }, (ctx, n) => {
+        if(this.inuse.apply) ctx.write(true, `$runtime.prefixPush(() => {${n.target} = ${n.exp};});`);
+        else ctx.write(true, `${n.target} = ${n.exp};`);
+      }));
     } else if(n.body.expression.type == 'SequenceExpression') {
       const ex = n.body.expression.expressions;
-      const handler = ex[ex.length - 1];
-      let callback = source.substring(handler.start, handler.end);
+      const handler = last(ex);
+      let callback = astring.generate(handler);
       if(handler.type == 'ArrowFunctionExpression' || handler.type == 'FunctionExpression') {
         // default
       } else if(detectExpressionType(callback) == 'identifier') {
@@ -233,13 +241,33 @@ export function transform() {
 
       if(ex.length == 2) {
         assertExpression(ex[0]);
-        let exp = source.substring(ex[0].start, ex[0].end);
-        if(this.config.immutable) result.watchers.push(`$watch(() => (${exp}), ${callback}, {ro: false});`);
-        else result.watchers.push(`$watch(() => (${exp}), ${callback}, {ro: false, cmp: $runtime.$$deepComparator(0)});`);
+        watchers.push(xNode('watch-expression', {
+          $wait: ['apply'],
+          exp: astring.generate(ex[0]),
+          callback
+        }, (ctx, n) => {
+          if(this.inuse.apply) {
+            if(this.config.immutable) ctx.write(true, `$watch(() => (${n.exp}), ${n.callback}, {ro: false});`);
+            else ctx.write(true, `$watch(() => (${n.exp}), ${n.callback}, {ro: false, cmp: $runtime.$$deepComparator(0)});`);
+          } else {
+            ctx.write(true, `(${n.callback})(${n.exp});`);
+          }
+        }));
       } else if(ex.length > 2) {
         for(let i = 0; i < ex.length - 1; i++) assertExpression(ex[i]);
-        let exp = source.substring(ex[0].start, ex[ex.length - 2].end);
-        result.watchers.push(`$watch(() => [${exp}], ($args) => { (${callback}).apply(null, $args); }, {ro: false, cmp: $runtime.$$deepComparator(1)});`);
+        let exp = {
+          type: 'ArrayExpression',
+          elements: ex.slice(0, ex.length - 1)
+        };
+
+        watchers.push(xNode('watch-expression', {
+          $wait: ['apply'],
+          exp: astring.generate(exp),
+          callback
+        }, (ctx, n) => {
+          if(this.inuse.apply) ctx.write(true, `$watch(() => ${n.exp}, ($args) => { (${n.callback}).apply(null, $args); }, {ro: false, cmp: $runtime.$$deepComparator(1)});`);
+          else ctx.write(true, `(${n.callback}).apply(null, ${n.exp})`);
+        }));
       } else throw 'Error';
     } else throw 'Error';
   };
@@ -367,6 +395,7 @@ export function transform() {
   }));
 
   this.module.top.push(xNode('ast', { body: imports }));
+  this.module.code.push(watchers);
 
   if(this.scriptNodes[0] && this.scriptNodes[0].attributes.some(a => a.name == 'property') && this.script.props.length && !this.script.readOnly) {
     this.require('apply');
