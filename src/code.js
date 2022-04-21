@@ -160,7 +160,7 @@ export function transform() {
     function walk(node, parent, fn) {
         if(typeof node !== 'object') return;
 
-        if(node._apply) return;
+        if(node._apply && node.type == 'ExpressionStatement') return;
         node._parent = parent;
         let forParent = parent;
         if(node.type) {
