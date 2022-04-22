@@ -1,4 +1,4 @@
-import { unwrapExp, assert as _assert, detectExpressionType, replaceElementKeyword, last } from './utils.js';
+import { unwrapExp, assert as _assert, detectExpressionType, replaceKeyword, last } from './utils.js';
 import { xNode } from './xnode.js';
 
 
@@ -45,7 +45,9 @@ export function makeEventProp(prop, requireElement) {
   if(prop.value) {
     assert(!handler);
     exp = unwrapExp(prop.value);
-    exp = replaceElementKeyword(exp, requireElement);
+    exp = replaceKeyword(exp, (name) => {
+      if(name == '$element') return requireElement();
+    });
   } else if(!handler) handler = event;
 
   this.detectDependency(exp || handler);

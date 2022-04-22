@@ -1,4 +1,4 @@
-import { assert, isSimpleName, trimEmptyNodes, parseJS } from '../utils.js';
+import { assert, isSimpleName, trimEmptyNodes, parseJS, replaceKeyword } from '../utils.js';
 import { xNode } from '../xnode.js';
 
 
@@ -21,15 +21,8 @@ export function makeEachBlock(data, option) {
   right = right.trim();
 
   const makeKeyFunction = (keyLink) => {
-    const e = parseJS(keyName).transform((n, pk) => {
-      if(n.type != 'Identifier') return;
-      if(pk == 'property') return;
-      let r = keyLink[n.name];
-      if(r) n.name = r;
-    });
-    let exp = e.build(e.ast.body[0].expression);
     keyFunction = xNode('key-function', {
-      exp
+      exp: replaceKeyword(keyName, n => keyLink[n])
     }, (ctx, n) => {
       ctx.write(`($$item, $index) => ${n.exp}`);
     });
@@ -41,22 +34,19 @@ export function makeEachBlock(data, option) {
     try {
       let exp = `[${right}]`;
       let e = parseJS(exp);
-      assert(e.ast.body.length == 1);
-
+      assert(e.ast.elements.length == 1 || e.ast.elements.length == 2);
       itemName = '$$item';
-      let n = e.ast.body[0];
-      assert(n.expression.elements.length == 1 || n.expression.elements.length == 2);
-      let a = n.expression.elements[0];
-      unwrap = exp.substring(a.start, a.end);
-      
-      if(n.expression.elements.length == 2) {
-        let b = n.expression.elements[1];
+
+      unwrap = e.build(e.ast.elements[0]);
+
+      if(e.ast.elements.length == 2) {
+        let b = e.ast.elements[1];
         assert(b.type == 'Identifier');
-        indexName = exp.substring(b.start, b.end);
+        indexName = e.build(b);
       }
 
       e = parseJS(`(${unwrap} = $$item)`);
-      let l = e.ast.body[0].expression.left;
+      let l = e.ast.left;
       if(l.type == 'ArrayPattern') {
         keywords = l.elements.map(p => p.name);
 

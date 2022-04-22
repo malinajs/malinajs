@@ -1,4 +1,4 @@
-import { svgElements, last, replaceElementKeyword, assert, Q } from './utils.js';
+import { svgElements, last, replaceKeyword, assert, Q } from './utils.js';
 import { xNode } from './xnode.js';
 
 
@@ -254,7 +254,7 @@ export function buildBlock(data, option = {}) {
             if(!exp.endsWith(';')) exp += ';';
             binds.push(xNode('block', {
               body: [
-                replaceElementKeyword(exp, () => textNode.bindName())
+                replaceKeyword(exp, (name) => name == '$element' ? textNode.bindName() : null)
               ]
             }));
           });

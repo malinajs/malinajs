@@ -599,3 +599,14 @@ export const mount = (label, component, option) => {
   }
   return app;
 }
+
+export const mountStatic = (label, component, option) => {
+  share.current_destroyList = [];
+  try {
+    let app = component(option);
+    label.appendChild(app.$dom);
+    return app;
+  } finally {
+    share.current_destroyList = null;
+  }
+}

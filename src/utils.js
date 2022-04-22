@@ -180,22 +180,24 @@ export const extractKeywords = (exp) => {
 };
 
 
-export const replaceElementKeyword = (exp, fn) => {
+export const replaceKeyword = (exp, fn) => {
   let changed = false;
   let r = parseJS(exp).transform((n, pk) => {
     if(n.type != 'Identifier') return;
     if(pk == 'property' || pk == 'params') return;
-    if(n.name != '$element') return;
-    n.name = fn();
-    changed = true;
+    let name = fn(n.name);
+    if(name) {
+      n.name = name;
+      changed = true;
+    }
   });
-  return changed ? r.build().trim() : exp;
+  return changed ? r.build() : exp;
 };
 
 
 export const parseJS = (exp) => {
   let self = {};
-  self.ast = acorn.parse(exp, { sourceType: 'module', ecmaVersion: 12 });
+  self.ast = acorn.parseExpressionAt(exp, 0, {ecmaVersion: 12});
 
   self.transform = function(fn) {
     const rec = (n, pk) => {
@@ -226,7 +228,7 @@ export const parseJS = (exp) => {
   }
 
   self.build = function(data) {
-    return astring.generate(data || self.ast);
+    return astring.generate(data || self.ast, {indent: '', lineEnd: ''});
   }
   return self;
 };

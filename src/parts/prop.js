@@ -1,4 +1,4 @@
-import { assert, detectExpressionType, isSimpleName, unwrapExp, last, toCamelCase, replaceElementKeyword, Q } from '../utils.js';
+import { assert, detectExpressionType, isSimpleName, unwrapExp, last, toCamelCase, replaceKeyword, Q } from '../utils.js';
 import { xNode } from '../xnode.js';
 
 
@@ -13,7 +13,7 @@ export function bindProp(prop, node, element) {
     return {
       bind: xNode('block', {
         body: [
-          replaceElementKeyword(exp, () => element.bindName())
+          replaceKeyword(exp, (name) => name == '$element' ? element.bindName() : null)
         ]
       })
     };
