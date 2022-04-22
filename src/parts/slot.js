@@ -32,7 +32,7 @@ export function attachSlot(slotName, node) {
   }, (ctx, n) => {
     let dynamicProps = this.inuse.apply && !n.staticProps;
 
-    let missed = '', slotName = n.name == 'default' ? 'null' : n.name;
+    let missed = '', slotName = n.name == 'default' ? 'null' : `'${n.name}'`;
     if(dynamicProps) ctx.write(`$runtime.invokeSlot($component, ${slotName}, $context`);
     else ctx.write(`$runtime.invokeSlotBase($component, ${slotName}, $context`);
 

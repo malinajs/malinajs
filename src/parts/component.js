@@ -102,7 +102,7 @@ export function makeComponent(node) {
           if(n.props) ctx.write(', $localProps');
           ctx.write(') => {', true);
           ctx.indent++;
-          if(n.props) ctx.write(true, `let {${n.props.join(', ')}} = $localProps;`);
+          if(n.props) ctx.write(true, `let {${n.props.join(', ')}} = $localProps || {};`);
           ctx.add(n.bind);
 
           if(n.props && this.inuse.apply) ctx.write(true, `return ($localProps) => ({${n.props.join(', ')}} = $localProps, $$apply());`);
