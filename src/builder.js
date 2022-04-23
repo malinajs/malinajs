@@ -70,17 +70,29 @@ export function buildRuntime() {
   let bb = this.buildBlock(this.DOM, {
     inline: true,
     protectLastTag: true,
+    allowSingleBlock: true,
     template: {
       name: '$parentElement',
       cloneNode: true
     }
   });
-  runtime.push(bb.template);
-  runtime.push(xNode('root-event', (ctx) => {
-    if(!this.inuse.rootEvent) return;
-    ctx.write(true, 'const $$addRootEvent = $runtime.makeRootEvent($parentElement);');
-  }));
-  runtime.push(bb.source);
+  if(bb.singleBlock) {
+    runtime.push(xNode('attach-block', {
+      block: bb.singleBlock
+    }, (ctx, n) => {
+      ctx.write(true, `let $parentElement = `);
+      ctx.add(n.block);
+      ctx.write('.$dom;');
+    }));
+  } else {
+    runtime.push(bb.template);
+    runtime.push(xNode('root-event', (ctx) => {
+      if(!this.inuse.rootEvent) return;
+      ctx.write(true, 'const $$addRootEvent = $runtime.makeRootEvent($parentElement);');
+    }));
+    runtime.push(bb.source);
+  }
+
 
   if(this.script.onMount) runtime.push('$runtime.$onMount(onMount);');
   if(this.script.onDestroy) runtime.push('$runtime.$onDestroy(onDestroy);');
