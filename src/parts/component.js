@@ -3,8 +3,6 @@ import { xNode } from '../xnode.js';
 
 
 export function makeComponent(node) {
-  this.require('apply');
-
   let propList = node.attributes;
 
   this.require('$context');
@@ -17,7 +15,7 @@ export function makeComponent(node) {
   let componentName = node.name;
   if(componentName != 'component' && this.config.autoimport) {
     let imported = this.script.autoimport[componentName] || this.script.importedNames.includes(componentName) ||
-            this.script.rootVariables[componentName] || this.script.rootFunctions[componentName];
+      this.script.rootVariables[componentName] || this.script.rootFunctions[componentName];
 
     if(!imported) {
       let r = this.config.autoimport(componentName, this.config.path, this);
@@ -315,6 +313,11 @@ export function makeComponent(node) {
       ctx.indent--;
       ctx.write(true, '}');
     }
+    if(n.$class.length && !ctx.inuse.apply) {
+      if(comma) ctx.write(', ');
+      comma = true;
+      ctx.write(`$class: {${n.$class.join(', ')}}`);
+    }
     ctx.write('}');
 
     let other = '';
@@ -336,7 +339,7 @@ export function makeComponent(node) {
       ctx.write(',\n', true, `($$_value) => ({${n.propsSetter.join(', ')}} = $$_value)`);
     } else other += ', null';
 
-    if(n.$class.length) {
+    if(n.$class.length && ctx.inuse.apply) {
       if(other) ctx.write(other);
       other = '';
       ctx.write(',\n', true, `() => ({${n.$class.join(', ')}})`);
@@ -364,6 +367,7 @@ export function makeComponentDyn(node, element) {
   }
 
   assert(dynamicComponent);
+  this.require('apply');
   this.detectDependency(dynamicComponent);
 
   let component = this.makeComponent(node).bind;
