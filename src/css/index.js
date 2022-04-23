@@ -316,7 +316,10 @@ function makeDom(data) {
       let n = new Node(e.name, { __node: e });
       e.attributes.forEach(a => {
         if(a.name == 'class') {
-          if(a.value != null) n.className += ' ' + a.value;
+          if(a.value != null) {
+            if(a.value.includes('{')) n.dynClass = true;
+            else n.className += ' ' + a.value;
+          }
           n.attributes[a.name] = a.value
         } else if(a.name == 'id') n.attributes.id = n.id = a.value;
         else if(a.name.startsWith('class:')) {
@@ -396,11 +399,15 @@ Node.prototype.getElementsByClassName = function(names) {
   if(names.length != 1) throw 'Not supported';
   let cls = names[0];
 
+  let rx = RegExp('(^|\\s)' + cls + '(\\s|$)', 'i');
   let result = [];
-  this.childNodes.forEach(n => {
-    let rx = RegExp('(^|\\s)' + cls + '(\\s|$)', 'i');
-    if(rx.test(n.className)) result.push(n);
-    result.push.apply(result, n.getElementsByClassName(cls));
-  });
+  const walk = (node) => {
+    node.childNodes.forEach(n => {
+      if(n.dynClass) result.push(n);
+      else if(rx.test(n.className)) result.push(n);
+      walk(n);
+    });
+  }
+  walk(this);
   return result;
 };
