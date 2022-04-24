@@ -78,11 +78,19 @@ export function buildRuntime() {
   });
   if(bb.singleBlock) {
     runtime.push(xNode('attach-block', {
-      block: bb.singleBlock
+      block: bb.singleBlock,
+      reference: bb.reference
     }, (ctx, n) => {
-      ctx.write(true, `let $parentElement = `);
-      ctx.add(n.block);
-      ctx.write('.$dom;');
+      if(n.reference) {
+        ctx.write(true, `${n.reference} = `);
+        ctx.add(n.block);
+        ctx.write(';');
+        ctx.write(true, `let $parentElement = ${n.reference}.$dom;`);
+      } else {
+        ctx.write(true, `let $parentElement = `);
+        ctx.add(n.block);
+        ctx.write('.$dom;');
+      }
     }));
   } else {
     runtime.push(bb.template);
@@ -154,13 +162,21 @@ export function buildBlock(data, option = {}) {
 
   if(option.each?.blockPrefix) binds.push(option.each.blockPrefix);
 
-  if(option.allowSingleBlock && data.body.length == 1) {
-    let n = data.body[0];
-    if(n.type == 'node' && n.name.match(/^[A-Z]/)) {
-      let component = this.makeComponent(n);
-      return {
-        singleBlock: component.bind
-      };
+  if(option.allowSingleBlock) {
+    let nodesForSingleBlock = data.body.filter(n => {
+      if(n.type == 'comment' && !this.config.preserveComments) return false;
+      return true;
+    });
+
+    if(nodesForSingleBlock.length == 1) {
+      let n = nodesForSingleBlock[0];
+      if(n.type == 'node' && n.name.match(/^[A-Z]/)) {
+        let component = this.makeComponent(n);
+        return {
+          singleBlock: component.bind,
+          reference: component.reference
+        };
+      }
     }
   }
 
@@ -303,11 +319,18 @@ export function buildBlock(data, option = {}) {
               let component = this.makeComponent(n);
               binds.push(xNode('insert-component', {
                 component: component.bind,
+                reference: component.reference,
                 el: el.bindName()
               }, (ctx, n) => {
-                ctx.write(true, `$runtime.insertAfter(${n.el}, `);
-                ctx.add(n.component);
-                ctx.write('.$dom);');
+                if(n.reference) {
+                  ctx.write(true, `${n.reference} = `);
+                  ctx.add(n.component);
+                  ctx.write(true, `$runtime.attachBlock(${n.el}, ${n.reference});`);
+                } else {
+                  ctx.write(true, `$runtime.attachBlock(${n.el}, `);
+                  ctx.add(n.component);
+                  ctx.write(');');
+                }
               }));
             }
           } else {

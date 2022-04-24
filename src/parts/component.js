@@ -242,14 +242,12 @@ export function makeComponent(node) {
     staticProps,
     props: propsFn,
     propsSetter,
-    reference,
     $class,
     forwardAllEvents,
     events,
     slots: slotBlocks.length ? slotBlocks : null,
     anchors: anchorBlocks.length ? anchorBlocks : null
   }, (ctx, n) => {
-    if(n.reference) throw 'not implemented'; // FIXME
     let comma = false;
     ctx.write(`$runtime.callComponent($context, ${n.componentName}, {`);
 
@@ -349,7 +347,7 @@ export function makeComponent(node) {
     ctx.write(true, ')');
   });
 
-  return { bind: result };
+  return { bind: result, reference };
 }
 
 export function makeComponentDyn(node, element) {
@@ -370,15 +368,17 @@ export function makeComponentDyn(node, element) {
   this.require('apply');
   this.detectDependency(dynamicComponent);
 
-  let component = this.makeComponent(node).bind;
+  let {bind: component, reference} = this.makeComponent(node);
 
   component.componentName = '$ComponentConstructor';
   return xNode('dyn-component', {
     el: element.bindName(),
     exp: dynamicComponent,
-    component
+    component,
+    reference
   }, (ctx, n) => {
     ctx.write(true, `$runtime.attachDynComponent(${n.el}, () => ${n.exp}, ($ComponentConstructor) => `);
+    if(n.reference) ctx.write(`${n.reference} = `);
     ctx.add(n.component);
     ctx.write(')');
   });
