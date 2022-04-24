@@ -1,4 +1,15 @@
 
+## 0.7.x
+* refactoring, optimization, fixes
+* export function
+* manual event delegation @click|root
+* able to delay destroying block (for animations)
+* be able to off autosubscribe for import: !no-autosubscribe
+* destructuring array/object for each
+* functions mount, mountStatic
+* each, index variable is not included by default
+* reference to element is removed on destroying
+
 ## 0.6.x
 
 * style's attribute "global"
