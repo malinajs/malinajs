@@ -164,11 +164,6 @@ export async function compile(source, config = {}) {
     const result = ctx.result = xNode('block');
     result.push('import * as $runtime from \'malinajs/runtime.js\';');
     result.push('import { $watch, $tick } from \'malinajs/runtime.js\';');
-    if(config.hideLabel) {
-      result.push('import { $$htmlToFragmentClean as $$htmlToFragment } from \'malinajs/runtime.js\';');
-    } else {
-      result.push('import { $$htmlToFragment } from \'malinajs/runtime.js\';');
-    }
     result.push(ctx.module.top);
     result.push(xNode('componentFn-wrapper', {
       $compile: [ctx.module.head, ctx.module.code, ctx.module.body, ctx.glob.rootCD],
