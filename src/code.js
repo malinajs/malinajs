@@ -289,6 +289,8 @@ export function transform() {
     });
   }
 
+  let exportedFunctions = [];
+
   ast.body.forEach(n => {
     if(n.type == 'ImportDeclaration') {
       imports.push(n);
@@ -304,8 +306,14 @@ export function transform() {
       });
       return;
     } else if(n.type == 'ExportNamedDeclaration') {
-      if(n.declaration.kind != 'const') constantProps = false;
+      if(n.declaration.type == 'FunctionDeclaration') {
+        exportedFunctions.push(n.declaration.id.name);
+        resultBody.push(n.declaration);
+        return;
+      }
+
       assert(n.declaration.type == 'VariableDeclaration', 'Wrong export');
+      if(n.declaration.kind != 'const') constantProps = false;
       n.declaration.declarations.forEach(d => {
         assert(d.type == 'VariableDeclarator', 'Wrong export');
         let p = { name: d.id.name };
@@ -407,6 +415,16 @@ export function transform() {
       });
     }));
   }
+
+  this.module.code.push(xNode('exported-functions', {
+    $hold: ['$component'],
+    list: exportedFunctions
+  }, (ctx, n) => {
+    if(!n.list.length) return;
+    this.require('$component');
+    for(let name of n.list)
+      ctx.write(true, `$component.${name} = ${name};`);
+  }));
 }
 
 
