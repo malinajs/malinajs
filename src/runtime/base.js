@@ -163,7 +163,7 @@ export const makeApply = () => {
   current_component.push = apply;
   apply();
   return apply;
-}
+};
 
 
 export const makeComponent = (init) => {
@@ -226,7 +226,7 @@ export const callComponent = (context, component, option = {}, propFn, cmp, sett
       option.props = parentWatch.fn();
       $component.push();
     });
-    Object.assign(w, {idle: true, cmp, value: parentWatch.value});
+    Object.assign(w, { idle: true, cmp, value: parentWatch.value });
     $component.$cd.watchers.push(w);
   }
 
@@ -426,8 +426,8 @@ export const makeAnchor = (fn) => {
     } finally {
       share.current_cd = prev;
     }
-  }
-}
+  };
+};
 
 
 export const spreadAttributes = (el, fn) => {
@@ -531,7 +531,7 @@ export const makeBlockBound = (fr, fn) => {
     } finally {
       share.current_cd = prev;
     }
-  }
+  };
 };
 
 
@@ -596,9 +596,9 @@ export const mount = (label, component, option) => {
   app.destroy = () => {
     safeGroupCall(destroyList);
     $$removeElements(first, last);
-  }
+  };
   return app;
-}
+};
 
 export const mountStatic = (label, component, option) => {
   share.current_destroyList = [];
@@ -609,4 +609,4 @@ export const mountStatic = (label, component, option) => {
   } finally {
     share.current_destroyList = null;
   }
-}
+};

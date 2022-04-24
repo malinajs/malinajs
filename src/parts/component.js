@@ -368,7 +368,7 @@ export function makeComponentDyn(node, element) {
   this.require('apply');
   this.detectDependency(dynamicComponent);
 
-  let {bind: component, reference} = this.makeComponent(node);
+  let { bind: component, reference } = this.makeComponent(node);
 
   component.componentName = '$ComponentConstructor';
   return xNode('dyn-component', {

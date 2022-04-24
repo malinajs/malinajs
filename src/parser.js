@@ -203,10 +203,10 @@ export function parse() {
         textNode = {
           type: 'text',
           value: ''
-        }
+        };
       }
       textNode.value += v;
-    }
+    };
 
     const flushText = () => {
       if(!textNode) return;

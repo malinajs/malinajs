@@ -26,7 +26,7 @@ export function makeEachBlock(data, option) {
     }, (ctx, n) => {
       ctx.write(`($$item, $index) => ${n.exp}`);
     });
-  }
+  };
 
   let itemName, indexName = null, blockPrefix = null;
   if(right[0] == '{' || right[0] == '[') {
@@ -89,7 +89,7 @@ export function makeEachBlock(data, option) {
     if(keyName) {
       if(keyName == itemName) keyFunction = 'noop';
       else {
-        let keyLink = {[itemName]: '$$item'};
+        let keyLink = { [itemName]: '$$item' };
         if(indexName) keyLink[indexName] = '$index';
         makeKeyFunction(keyLink);
       }
@@ -133,12 +133,12 @@ export function makeEachBlock(data, option) {
       indexName
     }, (ctx, n) => {
       ctx.write(`$runtime.makeEachSingleBlock((${n.itemName}`);
-      if(n.indexName) ctx.write(`, ${n.indexName}`)
-      ctx.write(`) => [`);
+      if(n.indexName) ctx.write(`, ${n.indexName}`);
+      ctx.write(') => [');
       ctx.indent++;
       ctx.write(true);
       if(n.rebind) ctx.add(n.rebind);
-      else ctx.write('null')
+      else ctx.write('null');
       ctx.write(',', true);
       ctx.add(n.block);
       ctx.indent--;

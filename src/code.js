@@ -32,9 +32,9 @@ export function parse() {
     }
     const onComment = (isBlockComment, value, start, end) => {
       if(isBlockComment) return;
-      this.script.comments.push({start, end, value});
-    }
-    this.script.ast = acorn.parse(source, {sourceType: 'module', ecmaVersion: 12, onComment});
+      this.script.comments.push({ start, end, value });
+    };
+    this.script.ast = acorn.parse(source, { sourceType: 'module', ecmaVersion: 12, onComment });
 
     if(source.includes('$props')) this.require('$props');
     if(source.includes('$attributes')) this.require('$attributes');
@@ -422,8 +422,7 @@ export function transform() {
   }, (ctx, n) => {
     if(!n.list.length) return;
     this.require('$component');
-    for(let name of n.list)
-      ctx.write(true, `$component.${name} = ${name};`);
+    for(let name of n.list) ctx.write(true, `$component.${name} = ${name};`);
   }));
 }
 

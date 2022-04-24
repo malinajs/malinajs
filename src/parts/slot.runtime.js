@@ -11,7 +11,7 @@ export const invokeSlot = ($component, slotName, $context, propsFn, placeholder,
 
   if($slot) {
     let push, w = new WatchObject(propsFn, value => push(value));
-    Object.assign(w, {value: {}, cmp, idle: true});
+    Object.assign(w, { value: {}, cmp, idle: true });
     fire(w);
     let $dom = $slot($component, $context, w.value);
     if($dom.$dom) {
@@ -33,7 +33,7 @@ export const makeSlot = (fr, fn) => {
     share.$onDestroy(() => cd_detach($cd));
     parentCD.component.apply();
     try {
-      return {$dom, push: fn($dom, $context, callerComponent, props)};
+      return { $dom, push: fn($dom, $context, callerComponent, props) };
     } finally {
       share.current_cd = prev;
     }

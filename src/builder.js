@@ -17,7 +17,7 @@ export function buildRuntime() {
   }));
 
   this.module.head.push(xNode('$context', {
-    $hold: ['componentFn'],
+    $hold: ['componentFn']
   }, (ctx) => {
     if(this.inuse.$context) {
       this.require('componentFn');

@@ -320,7 +320,7 @@ function makeDom(data) {
             if(a.value.includes('{')) n.dynClass = true;
             else n.className += ' ' + a.value;
           }
-          n.attributes[a.name] = a.value
+          n.attributes[a.name] = a.value;
         } else if(a.name == 'id') n.attributes.id = n.id = a.value;
         else if(a.name.startsWith('class:')) {
           n.className += ' ' + a.name.substring(6);
@@ -368,7 +368,7 @@ Node.prototype.getAttribute = function(n) {
 
 Node.prototype.hasAttribute = function(n) {
   return n in this.attributes;
-}
+};
 
 Node.prototype.appendChild = function(n) {
   n.parentElement = this;
@@ -407,7 +407,7 @@ Node.prototype.getElementsByClassName = function(names) {
       else if(rx.test(n.className)) result.push(n);
       walk(n);
     });
-  }
+  };
   walk(this);
   return result;
 };

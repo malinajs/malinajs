@@ -179,7 +179,7 @@ export async function compile(source, config = {}) {
       else ctx.write(true, `const ${n.name} = `);
       ctx.add(n.componentFn);
     }));
-  
+
     ctx.result = xBuild(result);
   });
 
@@ -232,7 +232,7 @@ function loadConfig(filename, option) {
 
   if(localConfig) {
     const confFn = require(localConfig);
-    if(typeof(confFn) == 'function') result = confFn(result, filename);
+    if(typeof (confFn) == 'function') result = confFn(result, filename);
     else result = confFn;
   }
   if(!result.path) result.path = filename;

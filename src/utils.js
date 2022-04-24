@@ -6,7 +6,7 @@ let current_context;
 export const get_context = () => {
   assert(current_context, 'Out of context');
   return current_context;
-}
+};
 
 export const use_context = (context, fn) => {
   let prev = current_context;
@@ -16,7 +16,7 @@ export const use_context = (context, fn) => {
   } finally {
     current_context = prev;
   }
-}
+};
 
 let _svgElements = 'animate,animateMotion,animateTransform,circle,clipPath,color-profile,defs,desc,discard,ellipse,feBlend,feColorMatrix,feComponentTransfer,feComposite,feConvolveMatrix,feDiffuseLighting,feDisplacementMap,feDistantLight,feDropShadow,feFlood,feFuncA,feFuncB,feFuncG,feFuncR,feGaussianBlur,feImage,feMerge,feMergeNode,feMorphology,feOffset,fePointLight,feSpecularLighting,feSpotLight,feTile,feTurbulence,filter,g,hatch,hatchpath,image,line,linearGradient,marker,mask,mesh,meshgradient,meshpatch,meshrow,metadata,mpath,path,pattern,polygon,polyline,radialGradient,rect,set,solidcolor,stop,switch,symbol,text,textPath,tspan,unknown,use,view';
 let svgElements = {};
@@ -197,7 +197,7 @@ export const replaceKeyword = (exp, fn) => {
 
 export const parseJS = (exp) => {
   let self = {};
-  self.ast = acorn.parseExpressionAt(exp, 0, {ecmaVersion: 12});
+  self.ast = acorn.parseExpressionAt(exp, 0, { ecmaVersion: 12 });
 
   self.transform = function(fn) {
     const rec = (n, pk) => {
@@ -206,11 +206,11 @@ export const parseJS = (exp) => {
         self = n;
         fn?.(n, pk);
       }
-  
+
       for(let k in n) {
         if(k == '_parent') continue;
         let v = n[k];
-        if(v == null || typeof(v) != 'object') continue;
+        if(v == null || typeof (v) != 'object') continue;
         if(Array.isArray(v)) {
           v.forEach(i => {
             i._parent = self || n._parent;
@@ -221,15 +221,15 @@ export const parseJS = (exp) => {
           rec(v, k);
         }
       }
-    }
+    };
     rec(self.ast, null);
 
     return self;
-  }
+  };
 
   self.build = function(data) {
-    return astring.generate(data || self.ast, {indent: '', lineEnd: ''});
-  }
+    return astring.generate(data || self.ast, { indent: '', lineEnd: '' });
+  };
   return self;
 };
 

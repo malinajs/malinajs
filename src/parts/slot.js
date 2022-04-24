@@ -28,7 +28,7 @@ export function attachSlot(slotName, node) {
     name: slotName,
     props,
     staticProps,
-    placeholder,
+    placeholder
   }, (ctx, n) => {
     let dynamicProps = this.inuse.apply && !n.staticProps;
 
