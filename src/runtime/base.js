@@ -545,6 +545,15 @@ export const mergeEvents = (...callbacks) => {
   return (e) => callbacks.forEach(cb => cb(e));
 };
 
+export const mergeAllEvents = ($events, local) => {
+  let result = Object.assign({}, $events);
+  for(let e in local) {
+    if(result[e]) result[e] = mergeEvents($events[e], local[e]);
+    else result[e] = local[e];
+  }
+  return result;
+};
+
 export const makeRootEvent = (root) => {
   let events = {}, nodes = [];
 

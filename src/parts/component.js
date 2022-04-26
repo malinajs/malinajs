@@ -261,10 +261,11 @@ export function makeComponent(node) {
       if(comma) ctx.write(', ');
       comma = true;
       ctx.write('events: $events');
-    } else if(n.events && !n.forwardAllEvents) {
+    } else if(n.events) {
       if(comma) ctx.write(',', true);
       comma = true;
-      ctx.write('events: {');
+      if(n.forwardAllEvents) ctx.write('events: $runtime.mergeAllEvents($events, {');
+      else ctx.write('events: {');
       ctx.indent++;
       ctx.write(true);
       Object.entries(n.events).forEach(([event, list], index) => {
@@ -281,9 +282,8 @@ export function makeComponent(node) {
         }
       });
       ctx.indent--;
-      ctx.write(true, '}');
-    } else if(n.events && n.forwardAllEvents) {
-      throw 'not implemented'; // FIXME
+      if(n.forwardAllEvents) ctx.write(true, '})');
+      else ctx.write(true, '}');
     }
     if(n.slots) {
       if(comma) ctx.write(', ');
