@@ -39,7 +39,8 @@ export async function compile(source, config = {}) {
     debug: true,
     css: true,
     passClass: true,
-    immutable: false
+    immutable: false,
+    useGroupReferencing: true
   }, config);
 
   const ctx = {

@@ -610,3 +610,37 @@ export const mountStatic = (label, component, option) => {
     share.current_destroyList = null;
   }
 };
+
+export const refer = (active, line) => {
+  let result = [], i, v;
+  const code = (x, d) => x.charCodeAt() - d;
+
+  for(i = 0; i < line.length; i++) {
+    let a = line[i];
+    switch (a) {
+      case '>':
+        active = active.firstChild;
+        break;
+      case '+':
+        active = active.firstChild;
+      case '.':
+        result.push(active);
+        break;
+      case '!':
+        v = code(line[++i], 48) * 42 + code(line[++i], 48);
+        while(v--) active = active.nextSibling;
+        break;
+      case '#':
+        active = result[code(line[++i], 48) * 26 + code(line[++i], 48)];
+        break;
+      default:
+        v = code(a, 0);
+        if(v >= 97) active = result[v - 97];
+        else {
+          v -= 48;
+          while(v--) active = active.nextSibling;
+        }
+    }
+  }
+  return result;
+};

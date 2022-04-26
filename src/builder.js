@@ -505,26 +505,153 @@ export function buildBlock(data, option = {}) {
         root: option.parentElement,
         single: rootTemplate.children.length == 1 && !requireFragment
       }, (ctx, n) => {
-        const gen = (parent, parentName) => {
-          for(let i = 0; i < parent.children.length; i++) {
-            let node = parent.children[i];
-            let diff = i == 0 ? '[$runtime.firstChild]' : `[$runtime.childNodes][${i}]`;
+        if(this.config.useGroupReferencing) {
+          const mark = (node) => {
+            let binding = false;
+            let next = false;
 
-            if(node._boundName) ctx.write(true, `let ${node._boundName} = ${parentName() + diff};`);
+            if(node._boundName) binding = true;
+
+            if(node.children?.length) {
+              let i = node.children.length - 1;
+              for(;i >= 0;i--) {
+                let n = node.children[i];
+  
+                if(mark(n)) {
+                  if(next) n.bindName();
+                  next = true;
+                  binding = true;
+                  node._innerBinding = true;
+                }
+              }
+            }
+            return binding;
+          }
+          mark(n.tpl);
+
+          const encodeShift = (i) => {
+            if(i <= 42) return String.fromCharCode(48 + i);
+            let b = i % 42;
+            let a = (i - b) / 42;
+            assert(a <= 42, 'Node-shift overflow: ' + i);
+            return '!' + String.fromCharCode(48 + a) + String.fromCharCode(48 + b);
+          }
+
+          const encodeRef = (i) => {
+            if(i <= 26) return String.fromCharCode(97 + i);
+            let b = i % 42;
+            let a = (i - b) / 42;
+            assert(a <= 42, 'Node ref overflow: ' + i);
+            return '#' + String.fromCharCode(48 + a) + String.fromCharCode(48 + b);
+          }
+
+          let result = [];
+          let vars = [];
+          let active = null;
+
+          const walk = (node) => {
+            let shift = 0;
+            let base = null;
+            node.children?.forEach((n, i) => {
+              if(i == 0) {
+                if(n._boundName) {
+                  result.push('+');
+                  vars.push(n);
+                  active = n;
+                  walk(n);
+                  if(n != active) base = n;
+                } else if(n._innerBinding) {
+                  result.push('>');
+                  active = n;
+                  walk(n);
+                } else if(node._innerBinding) {
+                  result.push('>');
+                  active = n;
+                  walk(n);
+                }
+              } else {
+                if(n._boundName) {
+                  if(base) {
+                    let x = vars.indexOf(base);
+                    result.push(encodeRef(x));
+                    base = null;
+                  }
+                  result.push(encodeShift(shift));
+                  result.push('.');
+                  shift = 0;
+                  active = n;
+                  vars.push(n);
+                  walk(n);
+                  if(n != active) base = n;
+                } else if(n._innerBinding) {
+                  if(base) {
+                    let x = vars.indexOf(base);
+                    result.push(encodeRef(x));
+                    base = null;
+                  }
+                  result.push(encodeShift(shift));
+                  active = n;
+                  walk(n);
+                }
+              }
+              shift++;
+            });
+          }
+
+          if(n.single) {
+            let node = n.tpl.children[0];
+            if(node._boundName) ctx.write(true, `let ${node._boundName} = ${n.root};`);
             if(node.children) {
-              gen(node, () => {
-                if(node._boundName) return node._boundName;
-                return parentName() + diff;
-              });
+              walk(node);
+              if(vars.length) {
+                result = result.join('');
+                vars = vars.map(v => v._boundName).join(', ');
+                ctx.write(true, `let [${vars}] = $runtime.refer(${n.root}, '${result}');`);
+              }
+            }
+          } else {
+            walk(n.tpl);
+            if(vars.length) {
+              result = result.join('');
+              vars = vars.map(v => v._boundName).join(', ');
+              ctx.write(true, `let [${vars}] = $runtime.refer(${n.root}, '${result}');`);
             }
           }
-        };
-        if(n.single) {
-          let node = n.tpl.children[0];
-          if(node._boundName) ctx.write(true, `let ${node._boundName} = ${n.root};`);
-          if(node.children) gen(node, () => n.root);
         } else {
-          gen(n.tpl, () => n.root);
+          const walk = p => {
+            if(p.children?.length) {
+              let col = 0;
+              for(let n of p.children) {
+                col += walk(n);
+              }
+              if(col > 1 && !p._boundName) p.bindName();
+              return col ? 1 : 0;
+            };
+            return p._boundName ? 1 : 0;
+          }
+          walk(n.tpl);
+  
+          const gen = (parent, parentName) => {
+            for(let i = 0; i < parent.children.length; i++) {
+              let node = parent.children[i];
+              let diff = i == 0 ? '[$runtime.firstChild]' : `[$runtime.childNodes][${i}]`;
+  
+              if(node._boundName) ctx.write(true, `let ${node._boundName} = ${parentName() + diff};`);
+              if(node.children) {
+                gen(node, () => {
+                  if(node._boundName) return node._boundName;
+                  return parentName() + diff;
+                });
+              }
+            }
+          };
+          if(n.single) {
+            let node = n.tpl.children[0];
+            if(node._boundName) ctx.write(true, `let ${node._boundName} = ${n.root};`);
+            if(node.children) gen(node, () => n.root);
+          } else {
+            gen(n.tpl, () => n.root);
+          }
         }
       }));
     }
