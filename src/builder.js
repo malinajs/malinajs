@@ -634,7 +634,7 @@ export function buildBlock(data, option = {}) {
           const gen = (parent, parentName) => {
             for(let i = 0; i < parent.children.length; i++) {
               let node = parent.children[i];
-              let diff = i == 0 ? '[$runtime.firstChild]' : `[$runtime.childNodes][${i}]`;
+              let diff = i == 0 ? '.firstChild' : `.childNodes[${i}]`;
   
               if(node._boundName) ctx.write(true, `let ${node._boundName} = ${parentName() + diff};`);
               if(node.children) {

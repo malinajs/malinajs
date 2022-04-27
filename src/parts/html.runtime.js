@@ -1,4 +1,4 @@
-import { insertAfter, $$removeElements, firstChild } from '../runtime/base';
+import { insertAfter, $$removeElements } from '../runtime/base';
 import { $watch } from '../runtime/cd';
 
 let create = (tag, html) => {
@@ -6,7 +6,7 @@ let create = (tag, html) => {
   if(tag.parentElement instanceof SVGElement) {
     let t = document.createElement('template');
     t.innerHTML = '<svg>' + html + '</svg>';
-    fr = t.content[firstChild];
+    fr = t.content.firstChild;
   } else {
     let t = document.createElement('template');
     t.innerHTML = html;

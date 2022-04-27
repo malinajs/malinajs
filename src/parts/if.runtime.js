@@ -1,4 +1,4 @@
-import { $$removeElements, firstChild, insertAfter } from '../runtime/base';
+import { $$removeElements, insertAfter } from '../runtime/base';
 import { $watch, cd_new, cd_attach2, cd_detach } from '../runtime/cd';
 import * as share from '../runtime/share';
 import { safeGroupCall } from '../runtime/utils';
@@ -20,7 +20,7 @@ export function ifBlock(label, fn, build, buildElse, parentLabel) {
     }
     cd_attach2(parentCD, $cd);
     if($dom.nodeType == 11) {
-      first = $dom[firstChild];
+      first = $dom.firstChild;
       last = $dom.lastChild;
     } else first = last = $dom;
     if(parentLabel) label.appendChild($dom);

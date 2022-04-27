@@ -1,4 +1,4 @@
-import { $$removeElements, childNodes, firstChild, iterNodes } from '../runtime/base';
+import { $$removeElements, iterNodes } from '../runtime/base';
 import { $watch, $$compareArray, isArray, cd_attach, cd_attach2, cd_new } from '../runtime/cd';
 import * as share from '../runtime/share';
 import { safeCall, safeGroupCall } from '../runtime/utils';
@@ -112,7 +112,7 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind) {
         next_ctx = null;
       } else ctx = mapping.get(key);
       if(ctx) {
-        nextEl = i == 0 && onlyChild ? parentNode[firstChild] : prevNode.nextSibling;
+        nextEl = i == 0 && onlyChild ? parentNode.firstChild : prevNode.nextSibling;
         if(p_promise) while(nextEl && nextEl.$$removing) nextEl = nextEl.nextSibling;
         if(nextEl != ctx.first) {
           let insert = true;
@@ -152,7 +152,7 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind) {
         ctx = { $cd, d, rebind };
         cd_attach2(eachCD, $cd);
         if($dom.nodeType == 11) {
-          ctx.first = $dom[firstChild];
+          ctx.first = $dom.firstChild;
           ctx.last = $dom.lastChild;
         } else ctx.first = ctx.last = $dom;
         parentNode.insertBefore($dom, prevNode?.nextSibling);

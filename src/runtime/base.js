@@ -9,9 +9,6 @@ import { $onDestroy } from './share.js';
 let templatecache = {};
 let templatecacheSvg = {};
 
-export const childNodes = 'childNodes';
-export const firstChild = 'firstChild';
-
 export let noop = a => a;
 
 export const insertAfter = (label, node) => {
@@ -60,8 +57,8 @@ export function svgToFragment(content) {
   t.innerHTML = '<svg>' + content + '</svg>';
 
   let result = document.createDocumentFragment();
-  let svg = t.content[firstChild];
-  while(svg[firstChild]) result.appendChild(svg[firstChild]);
+  let svg = t.content.firstChild;
+  while(svg.firstChild) result.appendChild(svg.firstChild);
   templatecacheSvg[content] = result.cloneNode(true);
   return result;
 }

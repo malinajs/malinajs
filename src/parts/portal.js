@@ -29,7 +29,7 @@ export function attachPortal(node) {
     ctx.indent++;
     ctx.add(n.template);
     ctx.add(n.source);
-    ctx.writeLine('let $$first = $parentElement[$runtime.firstChild];');
+    ctx.writeLine('let $$first = $parentElement.firstChild;');
     ctx.writeLine('let $$last = $parentElement.lastChild;');
     ctx.writeLine(`$runtime.$onDestroy(() => $runtime.$$removeElements($$first, $$last));`);
     ctx.writeLine(`$tick(() => ${label}.appendChild($parentElement));`);
