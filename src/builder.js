@@ -505,30 +505,30 @@ export function buildBlock(data, option = {}) {
         root: option.parentElement,
         single: rootTemplate.children.length == 1 && !requireFragment
       }, (ctx, n) => {
-        if(this.config.useGroupReferencing) {
-          const mark = (node) => {
-            let binding = false;
-            let next = false;
+        const mark = (node) => {
+          let binding = false;
+          let next = false;
 
-            if(node._boundName) binding = true;
+          if(node._boundName) binding = true;
 
-            if(node.children?.length) {
-              let i = node.children.length - 1;
-              for(;i >= 0;i--) {
-                let n = node.children[i];
-  
-                if(mark(n)) {
-                  if(next) n.bindName();
-                  next = true;
-                  binding = true;
-                  node._innerBinding = true;
-                }
+          if(node.children?.length) {
+            let i = node.children.length - 1;
+            for(;i >= 0;i--) {
+              let n = node.children[i];
+
+              if(mark(n)) {
+                if(next) n.bindName();
+                next = true;
+                binding = true;
+                node._innerBinding = true;
               }
             }
-            return binding;
           }
-          mark(n.tpl);
+          return binding;
+        }
+        mark(n.tpl);
 
+        if(this.config.useGroupReferencing) {
           const encodeShift = (i) => {
             if(i <= 42) return String.fromCharCode(48 + i);
             let b = i % 42;
@@ -618,39 +618,46 @@ export function buildBlock(data, option = {}) {
             }
           }
         } else {
-          const walk = p => {
-            if(p.children?.length) {
-              let col = 0;
-              for(let n of p.children) {
-                col += walk(n);
+
+          const walk = (node, path) => {
+            let shift = 0;
+            let base = null;
+            node.children?.forEach((n, i) => {
+              if(i == 0) {
+                if(n._boundName) {
+                  ctx.write(true, `let ${n._boundName} = ${path.join('.')}.firstChild;`);
+                  walk(n, [n._boundName]);
+                  base = n;
+                } else if(n._innerBinding) {
+                  walk(n, [...path, 'firstChild']);
+                } else if(node._innerBinding) {
+                  walk(n, [...path, 'firstChild']);
+                }
+              } else {
+                if(n._boundName) {
+                  ctx.write(true, `let ${n._boundName} = ${base._boundName}`);
+                  while(shift--) ctx.write('.nextSibling');
+                  ctx.write(';');
+                  walk(n, [n._boundName]);
+                  base = n;
+                  shift = 0;
+                } else if(n._innerBinding) {
+                  let npath = [base._boundName];
+                  while(shift--) npath.push('nextSibling');
+                  walk(n, npath);
+                  shift = 0;
+                }
               }
-              if(col > 1 && !p._boundName) p.bindName();
-              return col ? 1 : 0;
-            };
-            return p._boundName ? 1 : 0;
+              shift++;
+            });
           }
-          walk(n.tpl);
-  
-          const gen = (parent, parentName) => {
-            for(let i = 0; i < parent.children.length; i++) {
-              let node = parent.children[i];
-              let diff = i == 0 ? '.firstChild' : `.childNodes[${i}]`;
-  
-              if(node._boundName) ctx.write(true, `let ${node._boundName} = ${parentName() + diff};`);
-              if(node.children) {
-                gen(node, () => {
-                  if(node._boundName) return node._boundName;
-                  return parentName() + diff;
-                });
-              }
-            }
-          };
+
           if(n.single) {
             let node = n.tpl.children[0];
             if(node._boundName) ctx.write(true, `let ${node._boundName} = ${n.root};`);
-            if(node.children) gen(node, () => n.root);
+            if(node.children) walk(node, [n.root]);
           } else {
-            gen(n.tpl, () => n.root);
+            walk(n.tpl, [n.root]);
           }
         }
       }));
