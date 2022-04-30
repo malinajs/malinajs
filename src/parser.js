@@ -217,7 +217,7 @@ export function parse() {
 
     while(index < source.length) {
       let a = source[index];
-      if(a === '<') {
+      if(a === '<' && source[index+1].match(/\S/)) {
         flushText();
 
         if(source.substring(index, index + 4) === '<!--') {
@@ -295,8 +295,7 @@ export function parse() {
             push(tag);
             go(tag, n => tag.mainBlock.push(n));
             continue;
-          } else if(bind.value === ':else') {
-            assert(parent.type === 'each', 'Bind error: /each');
+          } else if(bind.value === ':else' && parent.type === 'each') {
             assert(!parent.elseBlock);
             parent.elseBlock = [];
             return go(parent, n => parent.elseBlock.push(n));
