@@ -195,8 +195,9 @@ export function parse() {
     return source.substring(start, end);
   };
 
-  const go = (parent) => {
+  const go = (parent, push) => {
     let textNode = null;
+    if(!push) push = n => parent.body.push(n);
 
     const addText = v => {
       if(!textNode) {
@@ -210,7 +211,7 @@ export function parse() {
 
     const flushText = () => {
       if(!textNode) return;
-      parent.body.push(textNode);
+      push(textNode);
       textNode = null;
     };
 
@@ -220,7 +221,7 @@ export function parse() {
         flushText();
 
         if(source.substring(index, index + 4) === '<!--') {
-          parent.body.push({
+          push({
             type: 'comment',
             content: readComment()
           });
@@ -244,7 +245,7 @@ export function parse() {
         }
 
         let tag = readTag();
-        parent.body.push(tag);
+        push(tag);
         if(tag.name === 'script') {
           tag.type = 'script';
           tag.content = readScript('script');
@@ -283,17 +284,22 @@ export function parse() {
               type: 'systag',
               value: bind.value
             };
-            parent.body.push(tag);
+            push(tag);
             continue;
           } else if(bind.value.startsWith('#each ')) {
             let tag = {
               type: 'each',
               value: bind.value,
-              body: []
+              mainBlock: []
             };
-            parent.body.push(tag);
-            go(tag);
+            push(tag);
+            go(tag, n => tag.mainBlock.push(n));
             continue;
+          } else if(bind.value === ':else') {
+            assert(parent.type === 'each', 'Bind error: /each');
+            assert(!parent.elseBlock);
+            parent.elseBlock = [];
+            return go(parent, n => parent.elseBlock.push(n));
           } else if(bind.value === '/each') {
             assert(parent.type === 'each', 'Bind error: /each');
             return;
@@ -303,7 +309,7 @@ export function parse() {
               value: bind.value,
               body: []
             };
-            parent.body.push(tag);
+            push(tag);
             go(tag);
             continue;
           } else if(bind.value === '/if') {
@@ -314,31 +320,24 @@ export function parse() {
             parent.bodyMain = parent.body;
             parent.body = [];
           } else if(bind.value.startsWith('#await ')) {
-            let mainPart = [];
             let tag = {
               type: 'await',
               value: bind.value,
-              body: mainPart,
-              parts: {
-                main: mainPart,
-                mainValue: bind.value
-              }
+              parts: {main: []}
             };
-            parent.body.push(tag);
-            go(tag);
+            push(tag);
+            go(tag, n => tag.parts.main.push(n));
             continue;
           } else if(bind.value.match(/^:then( |$)/)) {
             assert(parent.type === 'await', 'Bind error: await-then');
-            let thenPart = [];
-            parent.parts.then = thenPart;
+            parent.parts.then = [];
             parent.parts.thenValue = bind.value;
-            parent.body = thenPart;
+            return go(parent, n => parent.parts.then.push(n));
           } else if(bind.value.match(/^:catch( |$)/)) {
             assert(parent.type === 'await', 'Bind error: await-catch');
-            let catchPart = [];
-            parent.parts.catch = catchPart;
+            parent.parts.catch = [];
             parent.parts.catchValue = bind.value;
-            parent.body = catchPart;
+            return go(parent, n => parent.parts.catch.push(n));
           } else if(bind.value == '/await') {
             assert(parent.type === 'await', 'Bind error: /await');
             return;
@@ -348,7 +347,7 @@ export function parse() {
               value: bind.value,
               body: []
             };
-            parent.body.push(tag);
+            push(tag);
             go(tag);
             continue;
           } else if(bind.value == '/slot') {
@@ -360,7 +359,7 @@ export function parse() {
               value: bind.value,
               body: []
             };
-            parent.body.push(tag);
+            push(tag);
             go(tag);
             continue;
           } else if(bind.value == '/fragment') {

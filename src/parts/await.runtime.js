@@ -24,6 +24,7 @@ export function $$awaitBlock(label, relation, fn, build_main, build_then, build_
   function render(builder, value) {
     destroyBlock();
 
+    if(!builder) return;
     destroyList = share.current_destroyList = [];
     $cd = share.current_cd = cd_new();
     let $dom;
