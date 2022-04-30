@@ -335,9 +335,12 @@ export const bindAction = (element, action, fn, subscribe) => {
     value = fn();
     handler = action.apply(null, [element].concat(value));
   } else handler = action(element);
-  $onDestroy(handler?.destroy);
-  subscribe?.(fn, handler, value);
-  handler?.init && $tick(handler.init);
+  if(isFunction(handler)) $onDestroy(handler);
+  else {
+    $onDestroy(handler?.destroy);
+    subscribe?.(fn, handler, value);
+    handler?.init && $tick(handler.init);
+  }
 };
 
 

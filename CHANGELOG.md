@@ -10,6 +10,7 @@
 * each, index variable is not included by default
 * reference to element is removed on destroying
 * config.useGroupReferencing
+* action can return destroy function (not only object)
 
 ## 0.6.x
 
