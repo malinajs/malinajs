@@ -1,5 +1,5 @@
-import { $$removeElements, iterNodes } from '../runtime/base';
-import { $watch, $$compareArray, isArray, cd_attach, cd_attach2, cd_new } from '../runtime/cd';
+import { $$removeElements, iterNodes, attachBlock } from '../runtime/base';
+import { $watch, $$compareArray, isArray, cd_attach, cd_attach2, cd_new, cd_detach } from '../runtime/cd';
 import * as share from '../runtime/share';
 import { safeCall, safeGroupCall } from '../runtime/utils';
 
@@ -20,12 +20,41 @@ export const makeEachSingleBlock = (fn) => {
 };
 
 
-export function $$eachBlock(label, onlyChild, fn, getKey, bind) {
+export const makeEachElseBlock = (fn) => {
+  return (label, onlyChild, parentCD) => {
+    let first, last;
+    let destroyList = share.current_destroyList = [];
+    let $cd = share.current_cd = cd_new();
+    try {
+      let $dom = fn();
+      if($dom.nodeType == 11) {
+        first = $dom.firstChild;
+        last = $dom.lastChild;
+      } else first = last = $dom;
+      cd_attach2(parentCD, $cd);
+      if(onlyChild) label.appendChild($dom);
+      else attachBlock(label, $dom);
+    } finally {
+      share.current_destroyList = null;
+      share.current_cd = null;
+    }
+
+    return () => {
+      $$removeElements(first, last);
+      cd_detach($cd);
+      safeGroupCall(destroyList);
+    }
+  }
+};
+
+
+export function $$eachBlock(label, onlyChild, fn, getKey, bind, buildElseBlock) {
+  let parentCD = share.current_cd;
   let eachCD = cd_new();
   cd_attach(eachCD);
 
   let mapping = new Map();
-  let lastNode, vi = 0, p_promise = 0, p_destroy = 0;
+  let lastNode, vi = 0, p_promise = 0, p_destroy = 0, elseBlock;
 
   const destroyAll = () => {
     p_destroy && safeCall(() => mapping.forEach(ctx => ctx.d?.forEach(fn => fn())));
@@ -33,6 +62,7 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind) {
   };
 
   share.$onDestroy(destroyAll);
+  buildElseBlock && share.$onDestroy(() => elseBlock?.());
 
   $watch(fn, (array) => {
     if(!array) array = [];
@@ -103,6 +133,11 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind) {
       }
     }
 
+    if(elseBlock && array.length) {
+      elseBlock();
+      elseBlock = null;
+    }
+
     let i, item, next_ctx, ctx, nextEl, key;
     for(i = 0; i < array.length; i++) {
       item = array[i];
@@ -163,5 +198,9 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind) {
     lastNode = prevNode;
     mapping.clear();
     mapping = newMapping;
+
+    if(!array.length && !elseBlock && buildElseBlock) {
+      elseBlock = buildElseBlock(label, onlyChild, parentCD);
+    }
   }, { cmp: $$compareArray });
 }

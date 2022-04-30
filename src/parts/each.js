@@ -111,8 +111,8 @@ export function makeEachBlock(data, option) {
     }
   }
 
-  let nodeItems = trimEmptyNodes(data.body);
-  if(!nodeItems.length) nodeItems = [data.body[0]];
+  let nodeItems = trimEmptyNodes(data.mainBlock);
+  if(!nodeItems.length) nodeItems = [data.mainBlock[0]];
 
   let itemBlock, block = this.buildBlock({ body: nodeItems }, {
     protectLastTag: true,
@@ -146,9 +146,19 @@ export function makeEachBlock(data, option) {
     });
   } else itemBlock = block.block;
 
+  let elseBlock = null;
+  if(data.elseBlock) {
+    let block = this.buildBlock({ body: data.elseBlock }, {
+      protectLastTag: true,
+      allowSingleBlock: false
+    });
+    elseBlock = block.block;
+  }
+
   const source = xNode('each', {
     keyFunction,
-    block: itemBlock
+    block: itemBlock,
+    elseBlock
   }, (ctx, n) => {
     ctx.writeLine(`$runtime.$$eachBlock(${option.elName}, ${option.onlyChild ? 1 : 0}, () => (${arrayName}),`);
     ctx.indent++;
@@ -158,6 +168,11 @@ export function makeEachBlock(data, option) {
     else ctx.write('$runtime.eachDefaultKey');
     ctx.write(',');
     ctx.add(n.block);
+    if(n.elseBlock) {
+      ctx.write(', $runtime.makeEachElseBlock(');
+      ctx.add(n.elseBlock);
+      ctx.write(')');
+    }
     ctx.indent--;
     ctx.write(true, ');', true);
   });

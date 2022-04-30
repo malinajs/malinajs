@@ -11,6 +11,7 @@
 * reference to element is removed on destroying
 * config.useGroupReferencing
 * action can return destroy function (not only object)
+* each-else
 
 ## 0.6.x
 
