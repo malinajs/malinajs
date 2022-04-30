@@ -299,12 +299,16 @@ export function processCSS() {
 function makeDom(data) {
   function build(parent, list) {
     list.forEach(e => {
-      if(e.type == 'each' || e.type == 'fragment' || e.type == 'slot') {
+      if(e.type == 'fragment' || e.type == 'slot') {
         if(e.body && e.body.length) build(parent, e.body);
         return;
+      } else if(e.type == 'each') {
+        build(parent, e.mainBlock);
+        e.elseBlock?.length && build(parent, e.elseBlock);
+        return;
       } else if(e.type == 'if') {
-        if(e.bodyMain && e.bodyMain.length) build(parent, e.bodyMain);
-        if(e.body && e.body.length) build(parent, e.body);
+        e.parts.forEach(p => build(parent, p.body));
+        e.elsePart?.length && build(parent, e.elsePart);
         return;
       } else if(e.type == 'await') {
         if(e.parts.main && e.parts.main.length) build(parent, e.parts.main);
