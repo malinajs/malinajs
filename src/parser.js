@@ -305,19 +305,29 @@ export function parse() {
           } else if(bind.value.startsWith('#if ')) {
             let tag = {
               type: 'if',
+              parts: [{
+                value: bind.value,
+                body: []
+              }]
+            };
+            push(tag);
+            go(tag, n => tag.parts[0].body.push(n));
+            continue;
+          } else if(bind.value.match(/^:elif\s|^:else\s+if\s/)) {
+            assert(parent.type === 'if', 'Bind error: :else');
+            let part = {
               value: bind.value,
               body: []
             };
-            push(tag);
-            go(tag);
-            continue;
+            parent.parts.push(part);
+            return go(parent, n => part.body.push(n));
+          } else if(bind.value === ':else') {
+            assert(parent.type === 'if', 'Bind error: :else');
+            parent.elsePart = [];
+            return go(parent, n => parent.elsePart.push(n));
           } else if(bind.value === '/if') {
             assert(parent.type === 'if', 'Bind error: /if');
             return;
-          } else if(bind.value === ':else') {
-            assert(parent.type === 'if', 'Bind error: :else');
-            parent.bodyMain = parent.body;
-            parent.body = [];
           } else if(bind.value.startsWith('#await ')) {
             let tag = {
               type: 'await',

@@ -3,13 +3,6 @@ import { xNode } from '../xnode.js';
 
 
 export function makeifBlock(data, element, parentElement) {
-  let r = data.value.match(/^#if (.*)$/s);
-  let exp = r[1];
-  assert(exp, 'Wrong binding: ' + data.value);
-  this.detectDependency(exp);
-
-  let mainBlock, elseBlock;
-
   const getBlock = b => {
     if(b.singleBlock) {
       return xNode('make-block', {
@@ -22,38 +15,56 @@ export function makeifBlock(data, element, parentElement) {
     return b.block;
   };
 
-  if(data.bodyMain) {
-    mainBlock = getBlock(this.buildBlock({ body: data.bodyMain }, { protectLastTag: true, allowSingleBlock: true }));
-    elseBlock = getBlock(this.buildBlock(data, { protectLastTag: true, allowSingleBlock: true }));
-  } else {
-    mainBlock = getBlock(this.buildBlock(data, { protectLastTag: true, allowSingleBlock: true }));
-  }
+  let elseBlock, parts = [];
+  data.parts.forEach(part => {
+    let rx = part.value.match(/^(#if|:elif|:else\s+if)\s(.*)$/s);
+    let exp = rx[2]?.trim();
+    assert(exp, 'Wrong binding: ' + part.value);
+    this.detectDependency(exp);
+    parts.push({
+      exp,
+      block: getBlock(this.buildBlock(part, { protectLastTag: true, allowSingleBlock: true }))
+    });
+  });
+  if(data.elsePart) elseBlock = getBlock(this.buildBlock({ body: data.elsePart }, { protectLastTag: true, allowSingleBlock: true }));
 
   return xNode('if:bind', {
     $wait: ['apply'],
     el: element.bindName(),
     parentElement,
-    exp,
-    mainBlock: mainBlock,
-    elseBlock: elseBlock
+    parts,
+    elseBlock
   }, (ctx, n) => {
-    let missing = '';
     if(this.inuse.apply) {
-      ctx.write(true, `$runtime.ifBlock(${n.el}, () => !!(${n.exp}),`);
+      ctx.write(true, `$runtime.ifBlock(${n.el}, `);
     } else {
-      ctx.write(true, `$runtime.ifBlockReadOnly(${n.el}, () => !!(${n.exp}),`);
+      ctx.write(true, `$runtime.ifBlockReadOnly(${n.el}, `);
     }
 
-    ctx.indent++;
-    ctx.write(true);
-    ctx.add(n.mainBlock);
-    if(n.elseBlock) {
-      ctx.write(',');
-      ctx.add(n.elseBlock);
-    } else missing = ', null';
+    if(n.parts.length == 1) {
+      if(n.elseBlock) ctx.write(`() => (${n.parts[0].exp}) ? 0 : 1`);
+      else ctx.write(`() => (${n.parts[0].exp}) ? 0 : null`);
+      ctx.indent++;
+    } else {
+      ctx.write(`() => {`);
+      ctx.indent++;
+      n.parts.forEach((p, i) => {
+        ctx.write(true, `if(${p.exp}) return ${i};`);
+      });
+      if(n.elseBlock) ctx.write(true, `return ${n.parts.length};`);
+      ctx.write(true, `}`);
+    }
+    ctx.write(`, [`);
+    n.elseBlock && n.parts.push({block: n.elseBlock});
+    n.parts.forEach((p, i) => {
+      if(i) ctx.write(', ');
+      ctx.add(p.block);
+    })
+    ctx.write(']')
+
     ctx.indent--;
     ctx.write(true);
-    if(n.parentElement) ctx.write(missing + ', true');
+    if(n.parentElement) ctx.write(', true');
     ctx.write(');', true);
   });
 }

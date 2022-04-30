@@ -4,7 +4,7 @@ import * as share from '../runtime/share';
 import { safeGroupCall } from '../runtime/utils';
 
 
-export function ifBlock(label, fn, build, buildElse, parentLabel) {
+export function ifBlock(label, fn, parts, parentLabel) {
   let first, last, $cd, destroyList, parentCD = share.current_cd;
   share.$onDestroy(() => safeGroupCall(destroyList));
 
@@ -47,22 +47,13 @@ export function ifBlock(label, fn, build, buildElse, parentLabel) {
   }
 
   $watch(fn, (value) => {
-    if(value) {
-      destroyBlock();
-      createBlock(build);
-    } else {
-      destroyBlock();
-      if(buildElse) createBlock(buildElse);
-    }
+    destroyBlock();
+    if(value != null) createBlock(parts[value]);
   });
 }
 
 
-export function ifBlockReadOnly(label, fn, build, buildElse) {
-  function createBlock(builder) {
-    insertAfter(label, builder());
-  }
-
-  if(fn()) createBlock(build);
-  else if(buildElse) createBlock(buildElse);
+export function ifBlockReadOnly(label, fn, parts) {
+  let value = fn();
+  if(value != null) insertAfter(label, parts[value]());
 }
