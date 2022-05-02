@@ -37,9 +37,10 @@ export function replace(s, from, to, count) {
 }
 
 export function toCamelCase(name) {
-  assert(name[name.length - 1] !== '-', 'Wrong name');
-  return name.replace(/(?<!-)(\-\w)/g, function(part) {
-    return part[1].toUpperCase();
+  assert(last(name) !== '-', 'Wrong name');
+  return name.replace(/(.\-\w)/g, function(part) {
+    if(part[0] == '-') return part;
+    return part[0] + part[2].toUpperCase();
   });
 }
 
