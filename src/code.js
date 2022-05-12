@@ -34,7 +34,7 @@ export function parse() {
       if(isBlockComment) return;
       this.script.comments.push({ start, end, value });
     };
-    this.script.ast = acorn.parse(source, { sourceType: 'module', ecmaVersion: 12, onComment });
+    this.script.ast = acorn.parse(source, { sourceType: 'module', ecmaVersion: 'latest', onComment });
 
     if(source.includes('$props')) this.require('$props');
     if(source.includes('$attributes')) this.require('$attributes');

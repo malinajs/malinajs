@@ -47,7 +47,7 @@ export function makeEventProp(prop, requireElement) {
     exp = unwrapExp(prop.value);
     exp = replaceKeyword(exp, (name) => {
       if(name == '$element') return requireElement();
-    });
+    }, true);
   } else if(!handler) handler = event;
 
   this.detectDependency(exp || handler);

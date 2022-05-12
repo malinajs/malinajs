@@ -13,7 +13,7 @@ export function bindProp(prop, node, element) {
     return {
       bind: xNode('block', {
         body: [
-          replaceKeyword(exp, (name) => name == '$element' ? element.bindName() : null)
+          replaceKeyword(exp, (name) => name == '$element' ? element.bindName() : null, true)
         ]
       })
     };

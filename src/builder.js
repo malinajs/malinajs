@@ -282,7 +282,7 @@ export function buildBlock(data, option = {}) {
             if(!exp.endsWith(';')) exp += ';';
             binds.push(xNode('block', {
               body: [
-                replaceKeyword(exp, (name) => name == '$element' ? textNode.bindName() : null)
+                replaceKeyword(exp, (name) => name == '$element' ? textNode.bindName() : null, true)
               ]
             }));
           });

@@ -73,7 +73,7 @@ export const isNumber = (value) => {
 export function detectExpressionType(name) {
   if(isSimpleName(name)) return 'identifier';
 
-  let ast = acorn.parse(name, { allowReturnOutsideFunction: true });
+  let ast = acorn.parse(name, { allowReturnOutsideFunction: true, ecmaVersion: 'latest' });
 
   function checkIdentificator(body) {
     if(body.length != 1) return;
@@ -140,7 +140,7 @@ export const genId = () => {
 
 
 export const extractKeywords = (exp) => {
-  let ast = acorn.parse(exp, { sourceType: 'module', ecmaVersion: 12 });
+  let ast = acorn.parse(exp, { sourceType: 'module', ecmaVersion: 12, ecmaVersion: 'latest' });
 
   const keys = new Set();
   const rec = (n) => {
@@ -181,9 +181,9 @@ export const extractKeywords = (exp) => {
 };
 
 
-export const replaceKeyword = (exp, fn) => {
+export const replaceKeyword = (exp, fn, option) => {
   let changed = false;
-  let r = parseJS(exp).transform((n, pk) => {
+  let r = parseJS(exp, option).transform((n, pk) => {
     if(n.type != 'Identifier') return;
     if(pk == 'property' || pk == 'params') return;
     let name = fn(n.name);
@@ -196,9 +196,10 @@ export const replaceKeyword = (exp, fn) => {
 };
 
 
-export const parseJS = (exp) => {
+export const parseJS = (exp, option) => {
   let self = {};
-  self.ast = acorn.parseExpressionAt(exp, 0, { ecmaVersion: 12 });
+  if(option === true) self.ast = acorn.parse(exp, { ecmaVersion: 'latest' });
+  else self.ast = acorn.parseExpressionAt(exp, 0, { ecmaVersion: 'latest' });
 
   self.transform = function(fn) {
     const rec = (n, pk) => {
