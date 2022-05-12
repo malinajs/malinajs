@@ -109,6 +109,22 @@ export function parse() {
   const readScript = (tag) => {
     let endTag = `</${tag}>`;
     let q, a, p, start = index;
+
+    const readRegExp = () => {
+      while(true) {
+        p = a;
+        a = readNext();
+        if(q) {
+          if(a != q) continue;
+          if(p == '\\') continue;
+          q = null;
+          continue;
+        }
+        if(a == '[' && p != '\\') q = ']';
+        if(a == '/' && p != '\\') return;
+      }
+    }
+
     while(true) {
       p = a;
       a = readNext();
@@ -120,6 +136,10 @@ export function parse() {
       }
       if(a == '"' || a == '\'' || a == '`') {
         q = a;
+        continue;
+      }
+      if(a == '/') {
+        readRegExp();
         continue;
       }
       if(a == '<') {
