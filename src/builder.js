@@ -635,7 +635,8 @@ export function buildBlock(data, option = {}) {
                 }
               } else {
                 if(n._boundName) {
-                  ctx.write(true, `let ${n._boundName} = ${base._boundName}`);
+                  if(base) ctx.write(true, `let ${n._boundName} = ${base._boundName}`);
+                  else ctx.write(true, `let ${n._boundName} = ${path.join('.')}.firstChild`);
                   while(shift--) ctx.write('.nextSibling');
                   ctx.write(';');
                   walk(n, [n._boundName]);
