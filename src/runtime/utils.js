@@ -18,7 +18,7 @@ export const safeCall = fn => {
 
 export const safeGroupCall = list => {
   try {
-    list.forEach(fn => fn?.());
+    list?.forEach(fn => fn?.());
   } catch (e) {
     __app_onerror(e);
   }

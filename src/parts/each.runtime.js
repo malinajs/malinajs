@@ -118,7 +118,7 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind, buildElseBlock) 
             ctx.$cd && eachCD.children.push(ctx.$cd);
             return;
           }
-          ctx.d && safeGroupCall(ctx.d);
+          safeGroupCall(ctx.d);
           iterNodes(ctx.first, ctx.last, n => removedNodes.push(n));
         });
 

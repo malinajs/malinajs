@@ -231,7 +231,7 @@ export const callComponent = (context, component, option = {}, propFn, cmp, sett
 export const attachDynComponent = (label, exp, bind) => {
   let parentCD = share.current_cd;
   let active, destroyList, $cd, $dom, finalLabel = getFinalLabel(label);
-  const destroy = () => destroyList && safeGroupCall(destroyList);
+  const destroy = () => safeGroupCall(destroyList);
   $onDestroy(destroy);
 
   $watch(exp, (component) => {
