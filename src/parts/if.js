@@ -55,12 +55,12 @@ export function makeifBlock(data, element, parentElement) {
       ctx.write(true, `}`);
     }
     ctx.write(`, [`);
-    n.elseBlock && n.parts.push({block: n.elseBlock});
+    n.elseBlock && n.parts.push({ block: n.elseBlock });
     n.parts.forEach((p, i) => {
       if(i) ctx.write(', ');
       ctx.add(p.block);
-    })
-    ctx.write(']')
+    });
+    ctx.write(']');
 
     ctx.indent--;
     ctx.write(true);

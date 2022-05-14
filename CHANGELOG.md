@@ -12,6 +12,8 @@
 * config.useGroupReferencing
 * action can return destroy function (not only object)
 * each-else
+* else-if
+* refactoring $onMount
 
 ## 0.6.x
 

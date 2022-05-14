@@ -43,8 +43,8 @@ export const makeEachElseBlock = (fn) => {
       $$removeElements(first, last);
       cd_detach($cd);
       safeGroupCall(destroyList);
-    }
-  }
+    };
+  };
 };
 
 

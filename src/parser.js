@@ -123,7 +123,7 @@ export function parse() {
         if(a == '[' && p != '\\') q = ']';
         if(a == '/' && p != '\\') return;
       }
-    }
+    };
 
     while(true) {
       p = a;
@@ -237,7 +237,7 @@ export function parse() {
 
     while(index < source.length) {
       let a = source[index];
-      if(a === '<' && source[index+1].match(/\S/)) {
+      if(a === '<' && source[index + 1].match(/\S/)) {
         flushText();
 
         if(source.substring(index, index + 4) === '<!--') {
@@ -352,7 +352,7 @@ export function parse() {
             let tag = {
               type: 'await',
               value: bind.value,
-              parts: {main: []}
+              parts: { main: [] }
             };
             push(tag);
             go(tag, n => tag.parts.main.push(n));

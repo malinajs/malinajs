@@ -513,7 +513,7 @@ export function buildBlock(data, option = {}) {
 
           if(node.children?.length) {
             let i = node.children.length - 1;
-            for(;i >= 0;i--) {
+            for(;i >= 0; i--) {
               let n = node.children[i];
 
               if(mark(n)) {
@@ -525,7 +525,7 @@ export function buildBlock(data, option = {}) {
             }
           }
           return binding;
-        }
+        };
         mark(n.tpl);
 
         if(this.config.useGroupReferencing) {
@@ -535,7 +535,7 @@ export function buildBlock(data, option = {}) {
             let a = (i - b) / 42;
             assert(a <= 42, 'Node-shift overflow: ' + i);
             return '!' + String.fromCharCode(48 + a) + String.fromCharCode(48 + b);
-          }
+          };
 
           const encodeRef = (i) => {
             if(i <= 26) return String.fromCharCode(97 + i);
@@ -543,7 +543,7 @@ export function buildBlock(data, option = {}) {
             let a = (i - b) / 42;
             assert(a <= 42, 'Node ref overflow: ' + i);
             return '#' + String.fromCharCode(48 + a) + String.fromCharCode(48 + b);
-          }
+          };
 
           let result = [];
           let vars = [];
@@ -596,7 +596,7 @@ export function buildBlock(data, option = {}) {
               }
               shift++;
             });
-          }
+          };
 
           if(n.single) {
             let node = n.tpl.children[0];
@@ -651,7 +651,7 @@ export function buildBlock(data, option = {}) {
               }
               shift++;
             });
-          }
+          };
 
           if(n.single) {
             let node = n.tpl.children[0];
