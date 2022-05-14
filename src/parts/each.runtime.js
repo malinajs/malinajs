@@ -25,6 +25,7 @@ export const makeEachElseBlock = (fn) => {
     let first, last;
     let destroyList = share.current_destroyList = [];
     let $cd = share.current_cd = cd_new();
+    share.current_mountList = [];
     try {
       let $dom = fn();
       if($dom.nodeType == 11) {
@@ -34,9 +35,9 @@ export const makeEachElseBlock = (fn) => {
       cd_attach2(parentCD, $cd);
       if(onlyChild) label.appendChild($dom);
       else attachBlock(label, $dom);
+      safeCallMount(share.current_mountList, destroyList);
     } finally {
-      share.current_destroyList = null;
-      share.current_cd = null;
+      share.current_destroyList = share.current_mountList = share.current_cd = null;
     }
 
     return () => {
