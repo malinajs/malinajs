@@ -155,8 +155,8 @@ export const makeApply = () => {
     return r;
   };
 
-  current_component.apply = apply;
-  current_component.push = apply;
+  current_component.$apply = apply;
+  current_component.$push = apply;
   apply();
   return apply;
 };
@@ -192,9 +192,9 @@ export const callComponent = (context, component, option = {}, propFn, cmp, sett
       parentWatch = $watch(propFn, value => {
         option.props = value;
         if($component) {
-          $component.push?.();
+          $component.$push?.();
           childWatch && (childWatch.idle = true);
-          $component.apply?.();
+          $component.$apply?.();
         }
       }, { value: {}, cmp });
       fire(parentWatch);
@@ -204,17 +204,17 @@ export const callComponent = (context, component, option = {}, propFn, cmp, sett
   if(classFn) {
     fire($watch(classFn, value => {
       option.$class = value;
-      $component?.apply?.();
+      $component?.$apply?.();
     }, { value: {}, cmp: keyComparator }));
   }
 
   $component = safeCall(() => component(option));
-  if(setter && $component?.exportedProps) {
-    let w = new WatchObject($component.exportedProps, value => {
+  if(setter && $component?.$exportedProps) {
+    let w = new WatchObject($component.$exportedProps, value => {
       setter(value);
-      cd_component(parentCD).apply();
+      cd_component(parentCD).$apply();
       option.props = parentWatch.fn();
-      $component.push();
+      $component.$push();
     });
     Object.assign(w, { idle: true, cmp, value: parentWatch.value });
     $component.$cd.watchers.push(w);
@@ -260,7 +260,7 @@ export const attachDynComponent = (label, exp, bind) => {
 export const autoSubscribe = (...list) => {
   list.forEach(i => {
     if(isFunction(i.subscribe)) {
-      let unsub = i.subscribe(current_component.apply);
+      let unsub = i.subscribe(current_component.$apply);
       if(isFunction(unsub)) $onDestroy(unsub);
     }
   });
@@ -396,7 +396,7 @@ export const makeExternalProperty = (name, getter, setter) => {
   let $component = current_component;
   Object.defineProperty($component, name, {
     get: getter,
-    set: v => { setter(v); $component.apply(); }
+    set: v => { setter(v); $component.$apply(); }
   });
 };
 
@@ -481,7 +481,7 @@ export const exportFragment = (name, fn) => {
     let prev = share.current_cd, $cd = share.current_cd = cd_new();
     cd_attach2(childCD, $cd);
     $onDestroy(() => cd_detach($cd));
-    let apply = cd_component(childCD).apply;
+    let apply = cd_component(childCD).$apply;
     apply();
     try {
       return [fn(props, events || {}, slot), apply];

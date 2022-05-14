@@ -31,7 +31,7 @@ export const makeSlot = (fr, fn) => {
     let $dom = fr.cloneNode(true), prev = share.current_cd, $cd = share.current_cd = cd_new();
     cd_attach2(parentCD, $cd);
     share.$onDestroy(() => cd_detach($cd));
-    cd_component(parentCD).apply();
+    cd_component(parentCD).$apply();
     try {
       return { $dom, push: fn($dom, $context, callerComponent, props) };
     } finally {

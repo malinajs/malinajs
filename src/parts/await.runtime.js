@@ -40,7 +40,7 @@ export function $$awaitBlock(label, relation, fn, build_main, build_then, build_
     } else first = last = $dom;
     insertAfter(label, $dom);
     safeCallMount(mountList, destroyList);
-    cd_component(parentCD).apply();
+    cd_component(parentCD).$apply();
   }
 
   $watch(relation, () => {
