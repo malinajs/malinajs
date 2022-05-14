@@ -16,9 +16,7 @@ export function ifBlock(label, fn, parts, parentLabel) {
     try {
       $dom = builder();
     } finally {
-      share.current_destroyList = null;
-      share.current_mountList = null;
-      share.current_cd = null;
+      share.current_destroyList = share.current_mountList = share.current_cd = null;
     }
     cd_attach2(parentCD, $cd);
     if($dom.nodeType == 11) {

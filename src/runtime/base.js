@@ -241,15 +241,16 @@ export const attachDynComponent = (label, exp, bind) => {
 
     if(component) {
       destroyList = share.current_destroyList = [];
+      share.current_mountList = [];
       $cd = share.current_cd = cd_new();
       try {
         $dom = bind(component).$dom;
+        cd_attach2(parentCD, $cd);
+        insertAfter(label, $dom);
+        safeCallMount(share.current_mountList, destroyList);
       } finally {
-        share.current_destroyList = null;
-        share.current_cd = null;
+        share.current_destroyList = share.current_mountList = share.current_cd = null;
       }
-      cd_attach2(parentCD, $cd);
-      insertAfter(label, $dom);
       active = true;
     } else {
       $cd = null;
@@ -599,8 +600,7 @@ export const mount = (label, component, option) => {
     label.appendChild($dom);
     safeCallMount(share.current_mountList, destroyList);
   } finally {
-    share.current_destroyList = null;
-    share.current_mountList = null;
+    share.current_destroyList = share.current_mountList = null;
   }
   app.destroy = () => {
     safeGroupCall(destroyList);
@@ -618,8 +618,7 @@ export const mountStatic = (label, component, option) => {
     safeGroupCall(share.current_mountList);
     return app;
   } finally {
-    share.current_destroyList = null;
-    share.current_mountList = null;
+    share.current_destroyList = share.current_mountList = null;
   }
 };
 
