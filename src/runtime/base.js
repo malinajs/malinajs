@@ -169,7 +169,6 @@ export const makeComponent = (init) => {
       prev_cd = share.current_cd,
       $component = current_component = {
         $option,
-        context: $context,
         exported: {}
       };
     share.current_cd = null;
