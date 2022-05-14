@@ -167,10 +167,7 @@ export const makeComponent = (init) => {
     $context = $option.context || {};
     let prev_component = current_component,
       prev_cd = share.current_cd,
-      $component = current_component = {
-        $option,
-        exported: {}
-      };
+      $component = current_component = {$option};
     share.current_cd = null;
 
     try {
@@ -470,7 +467,7 @@ export const callExportedFragment = (childComponent, name, slot, events, props, 
     fire(w);
     props = () => result;
   }
-  let fn = childComponent.exported[name];
+  let fn = childComponent.$exported?.[name];
   ([$dom, push] = fn(props, events, slot));
   return $dom;
 };
@@ -478,7 +475,9 @@ export const callExportedFragment = (childComponent, name, slot, events, props, 
 
 export const exportFragment = (name, fn) => {
   let childCD = share.current_cd;
-  cd_component(childCD).exported[name] = (props, events, slot) => {
+  let component = cd_component(childCD);
+  if(!component.$exported) component.$exported = {};
+  component.$exported[name] = (props, events, slot) => {
     let prev = share.current_cd, $cd = share.current_cd = cd_new();
     cd_attach2(childCD, $cd);
     $onDestroy(() => cd_detach($cd));

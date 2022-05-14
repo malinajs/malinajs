@@ -643,7 +643,9 @@ export function buildBlock(data, option = {}) {
                   base = n;
                   shift = 0;
                 } else if(n._innerBinding) {
-                  let npath = [base._boundName];
+                  let npath;
+                  if(base) npath = [base._boundName];
+                  else npath = [...path, 'firstChild'];
                   while(shift--) npath.push('nextSibling');
                   walk(n, npath);
                   shift = 0;
