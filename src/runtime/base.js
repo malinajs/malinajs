@@ -2,7 +2,7 @@ import {
   $watch, $$deepComparator, cloneDeep, $$cloneDeep, cd_new, $digest,
   $$compareDeep, addEvent, fire, keyComparator, cd_attach, cd_attach2, cd_detach, cd_component, WatchObject
 } from './cd';
-import { __app_onerror, safeCall, isFunction, isObject, safeGroupCall } from './utils';
+import { __app_onerror, safeCall, isFunction, isObject, safeGroupCall, safeCallMount } from './utils';
 import * as share from './share.js';
 import { $onDestroy } from './share.js';
 
@@ -134,7 +134,6 @@ export function $$addEventForComponent(list, event, fn) {
 
 
 export let current_component, $context;
-export const $onMount = fn => current_component._m.push(fn);
 
 
 export const makeApply = () => {
@@ -171,8 +170,7 @@ export const makeComponent = (init) => {
       $component = current_component = {
         $option,
         context: $context,
-        exported: {},
-        _m: []
+        exported: {}
       };
     share.current_cd = null;
 
@@ -184,7 +182,6 @@ export const makeComponent = (init) => {
       share.current_cd = prev_cd;
     }
 
-    $component._m.forEach(fn => $onDestroy(safeCall(fn)));
     return $component;
   };
 };
@@ -339,7 +336,7 @@ export const bindAction = (element, action, fn, subscribe) => {
   else {
     $onDestroy(handler?.destroy);
     subscribe?.(fn, handler, value);
-    handler?.init && $tick(handler.init);
+    handler?.init && share.$onMount(handler.init);
   }
 };
 
@@ -590,6 +587,7 @@ export const makeRootEvent = (root) => {
 
 export const mount = (label, component, option) => {
   let app, first, last, destroyList = share.current_destroyList = [];
+  share.current_mountList = [];
   try {
     app = component(option);
     let $dom = app.$dom;
@@ -599,8 +597,10 @@ export const mount = (label, component, option) => {
       last = $dom.lastChild;
     } else first = last = $dom;
     label.appendChild($dom);
+    safeCallMount(share.current_mountList, destroyList);
   } finally {
     share.current_destroyList = null;
+    share.current_mountList = null;
   }
   app.destroy = () => {
     safeGroupCall(destroyList);
@@ -611,12 +611,15 @@ export const mount = (label, component, option) => {
 
 export const mountStatic = (label, component, option) => {
   share.current_destroyList = [];
+  share.current_mountList = [];
   try {
     let app = component(option);
     label.appendChild(app.$dom);
+    safeGroupCall(share.current_mountList);
     return app;
   } finally {
     share.current_destroyList = null;
+    share.current_mountList = null;
   }
 };
 

@@ -1,7 +1,7 @@
 import { $$removeElements, insertAfter } from '../runtime/base';
 import { $watch, keyComparator, cd_component, cd_new, cd_attach2, cd_detach } from '../runtime/cd';
 import * as share from '../runtime/share.js';
-import { safeGroupCall } from '../runtime/utils.js';
+import { safeGroupCall, safeCallMount } from '../runtime/utils.js';
 
 
 export function $$awaitBlock(label, relation, fn, build_main, build_then, build_catch) {
@@ -27,12 +27,11 @@ export function $$awaitBlock(label, relation, fn, build_main, build_then, build_
     if(!builder) return;
     destroyList = share.current_destroyList = [];
     $cd = share.current_cd = cd_new();
-    let $dom;
+    let $dom, mountList = share.current_mountList = [];
     try {
       $dom = builder(value);
     } finally {
-      share.current_destroyList = null;
-      share.current_cd = null;
+      share.current_destroyList = share.current_mountList = share.current_cd = null;
     }
     cd_attach2(parentCD, $cd);
     if($dom.nodeType == 11) {
@@ -40,6 +39,7 @@ export function $$awaitBlock(label, relation, fn, build_main, build_then, build_
       last = $dom.lastChild;
     } else first = last = $dom;
     insertAfter(label, $dom);
+    safeCallMount(mountList, destroyList);
     cd_component(parentCD).apply();
   }
 

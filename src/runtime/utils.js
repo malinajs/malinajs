@@ -23,3 +23,10 @@ export const safeGroupCall = list => {
     __app_onerror(e);
   }
 };
+
+export const safeCallMount = (mountList, destroyList) => {
+  mountList.forEach(fn => {
+    let r = safeCall(fn);
+    r && destroyList.push(r);
+  });
+};
