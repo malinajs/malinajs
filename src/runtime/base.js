@@ -209,6 +209,7 @@ export const callComponent = (context, component, option = {}, propFn, cmp, sett
   }
 
   $component = safeCall(() => component(option));
+  if($component instanceof Node) $component = {$dom: $component};
   if(setter && $component?.$exportedProps) {
     let w = new WatchObject($component.$exportedProps, value => {
       setter(value);
