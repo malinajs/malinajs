@@ -133,7 +133,7 @@ export function $$addEventForComponent(list, event, fn) {
 }
 
 
-export let current_component, $context;
+export let current_component;
 
 
 export const makeApply = () => {
@@ -164,7 +164,6 @@ export const makeApply = () => {
 
 export const makeComponent = (init) => {
   return ($option = {}) => {
-    $context = $option.context || {};
     let prev_component = current_component,
       prev_cd = share.current_cd,
       $component = current_component = {$option};
@@ -174,7 +173,6 @@ export const makeComponent = (init) => {
       $component.$dom = init($option);
     } finally {
       current_component = prev_component;
-      $context = null;
       share.current_cd = prev_cd;
     }
 

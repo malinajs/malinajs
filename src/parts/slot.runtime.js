@@ -28,10 +28,13 @@ export const invokeSlot = ($component, slotName, $context, propsFn, placeholder,
 export const makeSlot = (fr, fn) => {
   let parentCD = share.current_cd;
   return (callerComponent, $context, props) => {
-    let $dom = fr.cloneNode(true), prev = share.current_cd, $cd = share.current_cd = cd_new();
-    cd_attach2(parentCD, $cd);
-    share.$onDestroy(() => cd_detach($cd));
-    cd_component(parentCD).$apply();
+    let $dom = fr.cloneNode(true), prev = share.current_cd;
+    if(parentCD) {
+      let $cd = share.current_cd = cd_new();
+      cd_attach2(parentCD, $cd);
+      share.$onDestroy(() => cd_detach($cd));
+      cd_component(parentCD).$apply();
+    } else share.current_cd = null;
     try {
       return { $dom, push: fn($dom, $context, callerComponent, props) };
     } finally {
