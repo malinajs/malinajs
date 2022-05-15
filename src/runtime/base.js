@@ -183,20 +183,15 @@ export const makeComponent = (init) => {
 
 export const callComponent = (context, component, option = {}, propFn, cmp, setter, classFn) => {
   option.context = { ...context };
-  let $component, parentWatch, childWatch, parentCD = share.current_cd;
+  let $component, parentWatch, parentCD = share.current_cd;
 
   if(propFn) {
-    if(cmp) {
-      parentWatch = $watch(propFn, value => {
-        option.props = value;
-        if($component) {
-          $component.$push?.();
-          childWatch && (childWatch.idle = true);
-          $component.$apply?.();
-        }
-      }, { value: {}, cmp });
-      fire(parentWatch);
-    } else option.props = propFn();
+    parentWatch = $watch(propFn, value => {
+      $component.$push?.(value);
+      $component.$apply?.();
+    }, { value: {}, idle: true, cmp });
+    fire(parentWatch);
+    option.props = parentWatch.value;
   }
 
   if(classFn) {
@@ -212,8 +207,6 @@ export const callComponent = (context, component, option = {}, propFn, cmp, sett
     let w = new WatchObject($component.$exportedProps, value => {
       setter(value);
       cd_component(parentCD).$apply();
-      option.props = parentWatch.fn();
-      $component.$push();
     });
     Object.assign(w, { idle: true, cmp, value: parentWatch.value });
     $component.$cd.watchers.push(w);

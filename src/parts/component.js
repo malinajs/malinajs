@@ -238,6 +238,7 @@ export function makeComponent(node) {
   if(Object.keys(events).length == 0) events = null;
 
   let result = xNode('component', {
+    $wait: ['apply'],
     componentName,
     staticProps,
     props: propsFn,
@@ -251,7 +252,7 @@ export function makeComponent(node) {
     let comma = false;
     ctx.write(`$runtime.callComponent($context, ${n.componentName}, {`);
 
-    if(n.props.length && n.staticProps) {
+    if(n.props.length && (n.staticProps || !this.inuse.apply)) {
       ctx.write(`props: {${n.props.join(', ')}}`);
       comma = true;
       n.props = [];
@@ -322,7 +323,7 @@ export function makeComponent(node) {
     if(n.props.length) ctx.write(',\n', true, `() => ({${n.props.join(', ')}})`);
     else other = ', null';
 
-    if(ctx.inuse.apply && n.props.length) {
+    if(this.inuse.apply && n.props.length) {
       if(other) ctx.write(other);
       other = '';
       ctx.write(',');
@@ -331,7 +332,7 @@ export function makeComponent(node) {
       else ctx.write('$runtime.$$compareDeep');
     } else other += ', null';
 
-    if(n.propsSetter.length) {
+    if(n.propsSetter.length && this.inuse.apply) {
       if(other) ctx.write(other);
       other = '';
       ctx.write(',\n', true, `($$_value) => ({${n.propsSetter.join(', ')}} = $$_value)`);
