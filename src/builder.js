@@ -26,12 +26,8 @@ export function buildRuntime() {
   }));
 
   this.module.top.push(xNode(this.glob.$onMount, {
-    $hold: ['componentFn']
   }, (ctx, n) => {
-    if(n.value) {
-      this.require('componentFn');
-      ctx.write(true, `import { $onMount } from 'malinajs/runtime.js';`);
-    }
+    if(n.value) ctx.write(true, `import { $onMount } from 'malinajs/runtime.js';`);
   }));
 
   this.module.top.push(xNode('$onDestroy', (ctx) => {
