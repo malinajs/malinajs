@@ -199,7 +199,9 @@ export function makeComponent(node) {
         return;
       }
 
-      let { event, fn } = this.makeEventProp(prop);
+      let { event, fn } = this.makeEventProp(prop, () => {
+        throw new Error('$element is not available for component, use $event instead');
+      });
 
       passEvent(event, xNode('passEvent', {
         fn

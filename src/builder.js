@@ -162,7 +162,12 @@ export function buildBlock(data, option = {}) {
     if(nodesForSingleBlock.length == 1) {
       let n = nodesForSingleBlock[0];
       if(n.type == 'node' && n.name.match(/^[A-Z]/)) {
-        let component = this.makeComponent(n);
+        let component;
+        try {
+          component = this.makeComponent(n);
+        } catch (e) {
+          wrapException(e, n);
+        }
         return {
           singleBlock: component.bind,
           reference: component.reference

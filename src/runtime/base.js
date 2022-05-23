@@ -183,7 +183,7 @@ export const makeComponent = (init) => {
 
 export const callComponent = (context, component, option = {}, propFn, cmp, setter, classFn) => {
   option.context = { ...context };
-  let $component, parentWatch, parentCD = share.current_cd;
+  let $component, parentWatch;
 
   if(propFn) {
     parentWatch = $watch(propFn, value => {
@@ -204,7 +204,7 @@ export const callComponent = (context, component, option = {}, propFn, cmp, sett
   $component = safeCall(() => component(option));
   if($component instanceof Node) $component = {$dom: $component};
   if(setter && $component?.$exportedProps) {
-    let w = new WatchObject($component.$exportedProps, value => {
+    let parentCD = share.current_cd, w = new WatchObject($component.$exportedProps, value => {
       setter(value);
       cd_component(parentCD).$apply();
     });
