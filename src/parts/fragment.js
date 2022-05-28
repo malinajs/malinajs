@@ -74,6 +74,7 @@ function parseAttibutes(attributes) {
   let events = [];
   let forwardAllEvents;
   let staticProps = true;
+  let deepChecking = false;
 
   attributes.forEach(prop => {
     let name = prop.name;
@@ -98,10 +99,11 @@ function parseAttibutes(attributes) {
       let ip = this.inspectProp(prop);
       props.push(ip);
       if(!ip.static) staticProps = false;
+      if(ip.mod.deep) deepChecking = true;
     }
   });
 
-  return { props, events, forwardAllEvents, staticProps };
+  return { props, events, forwardAllEvents, staticProps, deepChecking };
 }
 
 
@@ -271,8 +273,8 @@ export function attchExportedFragment(node, label, componentName) {
         ctx.write('() => (');
         writeProps();
         ctx.write('), ');
-        if(this.config.immutable) ctx.write('$runtime.keyComparator');
-        else ctx.write('$runtime.$$compareDeep');
+        if(n.deepChecking) ctx.write('$runtime.$$compareDeep');
+        else ctx.write('$runtime.keyComparator');
       }
     }
 

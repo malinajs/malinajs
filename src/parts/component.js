@@ -8,7 +8,7 @@ export function makeComponent(node) {
   this.require('$context');
 
   let reference = null;
-  let propsFn = [], propsSetter = [], $class = [], staticProps = true;
+  let propsFn = [], propsSetter = [], $class = [], staticProps = true, deepChecking = false;
   let slotBlocks = [];
   let anchorBlocks = [];
 
@@ -234,6 +234,7 @@ export function makeComponent(node) {
     if(ip.name == ip.value) propsFn.push(`${ip.name}`);
     else propsFn.push(`${ip.name}: ${ip.value}`);
     if(!ip.static) staticProps = false;
+    if(ip.mod.deep) deepChecking = true;
   });
 
 
@@ -249,7 +250,8 @@ export function makeComponent(node) {
     forwardAllEvents,
     events,
     slots: slotBlocks.length ? slotBlocks : null,
-    anchors: anchorBlocks.length ? anchorBlocks : null
+    anchors: anchorBlocks.length ? anchorBlocks : null,
+    deepChecking
   }, (ctx, n) => {
     let comma = false;
     ctx.write(`$runtime.callComponent($context, ${n.componentName}, {`);
@@ -330,8 +332,8 @@ export function makeComponent(node) {
       other = '';
       ctx.write(',');
       if(n.props.length) ctx.write('\n', true);
-      if(this.config.immutable) ctx.write('$runtime.keyComparator');
-      else ctx.write('$runtime.$$compareDeep');
+      if(n.deepChecking) ctx.write('$runtime.$$compareDeep');
+      else ctx.write('$runtime.keyComparator');
     } else other += ', null';
 
     if(n.propsSetter.length && this.inuse.apply) {

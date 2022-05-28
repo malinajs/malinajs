@@ -2,12 +2,13 @@ import { xNode } from '../xnode.js';
 
 
 export function attachSlot(slotName, node) {
-  let props = [], staticProps = true;
+  let props = [], staticProps = true, deepChecking = false;
 
   if(node.attributes && node.attributes.length) {
     node.attributes.forEach(prop => {
       let { name, value, ...ip } = this.inspectProp(prop);
       if(!ip.static) staticProps = false;
+      if(ip.mod.deep) deepChecking = true;
       props.push(xNode('slot-prop', {
         name,
         value
@@ -28,7 +29,8 @@ export function attachSlot(slotName, node) {
     name: slotName,
     props,
     staticProps,
-    placeholder
+    placeholder,
+    deepChecking
   }, (ctx, n) => {
     let dynamicProps = this.inuse.apply && !n.staticProps;
 
@@ -55,8 +57,8 @@ export function attachSlot(slotName, node) {
 
     if(dynamicProps) {
       ctx.write(missed, ', ');
-      if(this.config.immutable) ctx.write('$runtime.keyComparator');
-      else ctx.write('$runtime.$$compareDeep');
+      if(n.deepChecking) ctx.write('$runtime.$$compareDeep');
+      else ctx.write('$runtime.keyComparator');
     }
     ctx.write(')');
   });

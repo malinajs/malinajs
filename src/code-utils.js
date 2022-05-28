@@ -2,14 +2,18 @@ import { unwrapExp, toCamelCase, assert, isNumber, Q } from './utils.js';
 
 
 export function inspectProp(prop) {
-  let { name, value } = prop;
+  let { name, value } = prop, mod = {};
   if(name[0] == '{') {
     assert(!prop.value);
     value = name;
     name = unwrapExp(name);
+  } else {
+    const p = name.split('|');
+    name = p[0];
+    p.slice(1).forEach(n => mod[n] = true);
   }
 
-  assert(name.match(/^([\w$_][\w\d$_.\-]*)$/), `Wrong property: '${name}'`);
+  assert(name.match(/^([\w$_][\w\d$_.\-|]*)$/), `Wrong property: '${name}'`);
   name = toCamelCase(name);
   if(name == 'class') name = '_class';
 
@@ -48,5 +52,5 @@ export function inspectProp(prop) {
     statical = true;
   }
 
-  return { name, value, rawValue, static: statical };
+  return { name, value, rawValue, static: statical, mod };
 }
