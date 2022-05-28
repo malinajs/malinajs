@@ -70,12 +70,12 @@ export function compactDOM() {
         let prev = getPrev();
         let next = getNext();
 
-        if(next?.type == 'node' && ['br', 'div'].includes(next.name)) {
+        if(next?.type == 'node' && ['br', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'h7'].includes(next.name)) {
           body.splice(i, 1);
           continue;
         }
 
-        if(prev?.type == 'node' && ['br', 'div'].includes(prev.name)) {
+        if(prev?.type == 'node' && ['br', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'h7'].includes(prev.name)) {
           body.splice(i, 1);
           continue;
         }
@@ -105,7 +105,7 @@ export function compactDOM() {
             body.splice(i, 1);
             continue;
           }
-          if(parentNode.type == 'node' && parentNode.name == 'div') {
+          if(parentNode.type == 'node' && ['div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'h7'].includes(parentNode.name)) {
             body.splice(i, 1);
             continue;
           }
