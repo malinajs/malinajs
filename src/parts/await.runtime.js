@@ -1,10 +1,10 @@
-import { $$removeElements, insertAfter } from '../runtime/base';
+import { removeElements, insertAfter } from '../runtime/base';
 import { $watch, keyComparator, cd_component, cd_new, cd_attach, cd_detach } from '../runtime/cd';
 import * as share from '../runtime/share.js';
 import { safeGroupCall, safeCallMount } from '../runtime/utils.js';
 
 
-export function $$awaitBlock(label, relation, fn, build_main, build_then, build_catch) {
+export function awaitBlock(label, relation, fn, build_main, build_then, build_catch) {
   let parentCD = share.current_cd, first, last, $cd, promise, destroyList, status = 0;
   share.$onDestroy(() => safeGroupCall(destroyList));
 
@@ -17,7 +17,7 @@ export function $$awaitBlock(label, relation, fn, build_main, build_then, build_
       cd_detach($cd);
       $cd = null;
     }
-    $$removeElements(first, last);
+    removeElements(first, last);
     first = last = null;
   }
 

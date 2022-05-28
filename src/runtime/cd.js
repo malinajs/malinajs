@@ -25,7 +25,7 @@ export function addEvent(el, event, callback) {
   });
 }
 
-export function $$removeItem(array, item) {
+export function removeItem(array, item) {
   let i = array.indexOf(item);
   if(i >= 0) array.splice(i, 1);
 }
@@ -51,11 +51,11 @@ export const cd_attach = (parent, cd) => {
   }
 };
 
-export const cd_detach = cd => $$removeItem(cd.parent.children, cd);
+export const cd_detach = cd => removeItem(cd.parent.children, cd);
 
 export const isArray = (a) => Array.isArray(a);
 
-const compareArray = (a, b) => {
+const _compareArray = (a, b) => {
   let a0 = isArray(a);
   let a1 = isArray(b);
   if(a0 !== a1) return true;
@@ -68,15 +68,15 @@ const compareArray = (a, b) => {
 };
 
 
-export function $$compareArray(w, value) {
-  if(!compareArray(w.value, value)) return 0;
+export function compareArray(w, value) {
+  if(!_compareArray(w.value, value)) return 0;
   if(isArray(value)) w.value = value.slice();
   else w.value = value;
   w.cb(w.value);
 }
 
 
-const compareDeep = (a, b, lvl) => {
+const _compareDeep = (a, b, lvl) => {
   if(lvl < 0 || !a || !b) return a !== b;
   if(a === b) return false;
   let o0 = isObject(a);
@@ -90,12 +90,12 @@ const compareDeep = (a, b, lvl) => {
   if(a0) {
     if(a.length !== b.length) return true;
     for(let i = 0; i < a.length; i++) {
-      if(compareDeep(a[i], b[i], lvl - 1)) return true;
+      if(_compareDeep(a[i], b[i], lvl - 1)) return true;
     }
   } else {
     let set = {};
     for(let k in a) {
-      if(compareDeep(a[k], b[k], lvl - 1)) return true;
+      if(_compareDeep(a[k], b[k], lvl - 1)) return true;
       set[k] = true;
     }
     for(let k in b) {
@@ -121,19 +121,16 @@ export function cloneDeep(d, lvl) {
   return d;
 }
 
-export const $$cloneDeep = function(d) {
-  return cloneDeep(d, 10);
-};
 
-export function $$deepComparator(depth) {
+export function deepComparator(depth) {
   return function(w, value) {
-    let diff = compareDeep(w.value, value, depth);
+    let diff = _compareDeep(w.value, value, depth);
     diff && (w.value = cloneDeep(value, depth), !w.idle && w.cb(value));
     w.idle = false;
   };
 }
 
-export const $$compareDeep = $$deepComparator(10);
+export const compareDeep = deepComparator(10);
 
 
 export const keyComparator = (w, value) => {

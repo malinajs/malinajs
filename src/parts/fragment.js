@@ -273,7 +273,7 @@ export function attchExportedFragment(node, label, componentName) {
         ctx.write('() => (');
         writeProps();
         ctx.write('), ');
-        if(n.deepChecking) ctx.write('$runtime.$$compareDeep');
+        if(n.deepChecking) ctx.write('$runtime.compareDeep');
         else ctx.write('$runtime.keyComparator');
       }
     }

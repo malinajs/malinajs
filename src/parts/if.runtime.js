@@ -1,4 +1,4 @@
-import { $$removeElements, insertAfter } from '../runtime/base';
+import { removeElements, insertAfter } from '../runtime/base';
 import { $watch, cd_new, cd_attach, cd_detach } from '../runtime/cd';
 import * as share from '../runtime/share';
 import { safeCall, safeGroupCall, safeCallMount } from '../runtime/utils';
@@ -40,9 +40,9 @@ export function ifBlock(label, fn, parts, parentLabel) {
     if(share.destroyResults.length) {
       let f = first, l = last;
       Promise.allSettled(share.destroyResults).then(() => {
-        $$removeElements(f, l);
+        removeElements(f, l);
       });
-    } else $$removeElements(first, last);
+    } else removeElements(first, last);
     first = last = null;
     share.destroyResults = null;
   }

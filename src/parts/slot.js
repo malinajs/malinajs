@@ -57,7 +57,7 @@ export function attachSlot(slotName, node) {
 
     if(dynamicProps) {
       ctx.write(missed, ', ');
-      if(n.deepChecking) ctx.write('$runtime.$$compareDeep');
+      if(n.deepChecking) ctx.write('$runtime.compareDeep');
       else ctx.write('$runtime.keyComparator');
     }
     ctx.write(')');

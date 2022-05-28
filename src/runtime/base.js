@@ -1,6 +1,6 @@
 import {
-  $watch, $$deepComparator, cloneDeep, $$cloneDeep, cd_new, $digest,
-  $$compareDeep, addEvent, fire, keyComparator, cd_attach, cd_detach, cd_component, WatchObject
+  $watch, deepComparator, cloneDeep, cd_new, $digest,
+  addEvent, fire, keyComparator, cd_attach, cd_detach, cd_component, WatchObject
 } from './cd';
 import { __app_onerror, safeCall, isFunction, isObject, safeGroupCall, safeCallMount } from './utils';
 import * as share from './share.js';
@@ -17,7 +17,7 @@ export const insertAfter = (label, node) => {
 
 export const createTextNode = (text) => document.createTextNode(text);
 
-export const $$htmlToFragment = (html, option) => {
+export const htmlToFragment = (html, option) => {
   let result = templatecache[html];
   if(!result) {
     let t = document.createElement('template');
@@ -30,7 +30,7 @@ export const $$htmlToFragment = (html, option) => {
   return option & 1 ? result.cloneNode(true) : result;
 };
 
-export const $$htmlToFragmentClean = (html, option) => {
+export const htmlToFragmentClean = (html, option) => {
   let result = templatecache[html];
   if(!result) {
     let t = document.createElement('template');
@@ -75,7 +75,7 @@ export const iterNodes = (el, last, fn) => {
 };
 
 
-export const $$removeElements = (el, last) => iterNodes(el, last, n => n.remove());
+export const removeElements = (el, last) => iterNodes(el, last, n => n.remove());
 
 
 export function removeElementsBetween(el, stop) {
@@ -105,7 +105,7 @@ export function $tick(fn) {
 }
 
 
-export function $makeEmitter(option) {
+export function makeEmitter(option) {
   return (name, detail) => {
     let fn = option.events?.[name];
     if(!fn) return;
@@ -113,23 +113,6 @@ export function $makeEmitter(option) {
     e.initCustomEvent(name, false, false, detail);
     fn(e);
   };
-}
-
-
-export function $$addEventForComponent(list, event, fn) {
-  let prev = list[event];
-  if(prev) {
-    if(prev._list) prev._list.push(fn);
-    else {
-      function handler(e) {
-        handler._list.forEach(fn => {
-          fn(e);
-        });
-      }
-      handler._list = [prev, fn];
-      list[event] = handler;
-    }
-  } else list[event] = fn;
 }
 
 
@@ -166,7 +149,7 @@ export const makeComponent = (init) => {
   return ($option = {}) => {
     let prev_component = current_component,
       prev_cd = share.current_cd,
-      $component = current_component = {$option};
+      $component = current_component = { $option };
     share.current_cd = null;
 
     try {
@@ -184,7 +167,7 @@ export const makeComponent = (init) => {
 export const callComponent = (component, context, option = {}) => {
   option.context = { ...context };
   let $component = safeCall(() => component(option));
-  if($component instanceof Node) $component = {$dom: $component};
+  if($component instanceof Node) $component = { $dom: $component };
   return $component;
 };
 
@@ -342,7 +325,7 @@ export const __bindActionSubscribe = (fn, handler, value) => {
   if(handler?.update && fn) {
     $watch(fn, args => {
       handler.update.apply(handler, args);
-    }, { cmp: $$deepComparator(1), value: cloneDeep(value, 1) });
+    }, { cmp: deepComparator(1), value: cloneDeep(value, 1) });
   }
 };
 
@@ -399,9 +382,6 @@ export const makeExternalProperty = (name, getter, setter) => {
     set: v => { setter(v); $component.$apply(); }
   });
 };
-
-
-export const eachDefaultKey = (item, index, array) => isObject(array[0]) ? item : index;
 
 
 export const attachAnchor = ($option, el, name) => {
@@ -602,7 +582,7 @@ export const mount = (label, component, option) => {
   }
   app.destroy = () => {
     safeGroupCall(destroyList);
-    $$removeElements(first, last);
+    removeElements(first, last);
   };
   return app;
 };

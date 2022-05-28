@@ -335,7 +335,7 @@ export function makeComponent(node) {
       other = '';
       ctx.write(',');
       if(n.props.length) ctx.write('\n', true);
-      if(n.deepChecking) ctx.write('$runtime.$$compareDeep');
+      if(n.deepChecking) ctx.write('$runtime.compareDeep');
       else ctx.write('$runtime.keyComparator');
     } else other += ', null';
 

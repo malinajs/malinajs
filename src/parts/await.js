@@ -61,7 +61,7 @@ export function makeAwaitBlock(node, element) {
     parts,
     keywords
   }, (ctx, n) => {
-    ctx.write(true, `$runtime.$$awaitBlock(${n.el}, () => [${n.keywords.join(', ')}], () => ${n.exp},`);
+    ctx.write(true, `$runtime.awaitBlock(${n.el}, () => [${n.keywords.join(', ')}], () => ${n.exp},`);
     ctx.indent++;
     n.parts.forEach((part, index) => {
       if(index) ctx.write(', ');

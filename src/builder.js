@@ -41,7 +41,7 @@ export function buildRuntime() {
   }));
 
   this.module.head.push(xNode('$emit', (ctx) => {
-    if(this.inuse.$emit) ctx.write(true, 'const $emit = $runtime.$makeEmitter($option);');
+    if(this.inuse.$emit) ctx.write(true, 'const $emit = $runtime.makeEmitter($option);');
   }));
 
   if(this.config.autoSubscribe && !this.script.readOnly) {

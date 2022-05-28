@@ -392,8 +392,8 @@ xNode.init = {
       cloneNode = false;
       if(!node.raw) template = htmlEntitiesToText(template);
     } else {
-      if(get_context().config.hideLabel) convert = '$runtime.$$htmlToFragmentClean';
-      else convert = '$runtime.$$htmlToFragment';
+      if(get_context().config.hideLabel) convert = '$runtime.htmlToFragmentClean';
+      else convert = '$runtime.htmlToFragment';
       template = template.replace(/<!---->/g, '<>');
     }
     if(node.raw) {

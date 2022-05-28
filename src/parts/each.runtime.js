@@ -1,7 +1,10 @@
-import { $$removeElements, iterNodes, attachBlock } from '../runtime/base';
-import { $watch, $$compareArray, isArray, cd_attach, cd_new, cd_detach } from '../runtime/cd';
+import { removeElements, iterNodes, attachBlock } from '../runtime/base';
+import { $watch, compareArray, isArray, cd_attach, cd_new, cd_detach } from '../runtime/cd';
 import * as share from '../runtime/share';
-import { safeCall, safeGroupCall, safeCallMount } from '../runtime/utils';
+import { safeCall, safeGroupCall, safeCallMount, isObject } from '../runtime/utils';
+
+
+export const eachDefaultKey = (item, index, array) => isObject(array[0]) ? item : index;
 
 
 export const makeEachBlock = (fr, fn) => {
@@ -41,7 +44,7 @@ export const makeEachElseBlock = (fn) => {
     }
 
     return () => {
-      $$removeElements(first, last);
+      removeElements(first, last);
       cd_detach($cd);
       safeGroupCall(destroyList);
     };
@@ -106,7 +109,7 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind, buildElseBlock) 
           Promise.allSettled(share.destroyResults).then(() => removedNodes.forEach(n => n.remove()));
         } else {
           if(onlyChild) label.textContent = '';
-          else $$removeElements(label.nextSibling, lastNode);
+          else removeElements(label.nextSibling, lastNode);
         }
 
         share.destroyResults = null;
@@ -206,5 +209,5 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind, buildElseBlock) 
     if(!array.length && !elseBlock && buildElseBlock) {
       elseBlock = buildElseBlock(label, onlyChild, parentCD);
     }
-  }, { cmp: $$compareArray });
+  }, { cmp: compareArray });
 }

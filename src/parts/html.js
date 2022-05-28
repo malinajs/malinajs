@@ -8,7 +8,7 @@ export function makeHtmlBlock(exp, label) {
     el: label.bindName(),
     exp
   }, (ctx, n) => {
-    if(this.inuse.apply) ctx.write(true, `$runtime.$$htmlBlock(${n.el}, () => (${n.exp}));`);
-    else ctx.write(true, `$runtime.$$htmlBlockStatic(${n.el}, ${n.exp});`);
+    if(this.inuse.apply) ctx.write(true, `$runtime.htmlBlock(${n.el}, () => (${n.exp}));`);
+    else ctx.write(true, `$runtime.htmlBlockStatic(${n.el}, ${n.exp});`);
   });
 }

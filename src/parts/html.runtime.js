@@ -1,4 +1,4 @@
-import { insertAfter, $$removeElements } from '../runtime/base';
+import { insertAfter, removeElements } from '../runtime/base';
 import { $watch } from '../runtime/cd';
 
 let create = (tag, html) => {
@@ -17,11 +17,11 @@ let create = (tag, html) => {
   return lastElement;
 };
 
-export function $$htmlBlock(tag, fn) {
+export function htmlBlock(tag, fn) {
   let lastElement;
   let destroy = () => {
     if(!lastElement) return;
-    $$removeElements(tag.nextSibling, lastElement);
+    removeElements(tag.nextSibling, lastElement);
     lastElement = null;
   };
   $watch(fn, (html) => {
@@ -30,6 +30,6 @@ export function $$htmlBlock(tag, fn) {
   });
 }
 
-export function $$htmlBlockStatic(tag, value) {
+export function htmlBlockStatic(tag, value) {
   create(tag, value);
 }

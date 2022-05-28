@@ -70,7 +70,7 @@ export function attachHead(n) {
         ctx.add(n.template);
         ctx.add(n.source);
         ctx.writeLine('let a=$parentElement.firstChild, b=$parentElement.lastChild;');
-        ctx.writeLine('$onDestroy(() => {$runtime.$$removeElements(a, b)});');
+        ctx.writeLine('$onDestroy(() => {$runtime.removeElements(a, b)});');
         ctx.writeLine('document.head.appendChild($parentElement);');
         ctx.indent--;
         ctx.writeLine('}');
