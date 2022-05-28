@@ -181,8 +181,15 @@ export const makeComponent = (init) => {
 };
 
 
-export const callComponent = (context, component, option = {}, propFn, cmp, setter, classFn) => {
+export const callComponent = (component, context, option = {}) => {
   option.context = { ...context };
+  let $component = safeCall(() => component(option));
+  if($component instanceof Node) $component = {$dom: $component};
+  return $component;
+};
+
+
+export const callComponentDyn = (component, context, option = {}, propFn, cmp, setter, classFn) => {
   let $component, parentWatch;
 
   if(propFn) {
@@ -201,8 +208,7 @@ export const callComponent = (context, component, option = {}, propFn, cmp, sett
     }, { value: {}, cmp: keyComparator }));
   }
 
-  $component = safeCall(() => component(option));
-  if($component instanceof Node) $component = {$dom: $component};
+  $component = callComponent(component, context, option);
   if(setter && $component?.$exportedProps) {
     let parentCD = share.current_cd, w = new WatchObject($component.$exportedProps, value => {
       setter(value);

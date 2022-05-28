@@ -254,7 +254,10 @@ export function makeComponent(node) {
     deepChecking
   }, (ctx, n) => {
     let comma = false;
-    ctx.write(`$runtime.callComponent($context, ${n.componentName}, {`);
+
+    if(this.inuse.apply && (n.$class.length || n.propsSetter.length || n.props.length && !n.staticProps)) {
+      ctx.write(`$runtime.callComponentDyn(${n.componentName}, $context, {`);
+    } else ctx.write(`$runtime.callComponent(${n.componentName}, $context, {`);
 
     if(n.props.length && (n.staticProps || !this.inuse.apply)) {
       ctx.write(`props: {${n.props.join(', ')}}`);
