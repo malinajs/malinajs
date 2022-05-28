@@ -3,14 +3,6 @@ import { last } from './utils.js';
 
 export function compactDOM() {
   let data = this.DOM;
-  const details = {
-    node: [n => n.body],
-    each: [n => n.body],
-    slot: [n => n.body],
-    fragment: [n => n.body],
-    if: [n => n.body, n => n.bodyMain],
-    await: [n => n.parts.main, n => n.parts.then, n => n.parts.catch]
-  };
 
   function go(body, parentNode) {
     let i;
@@ -48,11 +40,28 @@ export function compactDOM() {
         }
       } else {
         if(node.type == 'node' && (node.name == 'pre' || node.name == 'textarea')) continue;
-        let keys = details[node.type];
-        keys && keys.forEach(k => {
-          let body = k(node);
-          if(body && body.length) go(body, node);
-        });
+        switch(node.type) {
+          case 'node':
+          case 'slot':
+          case 'fragment':
+            if(node.body) go(node.body, node);
+            break
+          case 'each':
+            if(node.mainBlock) go(node.mainBlock, node);
+            if(node.elseBlock) go(node.elseBlock, node);
+            break
+          case 'await':
+            if(node.parts.main) go(node.parts.main, node);
+            if(node.parts.then) go(node.parts.then, node);
+            if(node.parts.catch) go(node.parts.catch, node);
+            break
+          case 'if':
+            node.parts.forEach(p => {
+              if(p.body) go(p.body, node);
+            })
+            if(node.elsePart) go(node.elsePart, node);
+            break
+        }
       }
     }
 
