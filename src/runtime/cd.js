@@ -44,14 +44,12 @@ export const cd_component = cd => {
 
 export const cd_new = () => new $ChangeDetector();
 
-export const cd_attach2 = (parent, cd) => {
+export const cd_attach = (parent, cd) => {
   if(cd) {
     cd.parent = parent;
     parent.children.push(cd);
   }
 };
-
-export const cd_attach = (cd) => cd_attach2(share.current_cd, cd);
 
 export const cd_detach = cd => $$removeItem(cd.parent.children, cd);
 

@@ -1,6 +1,6 @@
 import {
   $watch, $$deepComparator, cloneDeep, $$cloneDeep, cd_new, $digest,
-  $$compareDeep, addEvent, fire, keyComparator, cd_attach, cd_attach2, cd_detach, cd_component, WatchObject
+  $$compareDeep, addEvent, fire, keyComparator, cd_attach, cd_detach, cd_component, WatchObject
 } from './cd';
 import { __app_onerror, safeCall, isFunction, isObject, safeGroupCall, safeCallMount } from './utils';
 import * as share from './share.js';
@@ -233,7 +233,7 @@ export const attachDynComponent = (label, exp, bind) => {
       $cd = share.current_cd = cd_new();
       try {
         $dom = bind(component).$dom;
-        cd_attach2(parentCD, $cd);
+        cd_attach(parentCD, $cd);
         insertAfter(label, $dom);
         safeCallMount(share.current_mountList, destroyList);
       } finally {
@@ -405,7 +405,7 @@ export const makeAnchor = (fn) => {
   let parentCD = share.current_cd;
   return ($dom) => {
     let prev = share.current_cd, $cd = share.current_cd = cd_new();
-    cd_attach2(parentCD, $cd);
+    cd_attach(parentCD, $cd);
     $onDestroy(() => cd_detach($cd));
     try {
       fn($dom);
@@ -471,7 +471,7 @@ export const exportFragment = (name, fn) => {
   if(!component.$exported) component.$exported = {};
   component.$exported[name] = (props, events, slot) => {
     let prev = share.current_cd, $cd = share.current_cd = cd_new();
-    cd_attach2(childCD, $cd);
+    cd_attach(childCD, $cd);
     $onDestroy(() => cd_detach($cd));
     let apply = cd_component(childCD).$apply;
     apply();
@@ -511,7 +511,7 @@ export const makeBlockBound = (fr, fn) => {
   let parentCD = share.current_cd;
   return () => {
     let $dom = fr.cloneNode(true), prev = share.current_cd, $cd = share.current_cd = cd_new();
-    cd_attach2(parentCD, $cd);
+    cd_attach(parentCD, $cd);
     share.$onDestroy(() => cd_detach($cd));
     try {
       fn($dom);

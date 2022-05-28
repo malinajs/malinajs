@@ -1,5 +1,5 @@
 import { $$removeElements, insertAfter } from '../runtime/base';
-import { $watch, keyComparator, cd_component, cd_new, cd_attach2, cd_detach } from '../runtime/cd';
+import { $watch, keyComparator, cd_component, cd_new, cd_attach, cd_detach } from '../runtime/cd';
 import * as share from '../runtime/share.js';
 import { safeGroupCall, safeCallMount } from '../runtime/utils.js';
 
@@ -33,7 +33,7 @@ export function $$awaitBlock(label, relation, fn, build_main, build_then, build_
     } finally {
       share.current_destroyList = share.current_mountList = share.current_cd = null;
     }
-    cd_attach2(parentCD, $cd);
+    cd_attach(parentCD, $cd);
     if($dom.nodeType == 11) {
       first = $dom.firstChild;
       last = $dom.lastChild;

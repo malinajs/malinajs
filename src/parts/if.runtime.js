@@ -1,5 +1,5 @@
 import { $$removeElements, insertAfter } from '../runtime/base';
-import { $watch, cd_new, cd_attach2, cd_detach } from '../runtime/cd';
+import { $watch, cd_new, cd_attach, cd_detach } from '../runtime/cd';
 import * as share from '../runtime/share';
 import { safeCall, safeGroupCall, safeCallMount } from '../runtime/utils';
 
@@ -18,7 +18,7 @@ export function ifBlock(label, fn, parts, parentLabel) {
     } finally {
       share.current_destroyList = share.current_mountList = share.current_cd = null;
     }
-    cd_attach2(parentCD, $cd);
+    cd_attach(parentCD, $cd);
     if($dom.nodeType == 11) {
       first = $dom.firstChild;
       last = $dom.lastChild;

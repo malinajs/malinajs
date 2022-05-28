@@ -1,5 +1,5 @@
 import { $$removeElements, iterNodes, attachBlock } from '../runtime/base';
-import { $watch, $$compareArray, isArray, cd_attach, cd_attach2, cd_new, cd_detach } from '../runtime/cd';
+import { $watch, $$compareArray, isArray, cd_attach, cd_new, cd_detach } from '../runtime/cd';
 import * as share from '../runtime/share';
 import { safeCall, safeGroupCall, safeCallMount } from '../runtime/utils';
 
@@ -32,7 +32,7 @@ export const makeEachElseBlock = (fn) => {
         first = $dom.firstChild;
         last = $dom.lastChild;
       } else first = last = $dom;
-      cd_attach2(parentCD, $cd);
+      cd_attach(parentCD, $cd);
       if(onlyChild) label.appendChild($dom);
       else attachBlock(label, $dom);
       safeCallMount(share.current_mountList, destroyList);
@@ -52,7 +52,7 @@ export const makeEachElseBlock = (fn) => {
 export function $$eachBlock(label, onlyChild, fn, getKey, bind, buildElseBlock) {
   let parentCD = share.current_cd;
   let eachCD = cd_new();
-  cd_attach(eachCD);
+  cd_attach(parentCD, eachCD);
 
   let mapping = new Map();
   let lastNode, vi = 0, p_promise = 0, p_destroy = 0, elseBlock;
@@ -184,7 +184,7 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind, buildElseBlock) 
           share.current_destroyList = share.current_mountList = share.current_cd = null;
         }
         ctx = { $cd, rebind };
-        cd_attach2(eachCD, $cd);
+        cd_attach(eachCD, $cd);
         if($dom.nodeType == 11) {
           ctx.first = $dom.firstChild;
           ctx.last = $dom.lastChild;
