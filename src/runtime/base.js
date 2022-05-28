@@ -207,6 +207,8 @@ export const callComponent = (context, component, option = {}, propFn, cmp, sett
     let parentCD = share.current_cd, w = new WatchObject($component.$exportedProps, value => {
       setter(value);
       cd_component(parentCD).$apply();
+      $component.$push(parentWatch.fn());
+      $component.$apply();
     });
     Object.assign(w, { idle: true, cmp, value: parentWatch.value });
     $component.$cd.watchers.push(w);
