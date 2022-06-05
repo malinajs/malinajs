@@ -555,3 +555,15 @@ export const unwrapProps = (cd, props, fn) => {
         else fn(props)
     }
 }
+
+
+export const mount = (label, component, option) => {
+    const app = component(label, option);
+    const destroy = () => label.textContent = '';
+
+    if(app?._d) {
+        app._d.push(destroy);
+        return app;
+    }
+    return {destroy};
+}
