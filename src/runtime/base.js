@@ -453,16 +453,21 @@ export const callExportedFragment = (childComponent, name, slot, events, props, 
 };
 
 
-export const exportFragment = (name, fn) => {
+export const exportFragment = (component, name, fn) => {
   let childCD = share.current_cd;
-  let component = cd_component(childCD);
   if(!component.$exported) component.$exported = {};
   component.$exported[name] = (props, events, slot) => {
-    let prev = share.current_cd, $cd = share.current_cd = cd_new();
-    cd_attach(childCD, $cd);
-    $onDestroy(() => cd_detach($cd));
-    let apply = cd_component(childCD).$apply;
-    apply();
+    let prev = share.current_cd, apply;
+    if(childCD) {
+      let $cd = share.current_cd = cd_new();
+      cd_attach(childCD, $cd);
+      $onDestroy(() => cd_detach($cd));
+      apply = component.$apply;
+      apply();
+    } else {
+      share.current_cd = null;
+    }
+
     try {
       return [fn(props, events || {}, slot), apply];
     } finally {

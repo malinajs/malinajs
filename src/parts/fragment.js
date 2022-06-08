@@ -28,6 +28,11 @@ export function makeFragment(node) {
     });
   }
 
+  if(external) {
+    this.require('$component');
+    if(props?.length) this.require('apply');
+  }
+
   return xNode('fragment', {
     $compile: [block.source],
     name,
@@ -64,7 +69,7 @@ export function makeFragment(node) {
       ctx.indent--;
       ctx.writeLine('}');
     }
-    if(n.external) ctx.writeLine(`$runtime.exportFragment('${n.name}', $fragment_${n.name});`);
+    if(n.external) ctx.writeLine(`$runtime.exportFragment($component, '${n.name}', $fragment_${n.name});`);
   });
 }
 
