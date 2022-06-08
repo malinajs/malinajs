@@ -526,7 +526,7 @@ export const exportFragment = ($component, name, fn) => {
       let $cd = $childCD.new();
       cd_onDestroy($parentCD, () => $cd.destroy());
       fn($cd, label, props, events, slot);
-      $component.apply();
+      $component.apply?.();
     };
 };
 
@@ -542,7 +542,7 @@ export const observeProps = (cmp, fn) => {
         let result;
         fire($watch(cd, fn, value => {
             result = value;
-            target.$$.apply();
+            target.$$.apply?.();
         }, {ro: true, value: {}, cmp}));
         return () => result;
     }

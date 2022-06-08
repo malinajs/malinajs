@@ -27,6 +27,11 @@ export function makeFragment(node) {
         });
     }
 
+    if(external) {
+      this.require('$component');
+      if(props?.length) this.require('apply');
+    }
+
     return xNode('fragment', {
         name,
         props,
