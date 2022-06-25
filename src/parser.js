@@ -10,6 +10,8 @@ export function parse() {
     return source[index++];
   };
 
+  const probeNext = () => source[index];
+
   const readTag = () => {
     let start = index;
     let a = readNext();
@@ -139,6 +141,21 @@ export function parse() {
         continue;
       }
       if(a == '/') {
+        let n = probeNext();
+        if(n == '/') {  // inline comment
+          while(readNext() != '\n');
+          a = null;
+          continue
+        }
+        if(n == '*') {
+          readNext();
+          while(true) {  // multiline comment
+            if(readNext() == '*' && probeNext() == '/') break;
+          }
+          readNext();
+          a = null;
+          continue;
+        }
         readRegExp();
         continue;
       }
