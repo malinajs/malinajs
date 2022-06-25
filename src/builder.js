@@ -364,6 +364,7 @@ export function buildBlock(data, option = {}) {
         }
         if(n.name == 'fragment') {
           assert(n.elArg, 'Fragment name is required');
+          if(isRoot) requireFragment = true;
           let el = placeLabel(`fragment ${n.elArg}`);
           binds.push(xNode('attach-fragment', {
             el: el.bindName(),
