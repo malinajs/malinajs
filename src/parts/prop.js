@@ -142,7 +142,7 @@ export function bindProp(prop, node, element) {
             ctx.writeLine(`$runtime.bindInput($cd, ${n.el}, '${attr}', () => ${exp}, ${argName} => {${exp} = ${argName}; $$apply();});`);
         })};
     } else if(name == 'style' && arg) {
-        let styleName = toCamelCase(arg);
+        let styleName = arg;
         let exp;
         if(prop.value) {
             if(isExpression(prop.value)) {
@@ -159,12 +159,12 @@ export function bindProp(prop, node, element) {
                         name: styleName,
                         value: prop.value
                     }, (ctx, n) => {
-                        ctx.writeLine(`${n.el}.style.${n.name} = \`${this.Q(n.value)}\`;`);
+                        ctx.writeLine(`${n.el}.style.${toCamelCase(n.name)} = \`${this.Q(n.value)}\`;`);
                     })};
                 }
             }
         } else {
-            exp = styleName;
+            exp = toCamelCase(styleName);
         }
 
         let hasElement = exp.includes('$element');
@@ -180,7 +180,7 @@ export function bindProp(prop, node, element) {
                 if(ctx.inuse.apply) {
                     ctx.writeLine(`$runtime.bindStyle($cd, ${n.el}, '${n.styleName}', () => (${n.exp}));`);
                 } else {
-                    ctx.writeLine(`${n.el}.style.${n.styleName} = ${n.exp};`);
+                    ctx.writeLine(`${n.el}.style.${toCamelCase(n.styleName)} = ${n.exp};`);
                 }
             })]
         })};
