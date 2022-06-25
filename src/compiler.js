@@ -21,7 +21,7 @@ import { attachPortal } from './parts/portal.js';
 import { makeEventProp } from './event-prop.js';
 
 
-export const version = '0.6.62';
+export const version = '0.6.63';
 
 
 export async function compile(source, config = {}) {
