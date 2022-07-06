@@ -16,8 +16,13 @@ export function buildRuntime() {
     }
   }));
 
-  this.module.head.push(xNode('$context', (ctx) => {
-    if(this.inuse.$context) ctx.write(true, 'const $context = $option.context || {};');
+  this.module.head.push(xNode('$context', {
+    $hold: ['componentFn']
+  }, (ctx) => {
+    if(this.inuse.$context) {
+      this.require('componentFn');
+      ctx.write(true, 'const $context = $runtime.$context;');
+    }
   }));
 
   this.module.top.push(xNode(this.glob.$onMount, {

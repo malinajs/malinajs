@@ -116,7 +116,7 @@ export function makeEmitter(option) {
 }
 
 
-export let current_component;
+export let current_component, $context;
 
 
 export const makeApply = () => {
@@ -147,6 +147,7 @@ export const makeApply = () => {
 
 export const makeComponent = (init) => {
   return ($option = {}) => {
+    $context = $option.context || {};
     let prev_component = current_component,
       prev_cd = share.current_cd,
       $component = current_component = { $option };
@@ -157,6 +158,7 @@ export const makeComponent = (init) => {
     } finally {
       current_component = prev_component;
       share.current_cd = prev_cd;
+      $context = null;
     }
 
     return $component;
