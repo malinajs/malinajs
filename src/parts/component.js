@@ -358,7 +358,7 @@ export function makeComponent(node) {
   return { bind: result, reference };
 }
 
-export function makeComponentDyn(node, element) {
+export function makeComponentDyn(node, label) {
   let dynamicComponent;
 
   if(node.elArg) {
@@ -380,14 +380,15 @@ export function makeComponentDyn(node, element) {
 
   component.componentName = '$ComponentConstructor';
   return xNode('dyn-component', {
-    el: element.bindName(),
+    label,
     exp: dynamicComponent,
     component,
     reference
   }, (ctx, n) => {
-    ctx.write(true, `$runtime.attachDynComponent(${n.el}, () => ${n.exp}, ($ComponentConstructor) => `);
+    ctx.write(true, `$runtime.attachDynComponent(${n.label.name}, () => ${n.exp}, ($ComponentConstructor) => `);
     if(n.reference) ctx.write(`${n.reference} = `);
     ctx.add(n.component);
-    ctx.write(')');
+    if(n.label.node) ctx.write(')');
+    else ctx.write(', true)');
   });
 }

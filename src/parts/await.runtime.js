@@ -4,7 +4,7 @@ import * as share from '../runtime/share.js';
 import { safeGroupCall, safeCallMount } from '../runtime/utils.js';
 
 
-export function awaitBlock(label, relation, fn, build_main, build_then, build_catch) {
+export function awaitBlock(label, parentLabel, relation, fn, build_main, build_then, build_catch) {
   let parentCD = share.current_cd, first, last, $cd, promise, destroyList, status = 0;
   share.$onDestroy(() => safeGroupCall(destroyList));
 
@@ -38,7 +38,8 @@ export function awaitBlock(label, relation, fn, build_main, build_then, build_ca
       first = $dom.firstChild;
       last = $dom.lastChild;
     } else first = last = $dom;
-    insertAfter(label, $dom);
+    if(parentLabel) label.appendChild($dom);
+    else label.parentNode.insertBefore($dom, label);
     safeCallMount(mountList, destroyList);
     cd_component(parentCD).$apply();
   }

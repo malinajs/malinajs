@@ -2,7 +2,7 @@ import { assert } from '../utils.js';
 import { xNode } from '../xnode.js';
 
 
-export function makeifBlock(data, element, parentElement) {
+export function makeifBlock(data, label) {
   const getBlock = b => {
     if(b.singleBlock) {
       return xNode('make-block', {
@@ -23,22 +23,21 @@ export function makeifBlock(data, element, parentElement) {
     this.detectDependency(exp);
     parts.push({
       exp,
-      block: getBlock(this.buildBlock(part, { protectLastTag: true, allowSingleBlock: true }))
+      block: getBlock(this.buildBlock(part, { allowSingleBlock: true }))
     });
   });
-  if(data.elsePart) elseBlock = getBlock(this.buildBlock({ body: data.elsePart }, { protectLastTag: true, allowSingleBlock: true }));
+  if(data.elsePart) elseBlock = getBlock(this.buildBlock({ body: data.elsePart }, { allowSingleBlock: true }));
 
   return xNode('if:bind', {
     $wait: ['apply'],
-    el: element.bindName(),
-    parentElement,
+    label,
     parts,
     elseBlock
   }, (ctx, n) => {
     if(this.inuse.apply) {
-      ctx.write(true, `$runtime.ifBlock(${n.el}, `);
+      ctx.write(true, `$runtime.ifBlock(${n.label.name}, `);
     } else {
-      ctx.write(true, `$runtime.ifBlockReadOnly(${n.el}, `);
+      ctx.write(true, `$runtime.ifBlockReadOnly(${n.label.name}, `);
     }
 
     if(n.parts.length == 1) {
@@ -64,7 +63,7 @@ export function makeifBlock(data, element, parentElement) {
 
     ctx.indent--;
     ctx.write(true);
-    if(n.parentElement) ctx.write(', true');
+    if(!n.label.node) ctx.write(', true');
     ctx.write(');', true);
   });
 }

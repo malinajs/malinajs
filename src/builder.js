@@ -250,11 +250,53 @@ export function buildBlock(data, option = {}) {
       return el;
     };
 
+    let labelRequest;
+
+    const requireLabel = (final, noParent) => {
+      lastStatic = null;
+      if(labelRequest) {
+        if(labelRequest.final) {
+          labelRequest.set(tpl.push(xNode('node:comment', { label: true, value: '' })));
+        } else {
+          if(final) labelRequest.final = true;
+          if(noParent) labelRequest.noParent = true;
+          return labelRequest;
+        }
+      }
+      labelRequest = {
+        name: null,
+        node: null,
+        final,
+        noParent,
+        set(n) {
+          labelRequest.name = n.bindName();
+          labelRequest.node = n;
+          labelRequest = null;
+        },
+        resolve() {
+          assert(!labelRequest.node);
+          if(labelRequest.noParent) {
+            labelRequest.set(tpl.push(xNode('node:comment', { label: true, value: '' })));
+          } else if(isRoot) {
+            assert(!tpl._boundName);
+            labelRequest.name = tpl._boundName = option.parentElement
+          } else {
+            labelRequest.name = tpl.bindName();
+          }
+          labelRequest = null;
+        }
+      };
+      return labelRequest;
+    }
+
     const bindNode = (n, nodeIndex) => {
       if(n.type === 'text') {
         if(isRoot) lastTagDynamic = false;
         let prev = tpl.getLast();
-        if(prev?.$type == 'node:text' && prev._boundName) tpl.push(xNode('node:comment', { label: true }));
+        // if(prev?.$type == 'node:text' && prev._boundName) tpl.push(xNode('node:comment', { label: true }));
+        if(prev?.$type == 'node:text' && labelRequest) {
+          labelRequest.set(tpl.push(xNode('node:comment', { label: true })));
+        }
 
         if(n.value.indexOf('{') >= 0) {
           const pe = this.parseText(n.value);
@@ -288,10 +330,14 @@ export function buildBlock(data, option = {}) {
             }));
           });
 
+          labelRequest?.set(textNode);
           lastStatic = textNode;
         } else {
-          lastStatic = tpl.push(n.value);
+          const textNode = tpl.push(n.value);
+          labelRequest?.set(textNode);
+          lastStatic = textNode;
         }
+
       } else if(n.type === 'template') {
         if(isRoot) lastTagDynamic = false;
         lastStatic = null;
@@ -311,24 +357,27 @@ export function buildBlock(data, option = {}) {
           if(n.name == 'component' || !n.elArg) {
             // component
             if(isRoot) requireFragment = true;
-            let el = placeLabel(n.name);
 
             if(n.name == 'component') {
               // dyn-component
-              binds.push(this.makeComponentDyn(n, el));
+              const label = requireLabel(true);
+              binds.push(this.makeComponentDyn(n, label));
             } else {
+              const label = requireLabel();
               let component = this.makeComponent(n);
               binds.push(xNode('insert-component', {
                 component: component.bind,
                 reference: component.reference,
-                el: el.bindName()
+                label
               }, (ctx, n) => {
                 if(n.reference) {
                   ctx.write(true, `${n.reference} = `);
                   ctx.add(n.component);
-                  ctx.write(true, `$runtime.attachBlock(${n.el}, ${n.reference});`);
+                  if(n.label.node) ctx.write(true, `$runtime.insertBlock(${n.label.name}, ${n.reference});`);
+                  else ctx.write(true, `$runtime.addBlock(${n.label.name}, ${n.reference});`);
                 } else {
-                  ctx.write(true, `$runtime.attachBlock(${n.el}, `);
+                  if(n.label.node) ctx.write(true, `$runtime.insertBlock(${n.label.name}, `);
+                  else ctx.write(true, `$runtime.addBlock(${n.label.name}, `);
                   ctx.add(n.component);
                   ctx.write(');');
                 }
@@ -336,9 +385,7 @@ export function buildBlock(data, option = {}) {
             }
           } else {
             if(isRoot) requireFragment = true;
-            let el = placeLabel(`exported ${n.elArg}`);
-            let b = this.attchExportedFragment(n, el, n.name);
-            b && binds.push(b);
+            binds.push(this.attchExportedFragment(n, requireLabel(), n.name));
           }
           return;
         }
@@ -347,21 +394,20 @@ export function buildBlock(data, option = {}) {
           let slotName = n.elArg;
           if(!slotName) {
             if(option.context == 'fragment') {
-              let el = placeLabel('fragment-slot');
-              binds.push(this.attachFragmentSlot(el));
+              binds.push(this.attachFragmentSlot(requireLabel()));
               return;
             } else slotName = 'default';
           }
 
-          let el = placeLabel(slotName);
           let slot = this.attachSlot(slotName, n);
 
           binds.push(xNode('attach-slot', {
             $compile: [slot],
-            el: el.bindName(),
+            label: requireLabel(),
             slot
           }, (ctx, n) => {
-            ctx.write(true, `$runtime.attachBlock(${n.el}, `);
+            if(n.label.node) ctx.write(true, `$runtime.insertBlock(${n.label.name}, `);
+            else ctx.write(true, `$runtime.addBlock(${n.label.name}, `);
             ctx.add(n.slot);
             ctx.write(');', true);
           }));
@@ -370,12 +416,12 @@ export function buildBlock(data, option = {}) {
         if(n.name == 'fragment') {
           assert(n.elArg, 'Fragment name is required');
           if(isRoot) requireFragment = true;
-          let el = placeLabel(`fragment ${n.elArg}`);
           binds.push(xNode('attach-fragment', {
-            el: el.bindName(),
+            label: requireLabel(),
             fragment: this.attachFragment(n)
           }, (ctx, n) => {
-            ctx.write(true, `$runtime.attachBlock(${n.el}, `);
+            if(n.label.node) ctx.write(true, `$runtime.insertBlock(${n.label.name}, `);
+            else ctx.write(true, `$runtime.addBlock(${n.label.name}, `);
             ctx.add(n.fragment);
             ctx.write(')');
           }));
@@ -386,6 +432,7 @@ export function buildBlock(data, option = {}) {
         if(option.oneElement) el._boundName = option.oneElement;
         tpl.push(el);
         lastStatic = el;
+        labelRequest?.set(el);
 
         if(n.attributes.some(a => a.name.startsWith('{...'))) {
           this.require('rootCD');
@@ -452,10 +499,9 @@ export function buildBlock(data, option = {}) {
       } else if(n.type === 'if') {
         if(isRoot) {
           requireFragment = true;
-          lastTagDynamic = true;
+          if(!tpl.getLast()) tpl.push(xNode('node:comment', { label: true }));
         }
-        if(nodeIndex == 0 && !isRoot) binds.push(this.makeifBlock(n, tpl, true));
-        else binds.push(this.makeifBlock(n, placeLabel(n.value)));
+        binds.push(this.makeifBlock(n, requireLabel(true, isRoot)));
         return;
       } else if(n.type === 'systag') {
         let r = n.value.match(/^@(\w+)\s+(.*)$/s);
@@ -465,24 +511,23 @@ export function buildBlock(data, option = {}) {
         if(name == 'html') {
           if(isRoot) {
             requireFragment = true;
-            lastTagDynamic = true;
+            if(!tpl.getLast()) tpl.push(xNode('node:comment', { label: true }));
           }
-          let el = placeLabel('html');
-          binds.push(this.makeHtmlBlock(exp, el));
+          binds.push(this.makeHtmlBlock(exp, requireLabel(true, true)));
           return;
         } else throw 'Wrong tag';
       } else if(n.type === 'await') {
         if(isRoot) {
           requireFragment = true;
-          lastTagDynamic = true;
+          if(!tpl.getLast()) tpl.push(xNode('node:comment', { label: true }));
         }
-        let el = placeLabel(n.value);
-        let r = this.makeAwaitBlock(n, el);
-        r && binds.push(r);
+        binds.push(this.makeAwaitBlock(n, requireLabel(true, isRoot)));
         return;
       } else if(n.type === 'comment') {
         if(isRoot) lastTagDynamic = false;
-        lastStatic = tpl.push(n.content);
+        const commentNode = tpl.push(n.content);
+        labelRequest?.set(commentNode);
+        lastStatic = commentNode;
       }
     };
     body.forEach((node, i) => {
@@ -492,7 +537,9 @@ export function buildBlock(data, option = {}) {
         wrapException(e, node);
       }
     });
+    labelRequest?.resolve();
   };
+
   go(data, true, rootTemplate);
   if(option.protectLastTag && lastTagDynamic) {
     rootTemplate.push(xNode('node:comment', { value: '' }));
@@ -744,7 +791,7 @@ function wrapException(e, n) {
     if(n.type == 'text') e.details = n.value.trim();
     else if(n.type == 'node') e.details = n.openTag.trim();
     else if(n.type == 'each') e.details = n.value.trim();
-    else if(n.type == 'if') e.details = n.value.trim();
+    else if(n.type == 'if') e.details = n.parts?.[0]?.value.trim() || 'if-block';
   }
   throw e;
 }

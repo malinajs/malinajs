@@ -196,9 +196,10 @@ export function attachFragment(node) {
 
 export function attachFragmentSlot(label) {
   return xNode('fragment-slot', {
-    el: label.bindName()
+    label
   }, (ctx, n) => {
-    ctx.write(true, `$runtime.attachBlock(${n.el}, $$fragmentSlot?.())`);
+    if(n.label.node) ctx.write(true, `$runtime.insertBlock(${n.label.name}, $$fragmentSlot?.())`);
+    else ctx.write(true, `$runtime.addBlock(${n.label.name}, $$fragmentSlot?.())`);
   });
 }
 
@@ -207,7 +208,7 @@ export function attchExportedFragment(node, label, componentName) {
   let data = {
     name: node.elArg,
     componentName,
-    label: label.bindName()
+    label
   };
 
   let body = trimEmptyNodes(node.body || []);
@@ -222,7 +223,8 @@ export function attchExportedFragment(node, label, componentName) {
   data = { ...pa, ...data };
 
   return xNode('attach-exported-fragment', data, (ctx, n) => {
-    ctx.write(true, `$runtime.attachBlock(${n.label}, $runtime.callExportedFragment($instance_${n.componentName}, '${n.name}'`);
+    if(n.label.node) ctx.write(true, `$runtime.insertBlock(${n.label.name}, $runtime.callExportedFragment($instance_${n.componentName}, '${n.name}'`);
+    else ctx.write(true, `$runtime.addBlock(${n.label.name}, $runtime.callExportedFragment($instance_${n.componentName}, '${n.name}'`);
     ctx.indent++;
     let missed = '';
 

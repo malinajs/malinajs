@@ -1,4 +1,4 @@
-import { insertAfter, removeElements } from '../runtime/base';
+import { removeElements } from '../runtime/base';
 import { $watch } from '../runtime/cd';
 
 let create = (tag, html) => {
@@ -12,21 +12,21 @@ let create = (tag, html) => {
     t.innerHTML = html;
     fr = t.content;
   }
-  let lastElement = fr.lastChild;
-  insertAfter(tag, fr);
-  return lastElement;
+  let firstElement = fr.firstChild;
+  tag.parentNode.insertBefore(fr, tag);
+  return firstElement;
 };
 
 export function htmlBlock(tag, fn) {
-  let lastElement;
+  let firstElement;
   let destroy = () => {
-    if(!lastElement) return;
-    removeElements(tag.nextSibling, lastElement);
-    lastElement = null;
+    if(!firstElement) return;
+    removeElements(firstElement, tag.previousSibling);
+    firstElement = null;
   };
   $watch(fn, (html) => {
     destroy();
-    if(html) lastElement = create(tag, html);
+    if(html) firstElement = create(tag, html);
   });
 }
 

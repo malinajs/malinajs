@@ -2,7 +2,7 @@ import { isSimpleName, assert, extractKeywords } from '../utils';
 import { xNode } from '../xnode.js';
 
 
-export function makeAwaitBlock(node, element) {
+export function makeAwaitBlock(node, label) {
   let valueForThen, exp;
 
   let rx = node.value.match(/^#await\s+(.+)\s+then\s+(\S+)\s*$/s);
@@ -56,12 +56,12 @@ export function makeAwaitBlock(node, element) {
   this.require('apply');
 
   return xNode('await', {
-    el: element.bindName(),
+    label,
     exp,
     parts,
     keywords
   }, (ctx, n) => {
-    ctx.write(true, `$runtime.awaitBlock(${n.el}, () => [${n.keywords.join(', ')}], () => ${n.exp},`);
+    ctx.write(true, `$runtime.awaitBlock(${n.label.name}, ${n.label.node ? 0 : 1}, () => [${n.keywords.join(', ')}], () => ${n.exp},`);
     ctx.indent++;
     n.parts.forEach((part, index) => {
       if(index) ctx.write(', ');

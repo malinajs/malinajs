@@ -78,25 +78,6 @@ export const iterNodes = (el, last, fn) => {
 export const removeElements = (el, last) => iterNodes(el, last, n => n.remove());
 
 
-export function removeElementsBetween(el, stop) {
-  let next;
-  el = el.nextSibling;
-  while(el) {
-    next = el.nextSibling;
-    if(el == stop) break;
-    el.remove();
-    el = next;
-  }
-}
-
-export const getFinalLabel = n => {
-  if(n.nextSibling) return n.nextSibling;
-  let e = document.createTextNode('');
-  n.parentNode.appendChild(e);
-  return e;
-};
-
-
 const resolvedPromise = Promise.resolve();
 
 export function $tick(fn) {
@@ -209,34 +190,33 @@ export const callComponentDyn = (component, context, option = {}, propFn, cmp, s
 };
 
 
-export const attachDynComponent = (label, exp, bind) => {
+export const attachDynComponent = (label, exp, bind, parentLabel) => {
   let parentCD = share.current_cd;
-  let active, destroyList, $cd, $dom, finalLabel = getFinalLabel(label);
+  let destroyList, $cd, first;
   const destroy = () => safeGroupCall(destroyList);
   $onDestroy(destroy);
 
   $watch(exp, (component) => {
     destroy();
     if($cd) cd_detach($cd);
-    if(active) removeElementsBetween(label, finalLabel);
+    if(first) removeElements(first, parentLabel ? null : label.previousSibling);
 
     if(component) {
       destroyList = share.current_destroyList = [];
       share.current_mountList = [];
       $cd = share.current_cd = cd_new();
       try {
-        $dom = bind(component).$dom;
+        const $dom = bind(component).$dom;
         cd_attach(parentCD, $cd);
-        insertAfter(label, $dom);
+        first = $dom.nodeType == 11 ? $dom.firstChild : $dom;
+        if(parentLabel) label.appendChild($dom);
+        else label.parentNode.insertBefore($dom, label);
         safeCallMount(share.current_mountList, destroyList);
       } finally {
         share.current_destroyList = share.current_mountList = share.current_cd = null;
       }
-      active = true;
     } else {
-      $cd = null;
-      active = false;
-      destroyList = null;
+      $cd = first = destroyList = null;
     }
   });
 };
@@ -439,7 +419,8 @@ export const spreadAttributes = (el, fn) => {
 
 
 export const callExportedFragment = (childComponent, name, slot, events, props, cmp) => {
-  let push, $dom;
+  let push, $dom, fn = childComponent.$exported?.[name];
+  if(!fn) return;
   if(cmp) {
     let result;
     let w = $watch(props, (value) => {
@@ -449,7 +430,6 @@ export const callExportedFragment = (childComponent, name, slot, events, props, 
     fire(w);
     props = () => result;
   }
-  let fn = childComponent.$exported?.[name];
   ([$dom, push] = fn(props, events, slot));
   return $dom;
 };
@@ -521,6 +501,16 @@ export const makeBlockBound = (fr, fn) => {
 export const attachBlock = (label, $dom) => {
   if(!$dom) return;
   insertAfter(label, $dom.$dom || $dom);
+};
+
+export const addBlock = (parent, $dom) => {
+  if(!$dom) return;
+  parent.appendChild($dom.$dom || $dom);
+};
+
+export const insertBlock = (label, $dom) => {
+  if(!$dom) return;
+  label.parentNode.insertBefore($dom.$dom || $dom, label);
 };
 
 export const mergeEvents = (...callbacks) => {

@@ -35,6 +35,7 @@ function xWriter(node) {
 
   this.isEmpty = function(n) {
     if(n == null) return true;
+    if(n.$type == 'if:bind') return false;
     assert(n.$done, 'Node is not built');
     return !n.$result.some(r => {
       if(typeof (r) == 'string') return true;

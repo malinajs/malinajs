@@ -24,7 +24,7 @@ export function ifBlock(label, fn, parts, parentLabel) {
       last = $dom.lastChild;
     } else first = last = $dom;
     if(parentLabel) label.appendChild($dom);
-    else insertAfter(label, $dom);
+    else label.parentNode.insertBefore($dom, label);
     safeCallMount(mountList, destroyList);
   }
 
@@ -54,7 +54,11 @@ export function ifBlock(label, fn, parts, parentLabel) {
 }
 
 
-export function ifBlockReadOnly(label, fn, parts) {
+export function ifBlockReadOnly(label, fn, parts, parentLabel) {
   let value = fn();
-  if(value != null) insertAfter(label, parts[value]());
+  if(value != null) {
+    const $dom = parts[value]();
+    if(parentLabel) label.appendChild($dom);
+    else label.parentNode.insertBefore($dom, label);
+  }
 }
