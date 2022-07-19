@@ -24,11 +24,12 @@ export const makeEachSingleBlock = (fn) => {
 
 
 export const makeEachElseBlock = (fn) => {
-  return (label, onlyChild, parentCD) => {
+  return (label, mode, parentCD) => {
     let first, last;
     let destroyList = share.current_destroyList = [];
     let $cd = share.current_cd = cd_new();
     share.current_mountList = [];
+    const parentNode = mode ? label : label.parentNode;
     try {
       let $dom = fn();
       if($dom.nodeType == 11) {
@@ -36,8 +37,7 @@ export const makeEachElseBlock = (fn) => {
         last = $dom.lastChild;
       } else first = last = $dom;
       cd_attach(parentCD, $cd);
-      if(onlyChild) label.appendChild($dom);
-      else attachBlock(label, $dom);
+      parentNode.insertBefore($dom, mode ? null : label);
       safeCallMount(share.current_mountList, destroyList);
     } finally {
       share.current_destroyList = share.current_mountList = share.current_cd = null;
@@ -52,13 +52,16 @@ export const makeEachElseBlock = (fn) => {
 };
 
 
-export function $$eachBlock(label, onlyChild, fn, getKey, bind, buildElseBlock) {
+export function $$eachBlock(label, mode, fn, getKey, bind, buildElseBlock) {
   let parentCD = share.current_cd;
   let eachCD = cd_new();
   cd_attach(parentCD, eachCD);
 
   let mapping = new Map();
   let lastNode, vi = 0, p_promise = 0, p_destroy = 0, elseBlock;
+
+  let firstNode;
+  const onlyChild = mode == 1;
 
   const destroyAll = () => {
     p_destroy && safeCall(() => mapping.forEach(ctx => ctx.d?.forEach(fn => fn())));
@@ -74,14 +77,7 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind, buildElseBlock) 
     else if(!isArray(array)) array = [];
 
     let newMapping = new Map();
-    let prevNode, parentNode;
-    if(onlyChild) {
-      prevNode = null;
-      parentNode = label;
-    } else {
-      prevNode = label;
-      parentNode = label.parentNode;
-    }
+    let parentNode = mode ? label : label.parentNode;
 
     if(mapping.size) {
       let ctx, count = 0;
@@ -94,7 +90,7 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind, buildElseBlock) 
         }
       }
 
-      if(!count && lastNode) {
+      if(!count && firstNode) {
         share.destroyResults = [];
         eachCD.children.length = 0;
         destroyAll();
@@ -109,7 +105,7 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind, buildElseBlock) 
           Promise.allSettled(share.destroyResults).then(() => removedNodes.forEach(n => n.remove()));
         } else {
           if(onlyChild) label.textContent = '';
-          else removeElements(label.nextSibling, lastNode);
+          else removeElements(firstNode, label.previousSibling);
         }
 
         share.destroyResults = null;
@@ -143,7 +139,9 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind, buildElseBlock) 
     }
 
     let i, item, next_ctx, ctx, nextEl, key;
-    for(i = 0; i < array.length; i++) {
+    let nextNode = mode ? null : label;
+    i = array.length;
+    while(i--) {
       item = array[i];
       key = getKey(item, i, array);
       if(next_ctx) {
@@ -151,31 +149,31 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind, buildElseBlock) 
         next_ctx = null;
       } else ctx = mapping.get(key);
       if(ctx) {
-        nextEl = i == 0 && onlyChild ? parentNode.firstChild : prevNode.nextSibling;
+        nextEl = nextNode ? nextNode.previousSibling : parentNode.lastChild;
         if(p_promise) while(nextEl && nextEl.$$removing) nextEl = nextEl.nextSibling;
-        if(nextEl != ctx.first) {
+        if(nextEl != ctx.last) {
           let insert = true;
 
-          if(ctx.first == ctx.last && (i + 1 < array.length) && prevNode?.nextSibling) {
-            next_ctx = mapping.get(getKey(array[i + 1], i + 1, array));
-            if(next_ctx && prevNode.nextSibling.nextSibling === next_ctx.first) {
-              parentNode.replaceChild(ctx.first, prevNode.nextSibling);
+          if(ctx.first == ctx.last && (i > 0) && nextEl) {
+            next_ctx = mapping.get(getKey(array[i - 1], i - 1, array));
+            if(next_ctx && nextEl.previousSibling === next_ctx.last) {
+              parentNode.replaceChild(ctx.first, nextEl);
               insert = false;
             }
           }
 
           if(insert) {
-            let insertBefore = prevNode?.nextSibling;
             let next, el = ctx.first;
             while(el) {
               next = el.nextSibling;
-              parentNode.insertBefore(el, insertBefore);
+              parentNode.insertBefore(el, nextNode);
               if(el == ctx.last) break;
               el = next;
             }
           }
         }
         ctx.rebind?.(item, i);
+        nextNode = ctx.first;
       } else {
         let $dom, rebind,
           d = share.current_destroyList = [],
@@ -192,22 +190,22 @@ export function $$eachBlock(label, onlyChild, fn, getKey, bind, buildElseBlock) 
           ctx.first = $dom.firstChild;
           ctx.last = $dom.lastChild;
         } else ctx.first = ctx.last = $dom;
-        parentNode.insertBefore($dom, prevNode?.nextSibling);
+        parentNode.insertBefore($dom, nextNode);
+        nextNode = ctx.first;
         safeCallMount(m, d);
         if(d.length) {
           ctx.d = d;
           p_destroy = 1;
         }
       }
-      prevNode = ctx.last;
       newMapping.set(key, ctx);
     }
-    lastNode = prevNode;
+    firstNode = nextNode;
     mapping.clear();
     mapping = newMapping;
 
     if(!array.length && !elseBlock && buildElseBlock) {
-      elseBlock = buildElseBlock(label, onlyChild, parentCD);
+      elseBlock = buildElseBlock(label, mode, parentCD);
     }
   }, { cmp: compareArray });
 }

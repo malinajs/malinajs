@@ -65,7 +65,6 @@ export function buildRuntime() {
 
   let bb = this.buildBlock(this.DOM, {
     inline: true,
-    protectLastTag: true,
     allowSingleBlock: true,
     template: {
       name: '$parentElement',
@@ -152,7 +151,6 @@ export function buildBlock(data, option = {}) {
   let binds = xNode('block');
   let result = {};
   let inuse = Object.assign({}, this.inuse);
-  let lastTagDynamic = false;
 
   if(!option.parentElement) option.parentElement = '$parentElement';
 
@@ -235,25 +233,9 @@ export function buildBlock(data, option = {}) {
       if(svg && !other) rootSVG = true;
     }
 
-    let lastStatic;
-
-    const placeLabel = name => {
-      let el;
-      if(lastStatic) {
-        el = lastStatic;
-        el.label = true;
-        lastStatic = null;
-      } else {
-        el = xNode('node:comment', { label: true, value: name });
-        tpl.push(el);
-      }
-      return el;
-    };
-
     let labelRequest;
 
     const requireLabel = (final, noParent) => {
-      lastStatic = null;
       if(labelRequest) {
         if(labelRequest.final) {
           labelRequest.set(tpl.push(xNode('node:comment', { label: true, value: '' })));
@@ -291,7 +273,6 @@ export function buildBlock(data, option = {}) {
 
     const bindNode = (n, nodeIndex) => {
       if(n.type === 'text') {
-        if(isRoot) lastTagDynamic = false;
         let prev = tpl.getLast();
         // if(prev?.$type == 'node:text' && prev._boundName) tpl.push(xNode('node:comment', { label: true }));
         if(prev?.$type == 'node:text' && labelRequest) {
@@ -331,16 +312,12 @@ export function buildBlock(data, option = {}) {
           });
 
           labelRequest?.set(textNode);
-          lastStatic = textNode;
         } else {
           const textNode = tpl.push(n.value);
           labelRequest?.set(textNode);
-          lastStatic = textNode;
         }
 
       } else if(n.type === 'template') {
-        if(isRoot) lastTagDynamic = false;
-        lastStatic = null;
         tpl.push(n.openTag);
         tpl.push(n.content);
         tpl.push('</template>');
@@ -352,7 +329,6 @@ export function buildBlock(data, option = {}) {
           b && binds.push(b);
           return;
         }
-        if(isRoot) lastTagDynamic = false;
         if(n.name == 'component' || n.name.match(/^[A-Z]/)) {
           if(n.name == 'component' || !n.elArg) {
             // component
@@ -431,7 +407,6 @@ export function buildBlock(data, option = {}) {
         let el = xNode('node', { name: n.name });
         if(option.oneElement) el._boundName = option.oneElement;
         tpl.push(el);
-        lastStatic = el;
         labelRequest?.set(el);
 
         if(n.attributes.some(a => a.name.startsWith('{...'))) {
@@ -479,9 +454,8 @@ export function buildBlock(data, option = {}) {
         }
       } else if(n.type === 'each') {
         if(data.type == 'node' && data.body.length == 1) {
-          lastStatic = null;
           let eachBlock = this.makeEachBlock(n, {
-            elName: tpl.bindName(),
+            label: tpl.bindName(),
             onlyChild: true
           });
           binds.push(eachBlock.source);
@@ -489,10 +463,9 @@ export function buildBlock(data, option = {}) {
         } else {
           if(isRoot) {
             requireFragment = true;
-            lastTagDynamic = true;
+            if(!tpl.getLast()) tpl.push(xNode('node:comment', { label: true }));
           }
-          let element = placeLabel(n.value);
-          let eachBlock = this.makeEachBlock(n, { elName: element.bindName() });
+          let eachBlock = this.makeEachBlock(n, { label: requireLabel(true, isRoot) });
           binds.push(eachBlock.source);
           return;
         }
@@ -524,10 +497,8 @@ export function buildBlock(data, option = {}) {
         binds.push(this.makeAwaitBlock(n, requireLabel(true, isRoot)));
         return;
       } else if(n.type === 'comment') {
-        if(isRoot) lastTagDynamic = false;
         const commentNode = tpl.push(n.content);
         labelRequest?.set(commentNode);
-        lastStatic = commentNode;
       }
     };
     body.forEach((node, i) => {
@@ -541,9 +512,6 @@ export function buildBlock(data, option = {}) {
   };
 
   go(data, true, rootTemplate);
-  if(option.protectLastTag && lastTagDynamic) {
-    rootTemplate.push(xNode('node:comment', { value: '' }));
-  }
 
   let innerBlock = null;
   if(binds.body.length) {

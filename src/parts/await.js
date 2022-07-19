@@ -22,7 +22,7 @@ export function makeAwaitBlock(node, label) {
 
   let parts = [null, null, null];
   if(node.parts.main && node.parts.main.length) {
-    parts[0] = this.buildBlock({ body: node.parts.main }, { protectLastTag: true });
+    parts[0] = this.buildBlock({ body: node.parts.main });
   }
   if(node.parts.then && node.parts.then.length) {
     let args = [];
@@ -36,7 +36,7 @@ export function makeAwaitBlock(node, label) {
         args.push(rx[1]);
       }
     }
-    parts[1] = this.buildBlock({ body: node.parts.then }, { protectLastTag: true, extraArguments: args });
+    parts[1] = this.buildBlock({ body: node.parts.then }, { extraArguments: args });
   }
   if(node.parts.catch && node.parts.catch.length) {
     let args = [];
@@ -45,7 +45,7 @@ export function makeAwaitBlock(node, label) {
       assert(isSimpleName(rx[1]));
       args.push(rx[1]);
     }
-    parts[2] = this.buildBlock({ body: node.parts.catch }, { protectLastTag: true, extraArguments: args });
+    parts[2] = this.buildBlock({ body: node.parts.catch }, { extraArguments: args });
   }
 
   if(this.script.readOnly) {

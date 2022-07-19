@@ -115,7 +115,6 @@ export function makeEachBlock(data, option) {
   if(!nodeItems.length) nodeItems = [data.mainBlock[0]];
 
   let itemBlock, block = this.buildBlock({ body: nodeItems }, {
-    protectLastTag: true,
     allowSingleBlock: !blockPrefix,
     each: {
       blockPrefix,
@@ -149,7 +148,6 @@ export function makeEachBlock(data, option) {
   let elseBlock = null;
   if(data.elseBlock) {
     let block = this.buildBlock({ body: data.elseBlock }, {
-      protectLastTag: true,
       allowSingleBlock: false
     });
     elseBlock = block.block;
@@ -158,9 +156,15 @@ export function makeEachBlock(data, option) {
   const source = xNode('each', {
     keyFunction,
     block: itemBlock,
-    elseBlock
+    elseBlock,
+    label: option.label,
+    onlyChild: option.onlyChild
   }, (ctx, n) => {
-    ctx.writeLine(`$runtime.$$eachBlock(${option.elName}, ${option.onlyChild ? 1 : 0}, () => (${arrayName}),`);
+    let el = n.onlyChild ? n.label : n.label.name;
+    let mode = 0;
+    if(n.onlyChild) mode = 1;
+    else if(!n.label.node) mode = 2;
+    ctx.writeLine(`$runtime.$$eachBlock(${el}, ${mode}, () => (${arrayName}),`);
     ctx.indent++;
     ctx.write(true);
     if(n.keyFunction === 'noop') ctx.write('$runtime.noop');
