@@ -1,12 +1,12 @@
-import { removeElements, insertAfter } from '../runtime/base';
+import { removeElements } from '../runtime/base';
 import { $watch, cd_new, cd_attach, cd_detach } from '../runtime/cd';
 import * as share from '../runtime/share';
-import { safeCall, safeGroupCall, safeCallMount } from '../runtime/utils';
+import { safeGroupCall2 } from '../runtime/utils';
 
 
 export function ifBlock(label, fn, parts, parentLabel) {
   let first, last, $cd, destroyList, parentCD = share.current_cd;
-  share.$onDestroy(() => safeGroupCall(destroyList));
+  share.$onDestroy(() => safeGroupCall2(destroyList, share.destroyResults));
 
   function createBlock(builder) {
     let $dom;
@@ -25,13 +25,13 @@ export function ifBlock(label, fn, parts, parentLabel) {
     } else first = last = $dom;
     if(parentLabel) label.appendChild($dom);
     else label.parentNode.insertBefore($dom, label);
-    safeCallMount(mountList, destroyList);
+    safeGroupCall2(mountList, destroyList);
   }
 
   function destroyBlock() {
     if(!first) return;
     share.destroyResults = [];
-    safeGroupCall(destroyList);
+    safeGroupCall2(destroyList, share.destroyResults);
     destroyList.length = 0;
     if($cd) {
       cd_detach($cd);

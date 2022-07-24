@@ -1,3 +1,6 @@
+
+import * as share from '../runtime/share';
+
 export let __app_onerror = console.error;
 
 export const configure = (option) => {
@@ -24,9 +27,9 @@ export const safeGroupCall = list => {
   }
 };
 
-export const safeCallMount = (mountList, destroyList) => {
-  mountList.forEach(fn => {
+export const safeGroupCall2 = (list, resultList) => {
+  list?.forEach(fn => {
     let r = safeCall(fn);
-    r && destroyList.push(r);
+    r && resultList.push(r);
   });
 };

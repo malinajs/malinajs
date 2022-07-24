@@ -2,7 +2,7 @@ import {
   $watch, deepComparator, cloneDeep, cd_new, $digest,
   addEvent, fire, keyComparator, cd_attach, cd_detach, cd_component, WatchObject
 } from './cd';
-import { __app_onerror, safeCall, isFunction, isObject, safeGroupCall, safeCallMount } from './utils';
+import { __app_onerror, safeCall, isFunction, isObject, safeGroupCall, safeGroupCall2 } from './utils';
 import * as share from './share.js';
 import { $onDestroy } from './share.js';
 
@@ -211,7 +211,7 @@ export const attachDynComponent = (label, exp, bind, parentLabel) => {
         first = $dom.nodeType == 11 ? $dom.firstChild : $dom;
         if(parentLabel) label.appendChild($dom);
         else label.parentNode.insertBefore($dom, label);
-        safeCallMount(share.current_mountList, destroyList);
+        safeGroupCall2(share.current_mountList, destroyList);
       } finally {
         share.current_destroyList = share.current_mountList = share.current_cd = null;
       }
@@ -573,7 +573,7 @@ export const mount = (label, component, option) => {
       last = $dom.lastChild;
     } else first = last = $dom;
     label.appendChild($dom);
-    safeCallMount(share.current_mountList, destroyList);
+    safeGroupCall2(share.current_mountList, destroyList);
   } finally {
     share.current_destroyList = share.current_mountList = null;
   }

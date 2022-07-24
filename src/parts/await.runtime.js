@@ -1,7 +1,7 @@
-import { removeElements, insertAfter } from '../runtime/base';
+import { removeElements } from '../runtime/base';
 import { $watch, keyComparator, cd_component, cd_new, cd_attach, cd_detach } from '../runtime/cd';
 import * as share from '../runtime/share.js';
-import { safeGroupCall, safeCallMount } from '../runtime/utils.js';
+import { safeGroupCall, safeGroupCall2 } from '../runtime/utils.js';
 
 
 export function awaitBlock(label, parentLabel, relation, fn, build_main, build_then, build_catch) {
@@ -40,7 +40,7 @@ export function awaitBlock(label, parentLabel, relation, fn, build_main, build_t
     } else first = last = $dom;
     if(parentLabel) label.appendChild($dom);
     else label.parentNode.insertBefore($dom, label);
-    safeCallMount(mountList, destroyList);
+    safeGroupCall2(mountList, destroyList);
     cd_component(parentCD).$apply();
   }
 

@@ -1,7 +1,7 @@
-import { removeElements, iterNodes, attachBlock } from '../runtime/base';
+import { removeElements, iterNodes } from '../runtime/base';
 import { $watch, compareArray, isArray, cd_attach, cd_new, cd_detach } from '../runtime/cd';
 import * as share from '../runtime/share';
-import { safeCall, safeGroupCall, safeCallMount, isObject } from '../runtime/utils';
+import { safeGroupCall2, isObject } from '../runtime/utils';
 
 
 export const eachDefaultKey = (item, index, array) => isObject(array[0]) ? item : index;
@@ -38,15 +38,24 @@ export const makeEachElseBlock = (fn) => {
       } else first = last = $dom;
       cd_attach(parentCD, $cd);
       parentNode.insertBefore($dom, mode ? null : label);
-      safeCallMount(share.current_mountList, destroyList);
+      safeGroupCall2(share.current_mountList, destroyList);
     } finally {
       share.current_destroyList = share.current_mountList = share.current_cd = null;
     }
 
     return () => {
-      removeElements(first, last);
       cd_detach($cd);
-      safeGroupCall(destroyList);
+      share.destroyResults = [];
+      safeGroupCall2(destroyList, share.destroyResults);
+
+      if(share.destroyResults.length) {
+        const f = first, l = last;
+        iterNodes(f, l, n => n.$$removing = true);
+        Promise.allSettled(share.destroyResults).then(() => iterNodes(f, l, n => n.remove()));
+      } else {
+        removeElements(first, last);
+      }
+      share.destroyResults = null;
     };
   };
 };
@@ -58,13 +67,11 @@ export function $$eachBlock(label, mode, fn, getKey, bind, buildElseBlock) {
   cd_attach(parentCD, eachCD);
 
   let mapping = new Map();
-  let lastNode, vi = 0, p_promise = 0, p_destroy = 0, elseBlock;
-
-  let firstNode;
+  let firstNode, vi = 0, p_promise = 0, p_destroy = 0, elseBlock;
   const onlyChild = mode == 1;
 
   const destroyAll = () => {
-    p_destroy && safeCall(() => mapping.forEach(ctx => ctx.d?.forEach(fn => fn())));
+    p_destroy && mapping.forEach(ctx => safeGroupCall2(ctx.d, share.destroyResults));
     mapping.clear();
   };
 
@@ -98,7 +105,7 @@ export function $$eachBlock(label, mode, fn, getKey, bind, buildElseBlock) {
         if(share.destroyResults.length) {
           p_promise = 1;
           let removedNodes = [];
-          iterNodes(onlyChild ? label.firstChild : label.nextSibling, lastNode, n => {
+          iterNodes(firstNode, onlyChild ? null : label.previousSibling, n => {
             n.$$removing = true;
             removedNodes.push(n);
           });
@@ -118,7 +125,7 @@ export function $$eachBlock(label, mode, fn, getKey, bind, buildElseBlock) {
             ctx.$cd && eachCD.children.push(ctx.$cd);
             return;
           }
-          safeGroupCall(ctx.d);
+          safeGroupCall2(ctx.d, share.destroyResults);
           iterNodes(ctx.first, ctx.last, n => removedNodes.push(n));
         });
 
@@ -150,7 +157,7 @@ export function $$eachBlock(label, mode, fn, getKey, bind, buildElseBlock) {
       } else ctx = mapping.get(key);
       if(ctx) {
         nextEl = nextNode ? nextNode.previousSibling : parentNode.lastChild;
-        if(p_promise) while(nextEl && nextEl.$$removing) nextEl = nextEl.nextSibling;
+        if(p_promise) while(nextEl && nextEl.$$removing) nextEl = nextEl.previousSibling;
         if(nextEl != ctx.last) {
           let insert = true;
 
@@ -192,7 +199,7 @@ export function $$eachBlock(label, mode, fn, getKey, bind, buildElseBlock) {
         } else ctx.first = ctx.last = $dom;
         parentNode.insertBefore($dom, nextNode);
         nextNode = ctx.first;
-        safeCallMount(m, d);
+        safeGroupCall2(m, d);
         if(d.length) {
           ctx.d = d;
           p_destroy = 1;
