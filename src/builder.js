@@ -318,9 +318,15 @@ export function buildBlock(data, option = {}) {
         }
 
       } else if(n.type === 'template') {
-        tpl.push(n.openTag);
-        tpl.push(n.content);
-        tpl.push('</template>');
+        const templateNode = xNode('node', {
+          openTag: n.openTag,
+          content: n.content
+        });
+        templateNode.$handler = (ctx, n) => {
+          ctx.write(n.openTag, n.content, '</template>');
+        };
+        tpl.push(templateNode);
+        labelRequest?.set(templateNode);
       } else if(n.type === 'node') {
         if(n.name == 'malina' && !option.malinaElement) {
           let b;
