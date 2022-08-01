@@ -412,6 +412,9 @@ export function parse() {
             assert(parent.type === 'fragment', 'Fragment error: /fragment');
             return;
           } else throw 'Error binding: ' + bind.value;
+        } else {
+            addText(readBinding().raw);
+            continue;
         }
       }
 
