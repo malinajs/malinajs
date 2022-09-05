@@ -59,10 +59,25 @@ function malinaPlugin(options={}){
     const cssModules = new Map();
 
     if(options.displayVersion !== false) console.log('! Malina.js', malina.version);
-    
+
     return {
         name: 'malina-plugin',
-        setup(build) {        
+        setup(build) {
+            build.onResolve({ filter: /^malinajs$/ }, async (args) => {
+                const runtime = await build.resolve('malinajs/runtime.js', {resolveDir: args.resolveDir});
+                return {
+                    path: runtime.path,
+                    sideEffects: false
+                };
+            });
+
+            build.onResolve({ filter: /\.(xht|ma|html)$/ }, (arg) => {
+                return {
+                    path: path.resolve(arg.resolveDir,arg.path),
+                    sideEffects: false
+                }
+            });
+
             build.onLoad(
                 { filter: /\.(xht|ma|html)$/ }, 
                 async (args) => {
@@ -106,6 +121,7 @@ async function esbuild(options={}){
         outfile: 'public/bundle.js',
         minify: true,
         bundle: true,
+        platform: 'node',
         plugins: [malinaPlugin()],
         ...esbuildConfig,
         ...options
