@@ -12,7 +12,7 @@ export function ifBlock(label, fn, parts, parentLabel) {
     let $dom;
     destroyList = share.current_destroyList = [];
     let mountList = share.current_mountList = [];
-    $cd = share.current_cd = cd_new();
+    $cd = share.current_cd = cd_new(parentCD);
     try {
       $dom = builder();
     } finally {

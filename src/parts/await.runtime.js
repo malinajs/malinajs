@@ -26,7 +26,7 @@ export function awaitBlock(label, parentLabel, relation, fn, build_main, build_t
 
     if(!builder) return;
     destroyList = share.current_destroyList = [];
-    $cd = share.current_cd = cd_new();
+    $cd = share.current_cd = cd_new(parentCD);
     let $dom, mountList = share.current_mountList = [];
     try {
       $dom = builder(value);

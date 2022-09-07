@@ -121,7 +121,6 @@ async function esbuild(options={}){
         outfile: 'public/bundle.js',
         minify: true,
         bundle: true,
-        platform: 'node',
         plugins: [malinaPlugin()],
         ...esbuildConfig,
         ...options

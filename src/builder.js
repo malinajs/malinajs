@@ -342,7 +342,11 @@ export function buildBlock(data, option = {}) {
 
             if(n.name == 'component') {
               // dyn-component
-              const label = requireLabel(true);
+              if(isRoot) {
+                requireFragment = true;
+                if(!tpl.getLast()) tpl.push(xNode('node:comment', { label: true }));
+              }
+              const label = requireLabel(true, isRoot);
               binds.push(this.makeComponentDyn(n, label));
             } else {
               const label = requireLabel();

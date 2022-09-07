@@ -42,7 +42,7 @@ export const cd_component = cd => {
   return cd.component;
 };
 
-export const cd_new = () => new $ChangeDetector();
+export const cd_new = (parent) => new $ChangeDetector(parent);
 
 export const cd_attach = (parent, cd) => {
   if(cd) {

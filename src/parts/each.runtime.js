@@ -27,7 +27,7 @@ export const makeEachElseBlock = (fn) => {
   return (label, mode, parentCD) => {
     let first, last;
     let destroyList = share.current_destroyList = [];
-    let $cd = share.current_cd = cd_new();
+    let $cd = share.current_cd = cd_new(parentCD);
     share.current_mountList = [];
     const parentNode = mode ? label : label.parentNode;
     try {
@@ -185,7 +185,7 @@ export function $$eachBlock(label, mode, fn, getKey, bind, buildElseBlock) {
         let $dom, rebind,
           d = share.current_destroyList = [],
           m = share.current_mountList = [],
-          $cd = share.current_cd = cd_new();
+          $cd = share.current_cd = cd_new(eachCD);
         try {
           ([$dom, rebind] = bind(item, i));
         } finally {

@@ -204,7 +204,7 @@ export const attachDynComponent = (label, exp, bind, parentLabel) => {
     if(component) {
       destroyList = share.current_destroyList = [];
       share.current_mountList = [];
-      $cd = share.current_cd = cd_new();
+      $cd = share.current_cd = cd_new(parentCD);
       try {
         const $dom = bind(component).$dom;
         cd_attach(parentCD, $cd);
