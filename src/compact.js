@@ -43,6 +43,7 @@ export function compactDOM() {
         switch(node.type) {
           case 'node':
           case 'slot':
+          case 'block':
           case 'fragment':
             if(node.body) go(node.body, node);
             break

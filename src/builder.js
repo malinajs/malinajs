@@ -788,7 +788,7 @@ function wrapException(e, n) {
     console.log('Node: ', n);
     if(n.type == 'text') e.details = n.value.trim();
     else if(n.type == 'node') e.details = n.openTag.trim();
-    else if(n.type == 'each') e.details = n.value.trim();
+    else if(n.type == 'each' || n.type == 'block') e.details = n.value.trim();
     else if(n.type == 'if') e.details = n.parts?.[0]?.value.trim() || 'if-block';
   }
   throw e;

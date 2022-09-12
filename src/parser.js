@@ -411,6 +411,21 @@ export function parse() {
           } else if(bind.value == '/fragment') {
             assert(parent.type === 'fragment', 'Fragment error: /fragment');
             return;
+          } else if(bind.value.match(/^#([\w\-]+)/)) {
+            const name = bind.value.match(/^#([\w\-]+)/)[1];
+            let tag = {
+              type: 'block',
+              value: bind.value,
+              name,
+              body: []
+            };
+            push(tag);
+            go(tag);
+            continue;
+          } else if(bind.value.match(/^\/([\w\-]+)/)) {
+            const name = bind.value.match(/^\/([\w\-]+)/)[1];
+            assert(parent.type === 'block' && parent.name == name, `Fragment error: ${parent.name} - ${name}`);
+            return;
           } else throw 'Error binding: ' + bind.value;
         } else {
             addText(readBinding().raw);

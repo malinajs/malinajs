@@ -300,7 +300,7 @@ export function processCSS() {
 function makeDom(data) {
   function build(parent, list) {
     list.forEach(e => {
-      if(e.type == 'fragment' || e.type == 'slot') {
+      if(e.type == 'fragment' || e.type == 'slot' || e.type == 'block') {
         if(e.body && e.body.length) build(parent, e.body);
         return;
       } else if(e.type == 'each') {
