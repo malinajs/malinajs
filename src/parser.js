@@ -1,121 +1,103 @@
 import { assert, last, Q } from './utils.js';
 
 
-export function parse() {
-  let source = this.source;
-  let index = 0;
+class Reader {
+  constructor(source) {
+    if(source instanceof Reader) return source;
+    this.index = 0;
+    this.source = source;
+  }
 
-  const readNext = () => {
-    assert(index < source.length, 'EOF');
-    return source[index++];
-  };
+  read(pattern) {
+    assert(!this.end(), 'EOF');
+    if(pattern == null) {
+      return this.source[this.index++];
+    } else if(pattern instanceof RegExp) {
+      assert(pattern.source[0] == '^');
+      const rx = this.source.substring(this.index).match(pattern);
+      assert(rx && rx.index == 0, 'Wrong syntax');
+      let r = rx[1] || rx[0];
+      this.index += rx[0].length;
+      return r;
+    } else throw 'Not implemented';
+  }
 
-  const probeNext = () => source[index];
-
-  const readTag = () => {
-    let start = index;
-    let a = readNext();
-    assert(a === '<', 'Tag error');
-    let attributes = [];
-    let begin = true;
-    let name = '';
-    let eq, attr_start;
-    let elArg = null;
-
-    const error = (name) => {
-      let e = new Error(name);
-      e.details = source.substring(start, index);
-      throw e;
-    };
-
-    function flush(shift) {
-      if(!attr_start) return;
-      shift = shift || 0;
-      let end = index - 1 + shift;
-      if(elArg === true) {
-        elArg = source.substring(attr_start, end);
-        attr_start = null;
-        eq = null;
-        return;
-      }
-      let a = {
-        content: source.substring(attr_start, end)
-      };
-      if(eq) {
-        a.name = source.substring(attr_start, eq);
-        a.value = source.substring(eq + 1, end);
-        if(a.value[0] == '"' || a.value[0] == '\'') a.value = a.value.substring(1);
-        let i = a.value.length - 1;
-        if(a.value[i] == '"' || a.value[i] == '\'') a.value = a.value.substring(0, i);
-      } else a.name = a.content;
-      attributes.push(a);
-      attr_start = null;
-      eq = null;
+  probe(pattern) {
+    if(pattern instanceof RegExp) {
+      assert(pattern.source[0] == '^');
+      const r = this.source.substring(this.index).match(pattern);
+      if(r) return r[0];
+    } else {
+      if(this.source[this.index] == pattern[0] && this.source.substr(this.index, pattern.length) == pattern) return pattern;
     }
+    return null;
+  }
 
+  probeQuote() {
+    const a = this.source[this.index];
+    return a == '"' || a == "'" || a == '`';
+  }
+
+  readIf(pattern) {
+    const r = this.probe(pattern);
+    if(r != null) this.index += r.length;
+    return r;
+  }
+
+  end() {
+    return this.index >= this.source.length;
+  }
+
+  skip() {
+    while(!this.end()) {
+      if(!this.source[this.index].match(/\s/)) break;
+      this.index++;
+    }
+  }
+
+  readString() {
+    let q = this.read();
+    assert(q == '"' || q == '`' || q == `'`, 'Wrong syntax');
+    let a = null, p, result = q;
     while(true) {
-      a = readNext();
-      if(!begin && !attr_start && a.match(/\S/) && a != '/' && a != '>') attr_start = index - 1;
-      if(a == '"' || a == "'" || a == '`') {
-        while(a != readNext());
-        continue;
-      }
-      if(a == '{') {
-        index--;
-        readBinding();
-        flush(1);
-        continue;
-      }
-      if(a == '}') error('Wrong attr');
-      if(a == '<') error('Wrong tag');
-      if(a == '/') {
-        a = readNext();
-        assert(a == '>');
-        flush(-1);
-      }
-      if(a == '>') {
-        flush();
-        const voidTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
-        let voidTag = voidTags.indexOf(name) >= 0;
-        let closedTag = voidTag || source[index - 2] == '/';
-        return {
-          type: 'node',
-          name,
-          elArg,
-          openTag: source.substring(start, index),
-          start: start,
-          end: index,
-          closedTag,
-          voidTag,
-          attributes
-        };
-      }
-      if(begin) {
-        if(a.match(/[\da-zA-Z^\-]/)) {
-          name += a;
-          continue;
-        } else {
-          begin = false;
-          if(a == ':') {
-            elArg = true;
-            attr_start = index;
-          }
-        }
-      } else if(attr_start) {
-        if(a == '=' && !eq) eq = index - 1;
-        else if(a.match(/\s/)) flush();
-      }
+      p = a;
+      a = this.read()
+      result += a;
+      if(a == q && p != '\\') break;
     }
-  };
+    return result;
+  }
 
-  const readScript = (tag) => {
-    let endTag = `</${tag}>`;
-    let q, a, p, start = index;
+  readAttribute() {
+    let name = '';
+    while(true) {
+      assert(!this.end(), 'EOF');
+      let a = this.source[this.index];
+      if(a == '=' || a == '/' || a == '>' || a == '\t' || a == '\n' || a == '\v' || a == '\f' || a == '\r' || a == ' ' || a == ' ') break;
+      name += a;
+      this.index++;
+    }
+    return name;
+  }
+
+  sub(start, end) {
+    return this.source.substring(start, end || this.index);
+  }
+};
+
+
+export function parseHTML(source) {
+  const reader = new Reader(source);
+
+  const readScript = (reader) => {
+    const start = reader.index;
 
     const readRegExp = () => {
+      assert(reader.read() == '/');
+      let a, p, q;
       while(true) {
         p = a;
-        a = readNext();
+        a = reader.read();
         if(q) {
           if(a != q) continue;
           if(p == '\\') continue;
@@ -128,108 +110,40 @@ export function parse() {
     };
 
     while(true) {
-      p = a;
-      a = readNext();
-      if(q) {
-        if(a != q) continue;
-        if(p == '\\') continue;
-        q = null;
+      if(reader.probeQuote()) {
+        reader.readString();
         continue;
       }
-      if(a == '"' || a == '\'' || a == '`') {
-        q = a;
-        continue;
-      }
-      if(a == '/') {
-        let n = probeNext();
-        if(n == '/') {  // inline comment
-          while(readNext() != '\n');
-          a = null;
-          continue
+      if(reader.probe('/')) {
+        if(reader.readIf('//')) {
+          while(reader.read() != '\n');
+          continue;
         }
-        if(n == '*') {
-          readNext();
-          while(true) {  // multiline comment
-            if(readNext() == '*' && probeNext() == '/') break;
+        if(reader.readIf('/*')) {
+          while(true) {
+            if(reader.read() == '*' && reader.readIf('/')) break;
           }
-          readNext();
-          a = null;
           continue;
         }
         readRegExp();
         continue;
       }
-      if(a == '<') {
-        if(source.substring(index - 1, index + endTag.length - 1) == endTag) {
-          let end = index - 1;
-          index += endTag.length - 1;
-          return source.substring(start, end);
-        }
-      }
+      if(reader.readIf('</script>')) {
+        return reader.sub(start, reader.index - 9);
+      } else reader.read();
     }
-  };
+  }
 
   const readStyle = () => {
-    let start = index;
-    let end = source.substring(start).indexOf('</style>') + start;
-    assert(end >= 0, '<style> is not closed');
-    index = end + 9;
-    return source.substring(start, end);
-  };
-
-  const readBinding = () => {
-    let start = index;
-    assert(readNext() === '{', 'Bind error');
-    let a = null, p, q;
-    let bkt = 1;
-
-    while(true) {
-      p = a;
-      a = readNext();
-
-      if(q) {
-        if(a != q) continue;
-        if(p == '\\') continue;
-        q = null;
-        continue;
-      }
-      if(a == '"' || a == "'" || a == '`') {
-        q = a;
-        continue;
-      }
-      if(a == '*' && p == '/') {
-        // comment block
-        while(true) {
-          p = a;
-          a = readNext();
-          if(a == '/' && p == '*') break;
-        }
-        continue;
-      }
-
-      if(a == '{') {
-        bkt++;
-        continue;
-      }
-      if(a == '}') {
-        bkt--;
-        if(bkt > 0) continue;
-      } else continue;
-
-      return {
-        value: source.substring(start + 1, index - 1),
-        raw: source.substring(start, index)
-      };
-    }
+    return reader.read(/^(.*?)<\/style>/s);
   };
 
   const readComment = () => {
-    let start = index;
-    let end = source.indexOf('-->', start);
-    assert(end >= 0, 'Comment is not closed');
-    end += 3;
-    index = end;
-    return source.substring(start, end);
+    return reader.read(/^<!--.*?-->/s);
+  };
+
+  const readTemplate = () => {
+    return reader.read(/^(.*?)<\/template>/s);
   };
 
   const go = (parent, push) => {
@@ -252,12 +166,11 @@ export function parse() {
       textNode = null;
     };
 
-    while(index < source.length) {
-      let a = source[index];
-      if(a === '<' && source[index + 1].match(/\S/)) {
+    while(!reader.end()) {
+      if(reader.probe('<') && reader.probe(/^<\S/)) {
         flushText();
 
-        if(source.substring(index, index + 4) === '<!--') {
+        if(reader.probe('<!--')) {
           push({
             type: 'comment',
             content: readComment()
@@ -265,14 +178,8 @@ export function parse() {
           continue;
         }
 
-        if(source[index + 1] === '/') { // close tag
-          let name = '';
-          index += 2;
-          while(true) {
-            a = readNext();
-            if(a === '>') break;
-            name += a;
-          }
+        if(reader.readIf('</')) { // close tag
+          let name = reader.read(/^([^>]*)>/);
           name = name.trim();
           if(name) {
             name = name.split(':')[0];
@@ -281,15 +188,15 @@ export function parse() {
           return;
         }
 
-        let tag = readTag();
+        let tag = readTag(reader);
         push(tag);
         if(tag.name === 'script') {
           tag.type = 'script';
-          tag.content = readScript('script');
+          tag.content = readScript(reader);
           continue;
         } else if(tag.name === 'template') {
           tag.type = 'template';
-          tag.content = readScript('template');
+          tag.content = readTemplate();
           continue;
         } else if(tag.name === 'style') {
           tag.type = 'style';
@@ -310,9 +217,9 @@ export function parse() {
           throw e;
         }
         continue;
-      } else if(a === '{') {
-        if(['#', '/', ':', '@', '*'].indexOf(source[index + 1]) >= 0) {
-          let bind = readBinding();
+      } else if(reader.probe('{')) {
+        if(reader.probe(/^\{[#/:@*]/)) {
+          let bind = parseBinding(reader);
           if(bind.value[0] != '*') flushText();
           if(bind.value[0] == '*') {
             addText(bind.raw);
@@ -428,12 +335,12 @@ export function parse() {
             return;
           } else throw 'Error binding: ' + bind.value;
         } else {
-            addText(readBinding().raw);
-            continue;
+          addText(parseBinding(reader).raw);
+          continue;
         }
       }
 
-      addText(readNext());
+      addText(reader.read());
     }
     flushText();
     assert(parent.type === 'root', 'File ends to early');
@@ -445,8 +352,42 @@ export function parse() {
   };
   go(root);
 
-  this.DOM = root;
-}
+  return root;
+};
+
+
+function readTag(reader) {
+  const start = reader.index;
+  assert(reader.read() === '<', 'Tag error');
+
+  let name = reader.read(/^[\da-zA-Z^\-]+/);
+  let elArg = null;
+
+  if(reader.readIf(':')) {
+    elArg = reader.read(/^[^\s>/]+/);
+  }
+
+  let attributes = parseAttibutes(reader, {closedByTag: true});
+
+  let closedTag = false;
+  if(reader.readIf('/>')) closedTag = true;
+  else assert(reader.readIf('>'));
+
+  const voidTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
+  let voidTag = voidTags.indexOf(name) >= 0;
+  if(voidTag) closedTag = true;
+  return {
+    type: 'node',
+    name,
+    elArg,
+    openTag: reader.sub(start),
+    start: start,
+    end: reader.index,
+    closedTag,
+    voidTag,
+    attributes
+  };
+};
 
 
 export function parseText(source) {
@@ -515,4 +456,86 @@ export function parseText(source) {
   });
   result = result.map(p => p.type == 'text' ? '`' + Q(p.value) + '`' : '(' + p.value + ')').join('+');
   return { result, parts, staticText };
+}
+
+
+export const parseBinding = (reader) => {
+  let start = reader.index;
+
+  assert(reader.read() === '{', 'Bind error');
+  let a = null, p, q;
+  let bkt = 1;
+
+  while(true) {
+    p = a;
+    a = reader.read();
+
+    if(q) {
+      if(a != q) continue;
+      if(p == '\\') continue;
+      q = null;
+      continue;
+    }
+    if(a == '"' || a == "'" || a == '`') {
+      q = a;
+      continue;
+    }
+    if(a == '*' && p == '/') {
+      // comment block
+      while(true) {
+        p = a;
+        a = reader.read();
+        if(a == '/' && p == '*') break;
+      }
+      continue;
+    }
+
+    if(a == '{') {
+      bkt++;
+      continue;
+    }
+    if(a == '}') {
+      bkt--;
+      if(bkt > 0) continue;
+    } else continue;
+
+    const raw = reader.sub(start);
+    return {
+      raw,
+      value: raw.substring(1, raw.length - 1),
+    };
+  }
+};
+
+
+export const parseAttibutes = (source, option={}) => {
+  const r = new Reader(source);
+  let result = [];
+
+  while(!r.end()) {
+    r.skip();
+    if(option.closedByTag) {
+      if(r.probe('/>') || r.probe('>')) break;
+    } else if(r.end()) break;
+    let start = r.index;
+    const name = r.readAttribute();
+    assert(name, 'Wrong syntax');
+    if(r.readIf('=')) {
+      if(r.probe('{')) {
+        const {raw} = parseBinding(r);
+        result.push({name, value: raw, raw, content: r.sub(start)});
+      } else if(r.probeQuote()) {
+        const raw = r.readString();
+        const value = raw.substring(1, raw.length - 1);
+        result.push({name, value, raw, content: r.sub(start)});
+      } else {
+        const value = r.readIf(/^\S+/);
+        result.push({name, value, raw: value, content: r.sub(start)});
+      }
+    } else {
+      result.push({name, content: r.sub(start)});
+    }
+  }
+
+  return result;
 }

@@ -15,6 +15,7 @@
 * else-if
 * refactoring $onMount
 * optional deep checking for passed props: prop={value} prop|deep={value}
+* keep-alive
 
 ## 0.6.x
 

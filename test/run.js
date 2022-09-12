@@ -16,7 +16,8 @@ async function main() {
         'pass-css2',
         'css-global',
         'parser1',
-        'event'
+        'event',
+        'parser2'
     ];
 
     for(let i=0; i<tests.length; i++) {

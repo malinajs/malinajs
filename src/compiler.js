@@ -1,7 +1,8 @@
 import { assert, use_context } from './utils.js';
 import { xNode, xBuild } from './xnode.js';
 import { compactDOM } from './compact.js';
-import { parse as parseHTML, parseText } from './parser';
+import { parseHTML, parseText } from './parser';
+export { parseHTML } from './parser';
 import * as codelib from './code';
 import { buildRuntime, buildBlock } from './builder';
 import { processCSS } from './css/index';
@@ -98,7 +99,9 @@ export async function compile(source, config = {}) {
     detectDependency,
 
     DOM: null,
-    parseHTML,
+    parseHTML: function() {
+      this.DOM = parseHTML(this.source);
+    },
     compactDOM,
 
     script: null,
