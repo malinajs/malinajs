@@ -25,6 +25,12 @@ export function buildRuntime() {
     }
   }));
 
+  this.module.head.push(this.glob.keepAliveStore = xNode('$$keepAliveStore', {
+    value: false
+  }, (ctx, n) => {
+    if(n.value) ctx.write(true, `const $$keepAliveStore = new Map();`);
+  }));
+
   this.module.top.push(xNode(this.glob.$onMount, {
   }, (ctx, n) => {
     if(n.value) ctx.write(true, `import { $onMount } from 'malinajs/runtime.js';`);
@@ -462,6 +468,20 @@ export function buildBlock(data, option = {}) {
         if(!n.closedTag) {
           go(n, false, el);
         }
+      } else if(n.type === 'block') {
+        if(n.name == 'keep-alive') {
+          if(isRoot) requireFragment = true;
+          binds.push(xNode('attach-fragment', {
+            label: requireLabel(),
+            block: this.makeKeepAlive(n)
+          }, (ctx, n) => {
+            if(n.label.node) ctx.write(true, `$runtime.insertBlock(${n.label.name}, `);
+            else ctx.write(true, `$runtime.addBlock(${n.label.name}, `);
+            ctx.add(n.block);
+            ctx.write(')');
+          }));
+          return;
+        } else wrapException(`wrong block: "${n.name}"`, n);
       } else if(n.type === 'each') {
         if(data.type == 'node' && data.body.length == 1) {
           let eachBlock = this.makeEachBlock(n, {
