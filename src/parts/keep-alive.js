@@ -1,4 +1,4 @@
-import { assert, trimEmptyNodes } from '../utils.js';
+import { assert, trimEmptyNodes, unwrapExp } from '../utils.js';
 import { xNode } from '../xnode.js';
 import { parseAttibutes } from '../parser.js';
 
@@ -19,7 +19,11 @@ export function makeKeepAlive(node) {
   if(args) {
     args = parseAttibutes(args);
     const a = args.find(a => a.name == 'key');
-    if(a) key = `() => (${a.value})`;
+    if(a) {
+      let value = a.value;
+      if(value[0] == '{') value = unwrapExp(value);
+      key = `() => (${value})`;
+    }
   }
 
   if(!key) key = `() => '$$${this.uniqIndex++}'`;

@@ -126,8 +126,10 @@ async function main() {
           "raw": "{someBinding(\"text\", 2 + 5)}"
         },
         {
-          "content": "{bind}",
-          "name": "{bind}"
+          "name": "bind",
+          "value": "{bind}",
+          "raw": "{bind}",
+          "content": "{bind}"
         }
       ],
       "classes": new Set(),

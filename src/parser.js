@@ -1,4 +1,4 @@
-import { assert, last, Q } from './utils.js';
+import { assert, last, Q, unwrapExp } from './utils.js';
 
 
 class Reader {
@@ -71,12 +71,13 @@ class Reader {
   readAttribute() {
     let name = '';
     while(true) {
-      assert(!this.end(), 'EOF');
+      if(this.end()) break;
       let a = this.source[this.index];
       if(a == '=' || a == '/' || a == '>' || a == '\t' || a == '\n' || a == '\v' || a == '\f' || a == '\r' || a == ' ' || a == ' ') break;
       name += a;
       this.index++;
     }
+    assert(name, 'Syntax error');
     return name;
   }
 
@@ -518,7 +519,7 @@ export const parseAttibutes = (source, option={}) => {
       if(r.probe('/>') || r.probe('>')) break;
     } else if(r.end()) break;
     let start = r.index;
-    const name = r.readAttribute();
+    let name = r.readAttribute();
     assert(name, 'Wrong syntax');
     if(r.readIf('=')) {
       if(r.probe('{')) {
@@ -533,7 +534,12 @@ export const parseAttibutes = (source, option={}) => {
         result.push({name, value, raw: value, content: r.sub(start)});
       }
     } else {
-      result.push({name, content: r.sub(start)});
+      let value;
+      if(name[0] == '{' && last(name) == '}' && !name.startsWith('{...')) {
+        value = name;
+        name = unwrapExp(name);
+      }
+      result.push({name, value, raw: value, content: r.sub(start)});
     }
   }
 
