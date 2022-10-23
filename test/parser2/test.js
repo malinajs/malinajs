@@ -6,10 +6,10 @@ const malinajs = require('malinajs');
 async function main() {
   let root = malinajs.parseHTML(`
     <div>
-      <h1 title="header">Title</h1>
-      <hr>
+      <h1 title="header" *{someValue('start end')}>Title</h1>
+      <hr {* $element.value = "A B"}>
       <span id=1 name|mod:val={someBinding("text", 2 + 5)} {bind}>some text</span>
-      <fragment:some-info />
+      <fragment:some-info {...kw} />
       {binding({a: "}"})}
       <^anchor />
       <!-- comment -->
@@ -62,9 +62,9 @@ async function main() {
       "type": "node",
       "name": "h1",
       "elArg": null,
-      "openTag": "<h1 title=\"header\">",
+      "openTag": "<h1 title=\"header\" *{someValue('start end')}>",
       "start": 17,
-      "end": 36,
+      "end": 62,
       "closedTag": false,
       "voidTag": false,
       "attributes": [
@@ -73,6 +73,10 @@ async function main() {
           "name": "title",
           "value": "header",
           "raw": '"header"'
+        },
+        {
+            "content": "*{someValue('start end')}",
+            "name": "*{someValue('start end')}"
         }
       ],
       "classes": new Set(),
@@ -91,12 +95,17 @@ async function main() {
       "type": "node",
       "name": "hr",
       "elArg": null,
-      "openTag": "<hr>",
-      "start": 53,
-      "end": 57,
+      "openTag": "<hr {* $element.value = \"A B\"}>",
+      "start": 79,
+      "end": 110,
       "closedTag": true,
       "voidTag": true,
-      "attributes": [],
+      "attributes": [
+        {
+            "content": "{* $element.value = \"A B\"}",
+            "name": "{* $element.value = \"A B\"}"
+        }
+      ],
       "classes": new Set()
     },
     {
@@ -108,8 +117,8 @@ async function main() {
       "name": "span",
       "elArg": null,
       "openTag": "<span id=1 name|mod:val={someBinding(\"text\", 2 + 5)} {bind}>",
-      "start": 64,
-      "end": 124,
+      "start": 117,
+      "end": 177,
       "closedTag": false,
       "voidTag": false,
       "attributes": [
@@ -148,12 +157,17 @@ async function main() {
       "type": "node",
       "name": "fragment",
       "elArg": "some-info",
-      "openTag": "<fragment:some-info />",
-      "start": 147,
-      "end": 169,
+      "openTag": "<fragment:some-info {...kw} />",
+      "start": 200,
+      "end": 230,
       "closedTag": true,
       "voidTag": false,
-      "attributes": [],
+      "attributes": [
+        {
+            "content": "{...kw}",
+            "name": "{...kw}"
+        }
+      ],
       "classes": new Set()
     },
     {
@@ -165,8 +179,8 @@ async function main() {
       "name": "^anchor",
       "elArg": null,
       "openTag": "<^anchor />",
-      "start": 202,
-      "end": 213,
+      "start": 263,
+      "end": 274,
       "closedTag": true,
       "voidTag": false,
       "attributes": [],

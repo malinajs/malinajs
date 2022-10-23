@@ -519,27 +519,40 @@ export const parseAttibutes = (source, option={}) => {
       if(r.probe('/>') || r.probe('>')) break;
     } else if(r.end()) break;
     let start = r.index;
-    let name = r.readAttribute();
-    assert(name, 'Wrong syntax');
-    if(r.readIf('=')) {
-      if(r.probe('{')) {
-        const {raw} = parseBinding(r);
-        result.push({name, value: raw, raw, content: r.sub(start)});
-      } else if(r.probeQuote()) {
-        const raw = r.readString();
-        const value = raw.substring(1, raw.length - 1);
-        result.push({name, value, raw, content: r.sub(start)});
+    if(r.probe('{*')) {
+      const {raw} = parseBinding(r);
+      result.push({name: raw, content: raw});
+    } else if(r.probe('*{')) {
+      r.read();
+      let {raw} = parseBinding(r);
+      raw = '*' + raw;
+      result.push({name: raw, content: raw});
+    } else if(r.probe('{...')) {
+      let {raw} = parseBinding(r);
+      result.push({name: raw, content: raw});
+    } else {
+      let name = r.readAttribute();
+      assert(name, 'Wrong syntax');
+      if(r.readIf('=')) {
+        if(r.probe('{')) {
+          const {raw} = parseBinding(r);
+          result.push({name, value: raw, raw, content: r.sub(start)});
+        } else if(r.probeQuote()) {
+          const raw = r.readString();
+          const value = raw.substring(1, raw.length - 1);
+          result.push({name, value, raw, content: r.sub(start)});
+        } else {
+          const value = r.readIf(/^\S+/);
+          result.push({name, value, raw: value, content: r.sub(start)});
+        }
       } else {
-        const value = r.readIf(/^\S+/);
+        let value;
+        if(name[0] == '{' && last(name) == '}' && !name.startsWith('{...')) {
+          value = name;
+          name = unwrapExp(name);
+        }
         result.push({name, value, raw: value, content: r.sub(start)});
       }
-    } else {
-      let value;
-      if(name[0] == '{' && last(name) == '}' && !name.startsWith('{...')) {
-        value = name;
-        name = unwrapExp(name);
-      }
-      result.push({name, value, raw: value, content: r.sub(start)});
     }
   }
 
