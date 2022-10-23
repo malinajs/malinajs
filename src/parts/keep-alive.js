@@ -15,7 +15,7 @@ export function makeKeepAlive(node) {
   }
 
   let key = null;
-  let args = node.value.substr(12);
+  let args = node.value.substr(6);
   if(args) {
     args = parseAttibutes(args);
     const a = args.find(a => a.name == 'key');

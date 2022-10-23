@@ -469,7 +469,7 @@ export function buildBlock(data, option = {}) {
           go(n, false, el);
         }
       } else if(n.type === 'block') {
-        if(n.name == 'keep-alive') {
+        if(n.name == 'keep') {
           if(isRoot) requireFragment = true;
           binds.push(xNode('attach-fragment', {
             label: requireLabel(),
