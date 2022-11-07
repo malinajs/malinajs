@@ -56,7 +56,18 @@ module.exports = {
 
 function malinaPlugin(options={}){
 
-    const cssModules = new Map();
+   const cssModules = new Map();
+
+   options = {
+      ...malinaConfig({}, ''),
+      ...options,
+   };
+  
+    const filter = new RegExp(
+        !options.extension
+           ? `(html|xht|ma)$`
+           : `(${options.extension.join('|')})$`
+    );
 
     if(options.displayVersion !== false) console.log('! Malina.js', malina.version);
 
@@ -79,7 +90,7 @@ function malinaPlugin(options={}){
             });
 
             build.onLoad(
-                { filter: /\.(xht|ma|html)$/ }, 
+                { filter }, 
                 async (args) => {
 
                     let source = await fsp.readFile(args.path, 'utf8');
