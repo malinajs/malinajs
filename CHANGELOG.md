@@ -1,4 +1,22 @@
 
+## 0.7.x
+* refactoring, optimization, fixes
+* export function
+* manual event delegation @click|root
+* able to delay destroying block (for animations)
+* be able to off autosubscribe for import: !no-autosubscribe
+* destructuring array/object for each
+* functions mount, mountStatic
+* each, index variable is not included by default
+* reference to element is removed on destroying
+* config.useGroupReferencing
+* action can return destroy function (not only object)
+* each-else
+* else-if
+* refactoring $onMount
+* optional deep checking for passed props: prop={value} prop|deep={value}
+* keep-alive
+
 ## 0.6.x
 
 * style's attribute "global"
@@ -26,6 +44,13 @@
 * compile option: debugLabel
 * slot for fragment
 * exported fragments (inverted slots)
+* <malina:head>, <malina:body>, <malina:window>
+* option: passClass
+* option: immutable
+* event modifiers: prevent, stop, ctrl, alt, shift, meta. key-events: enter, tab, esc, space, up, down, left, right, delete
+* inline actions for text-node and elements
+* portals: <malina:portal>
+* autoimport
 
 ## 0.5.x
 

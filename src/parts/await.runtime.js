@@ -1,46 +1,64 @@
+import { removeElements } from '../runtime/base';
+import { $watch, keyComparator, cd_component, cd_new, cd_attach, cd_detach } from '../runtime/cd';
+import * as share from '../runtime/share.js';
+import { safeGroupCall, safeGroupCall2 } from '../runtime/utils.js';
 
-import { $$removeElements, firstChild, insertAfter } from '../runtime/base';
-import { $watch, $$deepComparator } from '../runtime/cd';
 
-export function $$awaitBlock($cd, label, relation, fn, $$apply, build_main, tpl_main, build_then, tpl_then, build_catch, tpl_catch) {
-    let promise, childCD;
-    let first, last, status = 0;
+export function awaitBlock(label, parentLabel, relation, fn, build_main, build_then, build_catch) {
+  let parentCD = share.current_cd, first, last, $cd, promise, destroyList, status = 0;
+  share.$onDestroy(() => safeGroupCall(destroyList));
 
-    function remove() {
-        if(!childCD) return;
-        childCD.destroy();
-        childCD = null;
-        $$removeElements(first, last);
-        first = last = null;
-    };
+  function destroyBlock() {
+    if(!first) return;
 
-    function render(build, tpl, value) {
-        if(childCD) remove();
-        if(!tpl) return;
-        childCD = $cd.new();
-        let fr = tpl.cloneNode(true);
-        build(childCD, fr, value);
-        $$apply();
-        first = fr[firstChild];
-        last = fr.lastChild;
-        insertAfter(label, fr);
-    };
+    safeGroupCall(destroyList);
+    destroyList.length = 0;
+    if($cd) {
+      cd_detach($cd);
+      $cd = null;
+    }
+    removeElements(first, last);
+    first = last = null;
+  }
 
-    $watch($cd, relation, () => {
-        let p = fn();
-        if(status !== 1) render(build_main, tpl_main);
-        status = 1;
-        if(p && p instanceof Promise) {
-            promise = p;
-            promise.then(value => {
-                status = 2;
-                if(promise !== p) return;
-                render(build_then, tpl_then, value);
-            }).catch(value => {
-                status = 3;
-                if(promise !== p) return;
-                render(build_catch, tpl_catch, value);
-            });
-        }
-    }, {ro: true, cmp: $$deepComparator(1)})
+  function render(builder, value) {
+    destroyBlock();
+
+    if(!builder) return;
+    destroyList = share.current_destroyList = [];
+    $cd = share.current_cd = cd_new(parentCD);
+    let $dom, mountList = share.current_mountList = [];
+    try {
+      $dom = builder(value);
+    } finally {
+      share.current_destroyList = share.current_mountList = share.current_cd = null;
+    }
+    cd_attach(parentCD, $cd);
+    if($dom.nodeType == 11) {
+      first = $dom.firstChild;
+      last = $dom.lastChild;
+    } else first = last = $dom;
+    if(parentLabel) label.appendChild($dom);
+    else label.parentNode.insertBefore($dom, label);
+    safeGroupCall2(mountList, destroyList);
+    cd_component(parentCD).$apply();
+  }
+
+  $watch(relation, () => {
+    let p = fn();
+    if(status !== 1) render(build_main);
+    status = 1;
+    if(p && p instanceof Promise) {
+      promise = p;
+      promise.then(value => {
+        status = 2;
+        if(promise !== p) return;
+        render(build_then, value);
+      }).catch(value => {
+        status = 3;
+        if(promise !== p) return;
+        render(build_catch, value);
+      });
+    }
+  }, { value: [], cmp: keyComparator });
 }

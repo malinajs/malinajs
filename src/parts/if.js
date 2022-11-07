@@ -1,76 +1,69 @@
+import { assert } from '../utils.js';
+import { xNode } from '../xnode.js';
 
-import { assert, xNode } from '../utils.js'
 
+export function makeifBlock(data, label) {
+  const getBlock = b => {
+    if(b.singleBlock) {
+      return xNode('make-block', {
+        block: b.singleBlock
+      }, (ctx, n) => {
+        ctx.write('() => ');
+        ctx.add(n.block);
+      });
+    }
+    return b.block;
+  };
 
-export function makeifBlock(data, element) {
-    let r = data.value.match(/^#if (.*)$/);
-    let exp = r[1];
-    assert(exp, 'Wrong binding: ' + data.value);
+  let elseBlock, parts = [];
+  data.parts.forEach(part => {
+    let rx = part.value.match(/^(#if|:elif|:else\s+if)\s(.*)$/s);
+    let exp = rx[2]?.trim();
+    assert(exp, 'Wrong binding: ' + part.value);
     this.detectDependency(exp);
-    this.require('$cd');
+    parts.push({
+      exp,
+      block: getBlock(this.buildBlock(part, { allowSingleBlock: true }))
+    });
+  });
+  if(data.elsePart) elseBlock = getBlock(this.buildBlock({ body: data.elsePart }, { allowSingleBlock: true }));
 
-    let mainBlock, elseBlock, mainTpl, elseTpl;
-
-    if(data.bodyMain) {
-        mainBlock = this.buildBlock({body: data.bodyMain}, {protectLastTag: true, inline: true});
-        elseBlock = this.buildBlock(data, {protectLastTag: true, inline: true});
-
-        elseTpl = xNode('template', {
-            inline: true,
-            body: elseBlock.tpl,
-            svg: elseBlock.svg
-        });
+  return xNode('if:bind', {
+    $wait: ['apply'],
+    label,
+    parts,
+    elseBlock
+  }, (ctx, n) => {
+    if(this.inuse.apply) {
+      ctx.write(true, `$runtime.ifBlock(${n.label.name}, `);
     } else {
-        mainBlock = this.buildBlock(data, {protectLastTag: true, inline: true});
+      ctx.write(true, `$runtime.ifBlockReadOnly(${n.label.name}, `);
     }
 
-    mainTpl = xNode('template', {
-        inline: true,
-        body: mainBlock.tpl,
-        svg: mainBlock.svg
+    if(n.parts.length == 1) {
+      if(n.elseBlock) ctx.write(`() => (${n.parts[0].exp}) ? 0 : 1`);
+      else ctx.write(`() => (${n.parts[0].exp}) ? 0 : null`);
+      ctx.indent++;
+    } else {
+      ctx.write(`() => {`);
+      ctx.indent++;
+      n.parts.forEach((p, i) => {
+        ctx.write(true, `if(${p.exp}) return ${i};`);
+      });
+      if(n.elseBlock) ctx.write(true, `return ${n.parts.length};`);
+      ctx.write(true, `}`);
+    }
+    ctx.write(`, [`);
+    n.elseBlock && n.parts.push({ block: n.elseBlock });
+    n.parts.forEach((p, i) => {
+      if(i) ctx.write(', ');
+      ctx.add(p.block);
     });
+    ctx.write(']');
 
-    const source = xNode('if:bind', {
-        el: element.bindName(),
-        exp,
-        mainTpl,
-        mainBlock: mainBlock.source,
-        elseTpl,
-        elseBlock: elseBlock && elseBlock.source
-    },
-    (ctx, data) => {
-        ctx.writeLine(`$runtime.$$ifBlock($cd, ${data.el}, () => !!(${data.exp}),`);
-        ctx.indent++;
-        ctx.writeIndent();
-        ctx.build(data.mainTpl);
-        ctx.write(',\n');
-        ctx.writeIndent();
-        if(data.mainBlock) {
-            ctx.build(xNode('function', {
-                inline: true,
-                arrow: true,
-                args: ['$cd', '$parentElement'],
-                body: [data.mainBlock]
-            }));
-        } else ctx.write('$runtime.noop');
-        if(data.elseTpl) {
-            ctx.write(',\n');
-            ctx.writeIndent();
-            ctx.build(data.elseTpl);
-            ctx.write(',\n');
-            ctx.writeIndent();
-            if(data.elseBlock) {
-                ctx.build(xNode('function', {
-                    inline: true,
-                    arrow: true,
-                    args: ['$cd', '$parentElement'],
-                    body: [data.elseBlock]
-                }));
-            } else ctx.write('$runtime.noop');
-        }
-        ctx.indent--;
-        ctx.write(');\n');
-    });
-
-    return {source};
-};
+    ctx.indent--;
+    ctx.write(true);
+    if(!n.label.node) ctx.write(', true');
+    ctx.write(');', true);
+  });
+}

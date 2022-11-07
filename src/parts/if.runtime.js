@@ -1,35 +1,64 @@
+import { removeElements } from '../runtime/base';
+import { $watch, cd_new, cd_attach, cd_detach } from '../runtime/cd';
+import * as share from '../runtime/share';
+import { safeGroupCall2 } from '../runtime/utils';
 
-import { $$removeElements, firstChild, insertAfter } from '../runtime/base';
-import { $watch } from '../runtime/cd';
 
-export function $$ifBlock($cd, $parentElement, fn, tpl, build, tplElse, buildElse) {
-    let childCD;
-    let first, last;
+export function ifBlock(label, fn, parts, parentLabel) {
+  let first, last, $cd, destroyList, parentCD = share.current_cd;
+  share.$onDestroy(() => safeGroupCall2(destroyList, share.destroyResults));
 
-    function create(fr, builder) {
-        childCD = $cd.new();
-        let tpl = fr.cloneNode(true);
-        builder(childCD, tpl);
-        first = tpl[firstChild];
-        last = tpl.lastChild;
-        insertAfter($parentElement, tpl);
-    };
+  function createBlock(builder) {
+    let $dom;
+    destroyList = share.current_destroyList = [];
+    let mountList = share.current_mountList = [];
+    $cd = share.current_cd = cd_new(parentCD);
+    try {
+      $dom = builder();
+    } finally {
+      share.current_destroyList = share.current_mountList = share.current_cd = null;
+    }
+    cd_attach(parentCD, $cd);
+    if($dom.nodeType == 11) {
+      first = $dom.firstChild;
+      last = $dom.lastChild;
+    } else first = last = $dom;
+    if(parentLabel) label.appendChild($dom);
+    else label.parentNode.insertBefore($dom, label);
+    safeGroupCall2(mountList, destroyList);
+  }
 
-    function destroy() {
-        if(!childCD) return;
-        childCD.destroy();
-        childCD = null;
-        $$removeElements(first, last);
-        first = last = null;
-    };
+  function destroyBlock() {
+    if(!first) return;
+    share.destroyResults = [];
+    safeGroupCall2(destroyList, share.destroyResults);
+    destroyList.length = 0;
+    if($cd) {
+      cd_detach($cd);
+      $cd = null;
+    }
+    if(share.destroyResults.length) {
+      let f = first, l = last;
+      Promise.allSettled(share.destroyResults).then(() => {
+        removeElements(f, l);
+      });
+    } else removeElements(first, last);
+    first = last = null;
+    share.destroyResults = null;
+  }
 
-    $watch($cd, fn, (value) => {
-        if(value) {
-            destroy();
-            create(tpl, build);
-        } else {
-            destroy();
-            if(buildElse) create(tplElse, buildElse);
-        }
-    });
-};
+  $watch(fn, (value) => {
+    destroyBlock();
+    if(value != null) createBlock(parts[value]);
+  });
+}
+
+
+export function ifBlockReadOnly(label, fn, parts, parentLabel) {
+  let value = fn();
+  if(value != null) {
+    const $dom = parts[value]();
+    if(parentLabel) label.appendChild($dom);
+    else label.parentNode.insertBefore($dom, label);
+  }
+}

@@ -1,9 +1,12 @@
-node_modules/
-example/public/app*
+/node_modules/
+/example/public/*.js
+/example/public/*.js.br
+/example/*.xht
 .vscode/
-info
+/info
 /malina.js
 /malina.js.map
 /compile.js
 /compile.js.map
 /runtime.js
+/old

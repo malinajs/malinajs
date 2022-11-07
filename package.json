@@ -1,6 +1,6 @@
 {
   "name": "malinajs",
-  "version": "0.6.25",
+  "version": "0.7.2-a7",
   "license": "MIT",
   "scripts": {
     "prepare": "npm run build",
@@ -12,11 +12,12 @@
     "web": "http-server ./example/public",
     "test": "NODE_PATH=.. node ./node_modules/.bin/mocha ./test/run.js",
     "test-debug": "NODE_PATH=.. node --inspect-brk ./node_modules/.bin/mocha ./test/run.js",
-    "brotli": "brotli --input /app/malinajs/example/public/app.min.js --output /app/malinajs/example/public/app.min.js.br; brotli --input /app/malinajs/example/public/app.min2.js --output /app/malinajs/example/public/app.min2.js.br"
+    "brotli": "brotli --input /app/malinajs/example/public/app.min.js --output /app/malinajs/example/public/app.min.js.br; brotli --input /app/malinajs/example/public/app.min2.js --output /app/malinajs/example/public/app.min2.js.br",
+    "fix": "npx standardx --fix ./src/"
   },
   "dependencies": {
-    "acorn": "^7.3.1",
-    "astring": "^1.4.3",
+    "acorn": "^8.7.1",
+    "astring": "^1.8.3",
     "css-tree": "^1.0.0-alpha.39"
   },
   "devDependencies": {
@@ -29,12 +30,12 @@
     "rollup": "^2.17.1",
     "rollup-plugin-css-only": "^3.1.0",
     "terser": "^5.4.0",
-    "uglify-js": "^3.13.7"
+    "uglify-js": "^3.13.7",
+    "standardx": "^7.0.0"
   },
   "main": "malina",
   "files": [
     "malina.js",
-    "compile.js",
     "runtime.js",
     "malina-rollup.js",
     "malina-esbuild.js",

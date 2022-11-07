@@ -13,7 +13,7 @@ async function main(build) {
 
     await tick();
 
-    assert.strictEqual(document.body.innerHTML.trim(), '<p>No.0 One</p><p>No.1 Two</p><p>No.2 Three</p>');
+    assert.strictEqual(document.body.innerHTML.trim(), '<p>No.0 One</p><p>No.1 Two</p><p>No.2 Three</p><!---->');
     
 }
 

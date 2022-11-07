@@ -1,4 +1,6 @@
 
+import { mount } from 'malinajs/runtime.js';
 import App from 'main.xht';
 
-window.app = App(document.body);
+document.body.innerHTML = '';
+window.app = mount(document.body, App, window.$$option);

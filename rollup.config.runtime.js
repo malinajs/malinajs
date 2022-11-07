@@ -4,5 +4,9 @@ export default {
     output: {
         file: './runtime.js',
         format: 'es'
+    },
+    onwarn(w, warn) {
+        if(w.code == 'ILLEGAL_NAMESPACE_REASSIGNMENT' && w.message.includes("'share'")) return;
+        warn(w);
     }
 }

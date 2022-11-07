@@ -1,474 +1,444 @@
-
-import { assert, detectExpressionType, isSimpleName, unwrapExp, xNode, last, toCamelCase } from '../utils.js'
+import { assert, detectExpressionType, isSimpleName, unwrapExp, last, toCamelCase, replaceKeyword, Q } from '../utils.js';
+import { xNode } from '../xnode.js';
 
 
 export function bindProp(prop, node, element) {
-    let name, arg;
-    if(prop.name[0] == '@') {
-        arg = prop.name.substring(1);
-        name = 'on';
-    }
-    if(!name && prop.name[0] == ':') {
-        name = 'bind';
-        arg = prop.name.substring(1);
-    }
-    if(!name && prop.name[0] == '*') {
-        let rx = prop.name.match(/^\*\{.*\}$/);
-        if(rx) {
-            assert(prop.value == null, 'wrong binding: ' + prop.content);
-            name = 'use';
-            prop.value = prop.name.substring(1);
-        } else {
-            name = 'use';
-            arg = prop.name.substring(1);
-        }
-    }
-    if(!name && prop.value == null) {
-        let rx = prop.name.match(/^\{(.*)\}$/);
-        if(rx) {
-            name = rx[1];
-            if(name.startsWith('...')) {
-                // spread operator
-                name = name.substring(3);
-                assert(detectExpressionType(name) == 'identifier');
-                return {bind: `${node.spreadObject}.spread(() => ${name});`};
-            } else {
-                prop.value = prop.name;
-            }
-        }
-    }
-    if(!name) {
-        let r = prop.name.match(/^(\w+)\:(.*)$/)
-        if(r) {
-            name = r[1];
-            arg = r[2];
-        } else name = prop.name;
-    }
+  let name, arg;
 
-    const isExpression = s => s[0] == '{' && last(s) == '}';
+  if(prop.content.startsWith('{*')) {
+    const pe = this.parseText(prop.content);
+    assert(pe.parts[0].type == 'js');
+    let exp = pe.parts[0].value;
+    if(!exp.endsWith(';')) exp += ';';
+    return {
+      bind: xNode('block', {
+        body: [
+          replaceKeyword(exp, (name) => name == '$element' ? element.bindName() : null, true)
+        ]
+      })
+    };
+  }
 
-    const getExpression = () => {
-        let exp = prop.value.match(/^\{(.*)\}$/)[1];
-        assert(exp, prop.content);
-        return exp;
-    }
-
-    if(name[0] == '#') {
-        let target = name.substring(1);
-        assert(isSimpleName(target), target);
-        this.checkRootName(target);
-        return {bind: `${target}=${element.bindName()};`};
-    } else if(name == 'on') {
-        if(arg == '@') {
-            this.require('$cd');
-            assert(!prop.value);
-            const bind = xNode('forwardAllEvents', {
-                el: element.bindName()
-            }, (ctx, data) => {
-                ctx.writeLine(`for(let event in $option.events)`);
-                ctx.goIndent(() => {
-                    ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, event, $option.events[event]);`);
-                });
-            });
-            return {bind};
-        }
-        let mod = '', opts = arg.split(/[\|:]/);
-        let event = opts.shift();
-        let exp, handler, funcName;
-
-        if(event[0] == '@') {  // forwarding
-            event = event.substring(1);
-            assert(!prop.value);
-            this.require('$cd');
-            return {bind: xNode('forwardEvent', {
-                event,
-                el: element.bindName()
-            }, (ctx, n) => {
-                ctx.writeLine(`$option.events?.${n.event} && $runtime.addEvent($cd, ${n.el}, '${n.event}', $option.events.${n.event});`);
-            })};
-        }
-
-        if(prop.value) {
-            exp = getExpression();
-        } else {
-            if(opts.length) handler = opts.pop();
-            else handler = event;
-        };
-        assert(event, prop.content);
-        assert(!handler ^ !exp, prop.content);
-
-        let needPrevent, preventInserted;
-        opts.forEach(opt => {
-            if(opt == 'preventDefault' || opt == 'prevent') {
-                if(preventInserted) return;
-                mod += '$event.preventDefault();';
-                preventInserted = true;
-            } else if(opt == 'stopPropagation' || opt == 'stop') {
-                mod += '$event.stopPropagation();';
-            } else if(opt == 'enter') {
-                mod += 'if($event.keyCode != 13) return;';
-                needPrevent = true;
-            } else if(opt == 'escape') {
-                mod += 'if($event.keyCode != 27) return;';
-                needPrevent = true;
-            } else throw 'Wrong modificator: ' + opt;
-        });
-        if(needPrevent && !preventInserted) mod += '$event.preventDefault();';
-        if(mod) mod += ' ';
-
-        this.detectDependency(exp || handler);
-
-        if(exp) {
-            let type = detectExpressionType(exp);
-            if(type == 'identifier') {
-                handler = exp;
-                exp = null;
-            } else if(type == 'function') {
-                funcName = 'fn' + (this.uniqIndex++);
-            };
-        }
-
-        if(funcName) {
-            this.require('$cd');
-            if(!this.script.readOnly) this.require('apply');
-            let bind = xNode('bindEvent', {
-                event,
-                mod,
-                funcName,
-                exp,
-                el: element.bindName(),
-                $element: exp.includes('$element')
-            }, (ctx, n) => {
-                if(n.$element) {
-                    ctx.writeLine('{');
-                    ctx.indent++;
-                    ctx.writeLine(`let $element=${n.el};`)
-                }
-                ctx.writeLine(`const ${n.funcName} = ${n.exp};`);
-                let apply = ctx.inuse.apply ? ' $$apply();' : '';
-                ctx.writeLine(`$runtime.addEvent($cd, ${n.el}, '${n.event}', ($event) => { ${n.mod}${n.funcName}($event);${apply} });`);
-                if(n.$element) {
-                    ctx.indent--;
-                    ctx.writeLine('}');
-                }
-            });
-            return {bind};
-        } else {
-            this.require('$cd');
-            if(!this.script.readOnly) this.require('apply');
-            const bind = xNode('bindEvent', {
-                el: element.bindName(),
-                event,
-                mod
-            }, (ctx, data) => {
-                let l = data.$element ? `let $element=${data.el}; ` : '';
-                if(data.handlerName && !ctx.inuse.apply && !data.mod) {
-                    ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, '${data.event}', ${data.handlerName});`);
-                } else {
-                    let exp = data.handlerName ? `${data.handlerName}($event);` : data.exp;
-                    let apply = ctx.inuse.apply ? ' $$apply();' : '';
-                    ctx.writeLine(`$runtime.addEvent($cd, ${data.el}, '${data.event}', ($event) => { ${l}${data.mod}${exp};${apply} });`);
-                }
-            });
-
-            if(handler) {
-                this.checkRootName(handler);
-                bind.handlerName = handler;
-            } else {
-                bind.exp = this.Q(exp);
-                bind.$element = exp.includes('$element');
-            }
-
-            return {bind};
-        }
-    } else if(name == 'bind') {
-        if(this.script.readOnly) {
-            this.warning('script read-only conflicts with bind: ' + node.openTag);
-            return;
-        }
-
-        this.require('apply', '$cd');
-        let exp;
-        arg = arg.split(/[\:\|]/);
-        let attr = arg.shift();
-        assert(attr, prop.content);
-
-        if(prop.value) exp = getExpression();
-        else {
-            if(arg.length) exp = arg.pop();
-            else exp = attr;
-        }
-        let inputType = null;
-        if(node.name == 'input') {
-            node.attributes.some(a => {
-                if(a.name == 'type') {
-                    inputType = a.value;
-                    return true;
-                }
-            });
-        }
-
-        assert(['value', 'checked', 'valueAsNumber', 'valueAsDate', 'selectedIndex'].includes(attr), 'Not supported: ' + prop.content);
-        assert(arg.length == 0);
-        assert(detectExpressionType(exp) == 'identifier', 'Wrong bind name: ' + prop.content);
-        if(attr == 'value' && ['number', 'range'].includes(inputType)) attr = 'valueAsNumber';
-        this.detectDependency(exp);
-
-        let spreading = '';
-        if(node.spreadObject) spreading = `${node.spreadObject}.except(['${attr}']);`;
-
-        let argName = 'a' + (this.uniqIndex++);
-
-        return {bind: xNode('bindInput', {
-            el: element.bindName()
-        }, (ctx, n) => {
-            if(spreading) ctx.writeLine(spreading);
-            ctx.writeLine(`$runtime.bindInput($cd, ${n.el}, '${attr}', () => ${exp}, ${argName} => {${exp} = ${argName}; $$apply();});`);
-        })};
-    } else if(name == 'style' && arg) {
-        let styleName = toCamelCase(arg);
-        let exp;
-        if(prop.value) {
-            if(isExpression(prop.value)) {
-                exp = getExpression();
-                this.detectDependency(exp);
-            } else {
-                if(prop.value.includes('{')) {
-                    const parsed = this.parseText(prop.value);
-                    this.detectDependency(parsed);
-                    exp = parsed.result;
-                } else {
-                    return {bind: xNode('staticStyle', {
-                        el: element.bindName(),
-                        name: styleName,
-                        value: prop.value
-                    }, (ctx, n) => {
-                        ctx.writeLine(`${n.el}.style.${n.name} = \`${this.Q(n.value)}\`;`);
-                    })};
-                }
-            }
-        } else {
-            exp = styleName;
-        }
-
-        let hasElement = exp.includes('$element');
-        return {bind: xNode('block', {
-            scope: hasElement,
-            body: [xNode('bindStyle', {
-                el: element.bindName(),
-                styleName,
-                exp,
-                hasElement
-            }, (ctx, n) => {
-                if(n.hasElement) ctx.writeLine(`let $element=${n.el};`);
-                if(ctx.inuse.apply) {
-                    ctx.writeLine(`$runtime.bindStyle($cd, ${n.el}, '${n.styleName}', () => (${n.exp}));`);
-                } else {
-                    ctx.writeLine(`${n.el}.style.${n.styleName} = ${n.exp};`);
-                }
-            })]
-        })};
-    } else if(name == 'use') {
-        if(arg) {
-            this.require('$cd');
-            assert(isSimpleName(arg), 'Wrong name: ' + arg);
-            this.checkRootName(arg);
-            let args = prop.value ? `, () => [${getExpression()}]` : '';
-            this.detectDependency(args);
-            return {bind: xNode('action', {
-                name: arg,
-                args,
-                el: element.bindName()
-            }, (ctx, n) => {
-                if(ctx.inuse.apply) {
-                    let args = n.args || ', null';
-                    ctx.writeLine(`$runtime.bindAction($cd, ${n.el}, ${n.name}${args}, $runtime.__bindActionSubscribe);`);
-                } else {
-                    ctx.writeLine(`$runtime.bindAction($cd, ${n.el}, ${n.name}${n.args});`);
-                }
-            })}
-        }
-        let exp = getExpression();
-        this.detectDependency(exp);
-        let hasElement = exp.includes('$element');
-        return {bind: xNode('inline-action', {
-            exp,
-            el: hasElement && element.bindName(),
-            element,
-            hasElement
-        }, (ctx, n) => {
-            ctx.writeLine(`$tick(() => {`);
-            ctx.goIndent(() => {
-                if(n.hasElement) ctx.writeLine(`let $element=${n.el};`);
-                ctx.writeLine(n.exp);
-                if(ctx.inuse.apply) ctx.writeLine('$$apply();');
-            });
-            ctx.writeLine(`});`);
-        })}
-    } else if(name == 'class') {
-        if(node.__skipClass) return {};
-        node.__skipClass = true;
-
-        let props = node.attributes.filter(a => a.name == 'class' || a.name.startsWith('class:'));
-
-        let compound = false;
-        props.forEach(prop => {
-            let classes = [];
-            if(prop.name == 'class') {
-                if(!prop.value) return;
-                let parsed = this.parseText(prop.value);
-                for(let p of parsed.parts) {
-                    if(p.type == 'text') {
-                        classes = classes.concat(p.value.trim().split(/\s+/));
-                    } else if(p.type == 'exp') compound = true;
-                }
-            } else {
-                classes = [prop.name.slice(6)];
-            }
-            return classes.some(name => {
-                if(this.css.isExternalClass(name)) compound=true;
-                else if(name[0] == '$') {
-                    this.css.markAsExternal(name.substring(1));
-                    compound = true;
-                }
-            });
-        });
-
-        if(compound) {
-            let defaultHash = '';
-            if(node.classes.has(this.css.id)) defaultHash = this.css.id;
-            node.classes.clear();
-            this.require('resolveClass');
-            let exp = props.map(prop => {
-                if(prop.name == 'class') {
-                    return this.parseText(prop.value).result;
-                } else {
-                    let className = prop.name.slice(6);
-                    assert(className);
-                    let exp = prop.value ? unwrapExp(prop.value) : className;
-                    this.detectDependency(exp);
-                    return `(${exp}) ? \`${this.Q(className)}\` : ''`;
-                }
-            }).join(') + \' \' + (');
-            const bind = xNode('compound-class', {
-                el: element.bindName(),
-                exp,
-                defaultHash
-            }, (ctx, n) => {
-                let base = n.defaultHash ? `,'${n.defaultHash}'` : '';
-                if(ctx.inuse.apply) {
-                    ctx.writeLine(`$watchReadOnly($cd, () => $$resolveClass((${n.exp})${base}), value => $runtime.setClassToElement(${n.el}, value));`);
-                } else {
-                    ctx.writeLine(`$runtime.setClassToElement(${n.el}, $$resolveClass((${n.exp})${base}));`);
-                }
-            });
-            return {bind};
-        } else {
-            let bind = xNode('block');
-            props.forEach(prop => {
-                if(prop.name == 'class') {
-                    prop.value && prop.value.trim().split(/\s+/).forEach(name => {
-                        node.classes.add(name);
-                    });
-                } else {
-                    let className = prop.name.slice(6);
-                    assert(className);
-                    let exp = prop.value ? unwrapExp(prop.value) : className;
-                    this.detectDependency(exp);
-                    bind.push(xNode('bindClass', {
-                        el: element.bindName(),
-                        className,
-                        exp,
-                        $element: exp.includes('$element')
-                    }, (ctx, n) => {
-                        if(n.$element) {
-                            ctx.writeLine(`{`);
-                            ctx.indent++;
-                            ctx.writeLine(`let $element = ${n.el};`)
-                        }
-                        if(ctx.inuse.apply) {
-                            ctx.writeLine(`$runtime.bindClass($cd, ${n.el}, () => !!(${n.exp}), '${n.className}');`)
-                        } else {
-                            ctx.writeLine(`(${n.exp}) && $runtime.addClass(${n.el}, '${n.className}');`)
-                        }
-                        if(n.$element) {
-                            ctx.indent--;
-                            ctx.writeLine(`}`);
-                        }
-                    }));
-                }
-            });
-            return {bind};
-        }
-    } else if(name[0] == '^') {
-        this.require('$cd');
-        return {bindTail: xNode('bindAnchor', {
-            name: name.slice(1) || 'default',
-            el: element.bindName()
-        }, (ctx, n) => {
-            ctx.writeLine(`$runtime.attachAnchor($option, $cd, '${n.name}', ${n.el});`)
-        })};
+  if(prop.name[0] == '@' || prop.name.startsWith('on:')) name = 'event';
+  else if(prop.name[0] == ':') {
+    name = 'bind';
+    arg = prop.name.substring(1);
+  } else if(prop.name[0] == '*') {
+    let rx = prop.name.match(/^\*\{.*\}$/);
+    if(rx) {
+      assert(prop.value == null, 'wrong binding: ' + prop.content);
+      name = 'use';
+      prop.value = prop.name.substring(1);
     } else {
-        if(prop.value && prop.value.indexOf('{') >= 0) {
-            const parsed = this.parseText(prop.value);
-            this.detectDependency(parsed);
-            let exp = parsed.result;
-            let hasElement = prop.value.includes('$element');
-
-            if(node.spreadObject) {
-                return {bind: `
-                    ${node.spreadObject}.prop('${name}', () => ${exp});
-                `};
-            }
-            const propList = {
-                hidden: true,
-                checked: true,
-                value: true,
-                disabled: true,
-                selected: true,
-                innerHTML: true,
-                innerText: true,
-                placeholder: true,
-                src: true
-            }
-
-            return {bind: xNode('block', {
-                scope: hasElement,
-                body: [
-                    xNode('bindAttribute', {
-                        name,
-                        exp,
-                        hasElement,
-                        el: element.bindName()
-                    }, (ctx, data) => {
-                        if(data.hasElement) ctx.writeLine(`let $element=${data.el};`);
-                        if(propList[name]) {
-                            if(ctx.inuse.apply) {
-                                ctx.writeLine(`$watchReadOnly($cd, () => (${data.exp}), (value) => {${data.el}.${name} = value;});`);
-                            } else {
-                                ctx.writeLine(`${data.el}.${name} = ${data.exp};`);
-                            }
-                        } else {
-                            if(ctx.inuse.apply) {
-                                ctx.writeLine(`$runtime.bindAttribute($cd, ${data.el}, '${data.name}', () => (${data.exp}));`);
-                            } else {
-                                ctx.writeLine(`$runtime.bindAttributeBase(${data.el}, '${data.name}', ${data.exp});`);
-                            }
-                        }
-                    })
-                ]
-            })};
-        }
-
-        if(node.spreadObject) {
-            return {bind: `
-                ${node.spreadObject}.attr('${name}', '${prop.value}');
-            `};
-        }
-
-        element.attributes.push({
-            name: prop.name,
-            value: prop.value
-        });
+      name = 'use';
+      arg = prop.name.substring(1);
     }
-};
+  } else if(prop.value == null) {
+    let rx = prop.name.match(/^\{(.*)\}$/);
+    if(rx) {
+      name = rx[1];
+      if(name.startsWith('...')) {
+        // spread operator
+        name = name.substring(3);
+        assert(detectExpressionType(name) == 'identifier');
+        this.detectDependency(name);
+        return node.spreading.push(`...${name}`);
+      } else {
+        prop.value = prop.name;
+      }
+    }
+  }
+  if(!name) {
+    let r = prop.name.match(/^(\w+):(.*)$/);
+    if(r) {
+      name = r[1];
+      arg = r[2];
+    } else name = prop.name;
+  }
+
+  const isExpression = s => s[0] == '{' && last(s) == '}';
+
+  const getExpression = () => {
+    let exp = prop.value.match(/^\{(.*)\}$/)[1];
+    assert(exp, prop.content);
+    return exp;
+  };
+
+  if(name[0] == '#') {
+    let target = name.substring(1);
+    assert(detectExpressionType(target) == 'identifier', name);
+    return {
+      bind: xNode('reference-to-element', {
+        target,
+        el: element.bindName()
+      }, (ctx, n) => {
+        ctx.write(true, `${n.target} = ${n.el};`);
+        ctx.write(true, `$runtime.$onDestroy(() => ${n.target} = null);`);
+      })
+    };
+  } else if(name == 'event') {
+    if(prop.name.startsWith('@@')) {
+      assert(!prop.value);
+      this.require('$events');
+      if(prop.name == '@@') {
+        return {
+          bind: xNode('forwardAllEvents', {
+            el: element.bindName()
+          }, (ctx, data) => {
+            ctx.writeLine('for(let event in $events)');
+            ctx.goIndent(() => {
+              ctx.writeLine(`$runtime.addEvent(${data.el}, event, $events[event]);`);
+            });
+          })
+        };
+      }
+
+      return {
+        bind: xNode('forwardEvent', {
+          event: prop.name.substring(2),
+          el: element.bindName()
+        }, (ctx, n) => {
+          ctx.writeLine(`$events.${n.event} && $runtime.addEvent(${n.el}, '${n.event}', $events.${n.event});`);
+        })
+      };
+    }
+
+    let { event, fn, rootModifier } = this.makeEventProp(prop, () => element.bindName());
+    if(rootModifier) this.require('rootEvent');
+
+    return {
+      bind: xNode('bindEvent', {
+        event,
+        fn,
+        el: element.bindName(),
+        rootModifier
+      }, (ctx, n) => {
+        if(n.rootModifier) ctx.write(true, `$$addRootEvent(${n.el}, '${n.event}', `);
+        else ctx.write(true, `$runtime.addEvent(${n.el}, '${n.event}', `);
+        ctx.build(n.fn);
+        ctx.write(');');
+      })
+    };
+  } else if(name == 'bind') {
+    if(this.script.readOnly) {
+      this.warning('script read-only conflicts with bind: ' + node.openTag);
+      return;
+    }
+
+    this.require('apply');
+    let exp;
+    arg = arg.split(/[:|]/);
+    let attr = arg.shift();
+    assert(attr, prop.content);
+
+    if(prop.value) exp = getExpression();
+    else {
+      if(arg.length) exp = arg.pop();
+      else exp = attr;
+    }
+    let inputType = null;
+    if(node.name == 'input') {
+      node.attributes.some(a => {
+        if(a.name == 'type') {
+          inputType = a.value;
+          return true;
+        }
+      });
+    }
+
+    assert(['value', 'checked', 'valueAsNumber', 'valueAsDate', 'selectedIndex'].includes(attr), 'Not supported: ' + prop.content);
+    assert(arg.length == 0);
+    assert(detectExpressionType(exp) == 'identifier', 'Wrong bind name: ' + prop.content);
+    if(attr == 'value' && ['number', 'range'].includes(inputType)) attr = 'valueAsNumber';
+    this.detectDependency(exp);
+
+    let argName = 'a' + (this.uniqIndex++);
+
+    return {
+      bind: xNode('bindInput', {
+        el: element.bindName()
+      }, (ctx, n) => {
+        ctx.writeLine(`$runtime.bindInput(${n.el}, '${attr}', () => ${exp}, ${argName} => {${exp} = ${argName}; $$apply();});`);
+      })
+    };
+  } else if(name == 'style' && arg) {
+    let styleName = arg;
+    let exp;
+    if(prop.value) {
+      if(isExpression(prop.value)) {
+        exp = getExpression();
+        this.detectDependency(exp);
+      } else {
+        if(prop.value.includes('{')) {
+          const parsed = this.parseText(prop.value);
+          this.detectDependency(parsed);
+          exp = parsed.result;
+        } else {
+          return {
+            bind: xNode('staticStyle', {
+              el: element.bindName(),
+              name: styleName,
+              value: prop.value
+            }, (ctx, n) => {
+              ctx.writeLine(`${n.el}.style.${toCamelCase(n.name)} = \`${Q(n.value)}\`;`);
+            })
+          };
+        }
+      }
+    } else {
+      exp = toCamelCase(styleName);
+    }
+
+    let hasElement = exp.includes('$element');
+    return {
+      bind: xNode('block', {
+        scope: hasElement,
+        body: [xNode('bindStyle', {
+          el: element.bindName(),
+          styleName,
+          exp,
+          hasElement
+        }, (ctx, n) => {
+          if(n.hasElement) ctx.writeLine(`let $element=${n.el};`);
+          if(ctx.inuse.apply) {
+            ctx.writeLine(`$runtime.bindStyle(${n.el}, '${n.styleName}', () => (${n.exp}));`);
+          } else {
+            ctx.writeLine(`${n.el}.style.${toCamelCase(n.styleName)} = ${n.exp};`);
+          }
+        })]
+      })
+    };
+  } else if(name == 'use') {
+    if(arg) {
+      assert(isSimpleName(arg), 'Wrong name: ' + arg);
+      this.checkRootName(arg);
+      let args = prop.value ? `, () => [${getExpression()}]` : '';
+      this.detectDependency(args);
+      return {
+        bind: xNode('action', {
+          $wait: ['apply'],
+          name: arg,
+          args,
+          el: element.bindName()
+        }, (ctx, n) => {
+          if(ctx.inuse.apply && n.args) {
+            ctx.writeLine(`$runtime.bindAction(${n.el}, ${n.name}${n.args}, $runtime.__bindActionSubscribe);`);
+          } else {
+            ctx.writeLine(`$runtime.bindAction(${n.el}, ${n.name}${n.args});`);
+          }
+        })
+      };
+    }
+    let exp = getExpression();
+    this.detectDependency(exp);
+    let hasElement = exp.includes('$element');
+    return {
+      bind: xNode('inline-action', {
+        exp,
+        el: hasElement && element.bindName(),
+        element,
+        hasElement
+      }, (ctx, n) => {
+        ctx.writeLine('$tick(() => {');
+        ctx.goIndent(() => {
+          if(n.hasElement) ctx.writeLine(`let $element=${n.el};`);
+          ctx.writeLine(n.exp);
+          if(ctx.inuse.apply) ctx.writeLine('$$apply();');
+        });
+        ctx.writeLine('});');
+      })
+    };
+  } else if(name == 'class') {
+    if(node.__skipClass) return {};
+    node.__skipClass = true;
+
+    let props = node.attributes.filter(a => a.name == 'class' || a.name.startsWith('class:'));
+
+    let compound = false;
+    props.forEach(prop => {
+      let classes = [];
+      if(prop.name == 'class') {
+        if(!prop.value) return;
+        let parsed = this.parseText(prop.value);
+        for(let p of parsed.parts) {
+          if(p.type == 'text') {
+            classes = classes.concat(p.value.trim().split(/\s+/));
+          } else if(p.type == 'exp') compound = true;
+        }
+      } else {
+        classes = [prop.name.slice(6)];
+      }
+      return this.config.passClass && classes.some(name => {
+        if(this.css.isExternalClass(name)) {
+          compound = true;
+          this.require('apply');
+        } else if(name[0] == '$') {
+          this.css.markAsExternal(name.substring(1));
+          compound = true;
+          this.require('apply');
+        }
+      });
+    });
+
+    if(compound) {
+      let classes = Array.from(node.classes);
+      node.classes.clear();
+      if(this.config.passClass) this.require('resolveClass');
+      let exp = props.map(prop => {
+        if(prop.name == 'class') {
+          return this.parseText(prop.value).result;
+        } else {
+          let className = prop.name.slice(6);
+          assert(className);
+          let exp = prop.value ? unwrapExp(prop.value) : className;
+          this.detectDependency(exp);
+          return `(${exp}) ? \`${Q(className)}\` : ''`;
+        }
+      }).join(') + \' \' + (');
+      const bind = xNode('compound-class', {
+        $wait: ['apply'],
+        el: element.bindName(),
+        exp,
+        classes
+      }, (ctx, n) => {
+        let base = '';
+        if(n.classes.length) {
+          if(this.css.passingClass) {
+            base = [];
+            n.classes.forEach(c => {
+              if(c.local) base.push(this.css.resolve(c));
+            });
+            base = base.join(' ');
+            if(base) base = `, '${base}'`;
+          } else {
+            if(n.classes.some(c => c.local)) base = `,'${this.css.id}'`;
+          }
+        }
+
+        if(ctx.inuse.resolveClass) {
+          if(ctx.inuse.apply) {
+            ctx.write(true, `$runtime.bindClassExp(${n.el}, () => $$resolveClass((${n.exp})${base}))`);
+          } else {
+            ctx.write(true, `$runtime.setClassToElement(${n.el}, $$resolveClass((${n.exp})${base}));`);
+          }
+        } else {
+          if(ctx.inuse.apply) {
+            ctx.write(true, `$runtime.bindClassExp(${n.el}, () => (${n.exp})${base})`);
+          } else {
+            ctx.write(true, `$runtime.setClassToElement(${n.el}, ${n.exp}${base});`);
+          }
+        }
+      });
+      return { bind };
+    } else {
+      let bind = xNode('block');
+      props.forEach(prop => {
+        if(prop.name == 'class') {
+          prop.value && prop.value.trim().split(/\s+/).forEach(name => {
+            node.classes.add(name);
+          });
+        } else {
+          let className = prop.name.slice(6);
+          assert(className);
+          let exp = prop.value ? unwrapExp(prop.value) : className;
+          this.detectDependency(exp);
+
+          let n = xNode('bindClass', {
+            $wait: ['apply'],
+            el: element.bindName(),
+            className,
+            exp,
+            $element: exp.includes('$element')
+          }, (ctx, n) => {
+            if(n.$element) {
+              ctx.writeLine('{');
+              ctx.indent++;
+              ctx.writeLine(`let $element = ${n.el};`);
+            }
+            if(this.inuse.apply) {
+              ctx.writeLine(`$runtime.bindClass(${n.el}, () => !!(${n.exp}), '${n.className}');`);
+            } else {
+              ctx.writeLine(`(${n.exp}) && $runtime.addClass(${n.el}, '${n.className}');`);
+            }
+            if(n.$element) {
+              ctx.indent--;
+              ctx.writeLine('}');
+            }
+          });
+          bind.push(n);
+        }
+      });
+      return { bind: bind.body.length ? bind : null };
+    }
+  } else if(name[0] == '^') {
+    return {
+      bindTail: xNode('bindAnchor', {
+        name: name.slice(1) || 'default',
+        el: element.bindName()
+      }, (ctx, n) => {
+        ctx.write(true, `$runtime.attachAnchor($option, ${n.el}`);
+        if(n.name == 'default') ctx.write(');');
+        else ctx.write(`, '${n.name}');`);
+      })
+    };
+  } else {
+    if(prop.value && prop.value.indexOf('{') >= 0) {
+      const parsed = this.parseText(prop.value);
+      this.detectDependency(parsed);
+      let exp = parsed.result;
+      let hasElement = prop.value.includes('$element');
+
+      if(node.spreading) return node.spreading.push(`${name}: ${exp}`);
+
+      const propList = {
+        hidden: true,
+        checked: true,
+        value: true,
+        disabled: true,
+        selected: true,
+        innerHTML: true,
+        innerText: true,
+        src: true,
+        readonly: 'readOnly'
+      };
+
+      let n = xNode('bindAttribute', {
+        $wait: ['apply'],
+        name,
+        exp,
+        hasElement,
+        el: element.bindName()
+      }, (ctx, data) => {
+        if(data.hasElement) ctx.writeLine(`let $element=${data.el};`);
+        if(propList[name]) {
+          let propName = propList[name] === true ? name : propList[name];
+          if(ctx.inuse.apply) {
+            ctx.writeLine(`$watch(() => (${data.exp}), (value) => {${data.el}.${propName} = value;});`);
+          } else {
+            ctx.writeLine(`${data.el}.${propName} = ${data.exp};`);
+          }
+        } else {
+          if(ctx.inuse.apply) {
+            ctx.writeLine(`$runtime.bindAttribute(${data.el}, '${data.name}', () => (${data.exp}));`);
+          } else {
+            ctx.writeLine(`$runtime.bindAttributeBase(${data.el}, '${data.name}', ${data.exp});`);
+          }
+        }
+      });
+
+      return {
+        bind: xNode('block', {
+          scope: hasElement,
+          body: [n]
+        })
+      };
+    }
+
+    if(node.spreading) return node.spreading.push(`${name}: \`${Q(prop.value)}\``);
+
+    element.attributes.push({
+      name: prop.name,
+      value: prop.value
+    });
+  }
+}

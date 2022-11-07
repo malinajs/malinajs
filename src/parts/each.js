@@ -1,133 +1,186 @@
-
-import { assert, isSimpleName, detectExpressionType, xNode, trimEmptyNodes } from '../utils.js'
+import { assert, isSimpleName, trimEmptyNodes, parseJS, replaceKeyword } from '../utils.js';
+import { xNode } from '../xnode.js';
 
 
 export function makeEachBlock(data, option) {
+  this.require('rootCD');
 
-    let nodeItems = trimEmptyNodes(data.body);
-    if(!nodeItems.length) nodeItems = [data.body[0]];
+  // #each items as item, index (key)
+  let rx = data.value.match(/^#each\s+(.+)\s+as\s+(.+)$/s);
+  assert(rx, `Wrong #each expression '${data.value}'`);
+  let arrayName = rx[1];
+  let right = rx[2];
+  let keyName, keyFunction = null;
 
-    let itemData = this.buildBlock({body: nodeItems}, {protectLastTag: true, inline: true});
+  // get keyName
+  rx = right.match(/^(.*)\s*\(\s*([^()]+)\s*\)\s*$/s);
+  if(rx) {
+    right = rx[1];
+    keyName = rx[2];
+  }
+  right = right.trim();
 
-    // #each items as item, index (key)
-    let rx = data.value.match(/^#each\s+(.+)\s+as\s+(.+)$/);
-    assert(rx, `Wrong #each expression '${data.value}'`);
-    let arrayName = rx[1];
-    let right = rx[2];
-    let keyName;
+  const makeKeyFunction = (keyLink) => {
+    keyFunction = xNode('key-function', {
+      exp: replaceKeyword(keyName, n => keyLink[n])
+    }, (ctx, n) => {
+      ctx.write(`($$item, $index) => ${n.exp}`);
+    });
+  };
 
-    // get keyName
-    rx = right.match(/^(.*)\s*\(\s*([^\(\)]+)\s*\)\s*$/);
-    if(rx) {
-        right = rx[1];
-        keyName = rx[2];
+  let itemName, indexName = null, blockPrefix = null;
+  if(right[0] == '{' || right[0] == '[') {
+    let keywords, unwrap;
+    try {
+      let exp = `[${right}]`;
+      let e = parseJS(exp);
+      assert(e.ast.elements.length == 1 || e.ast.elements.length == 2);
+      itemName = '$$item';
+
+      unwrap = e.build(e.ast.elements[0]);
+
+      if(e.ast.elements.length == 2) {
+        let b = e.ast.elements[1];
+        assert(b.type == 'Identifier');
+        indexName = e.build(b);
+      }
+
+      e = parseJS(`(${unwrap} = $$item)`);
+      let l = e.ast.left;
+      if(l.type == 'ArrayPattern') {
+        keywords = l.elements.map(p => p.name);
+
+        if(keyName) {
+          let keyLink = {};
+          if(indexName) keyLink[indexName] = '$index';
+          for(let i in keywords) keyLink[keywords[i]] = `$$item[${i}]`;
+          makeKeyFunction(keyLink);
+        }
+      } else {
+        assert(l.type == 'ObjectPattern');
+        keywords = l.properties.map(p => p.key.name);
+
+        if(keyName) {
+          let keyLink = {};
+          if(indexName) keyLink[indexName] = '$index';
+          for(let k of keywords) keyLink[k] = `$$item.${k}`;
+          makeKeyFunction(keyLink);
+        }
+      }
+    } catch (e) {
+      throw new Error('Wrong destructuring in each: ' + data.value);
     }
-    right = right.trim();
 
-    let itemName, indexName, keywords, bind0 = null;
-    if(right[0] == '{') {
-        rx = right.match(/^\{([^}]+)\}(.*)$/);
-        assert(rx, `Wrong #each expression '${data.value}'`);
-        keywords = rx[1].trim().split(/\s*\,\s*/);
-        itemName = '$$item';
-        indexName = rx[2].trim();
-        if(indexName[0] == ',') indexName = indexName.substring(1).trim();
-        indexName = indexName || '$index';
-
-        let assignVars = keywords.map(k => `${k} = $$item.${k}`).join(', ');
-        bind0 = xNode('each:unwrap', ctx => {
-            ctx.writeLine(`var ${assignVars};`);
-            ctx.writeLine(`$ctx.cd.prefix.push(() => {${assignVars};});`);
-        });
-    } else {
-        rx = right.trim().split(/\s*\,\s*/);
-        assert(rx.length <= 2, `Wrong #each expression '${data.value}'`);
-        itemName = rx[0];
-        indexName = rx[1] || '$index';
-    }
-    assert(isSimpleName(itemName), `Wrong name '${itemName}'`);
-    assert(isSimpleName(indexName), `Wrong name '${indexName}'`);
-
-    let keyFunction = null;
-    if(keyName == itemName) {
-        keyName = null;
-        keyFunction = 'noop';
-    }
-    if(keyName) assert(detectExpressionType(keyName) == 'identifier', `Wrong key '${keyName}'`);
-
+    blockPrefix = xNode('each:unwrap', {
+      unwrap,
+      keywords
+    }, (ctx, n) => {
+      if(this.script.readOnly) ctx.writeLine(`let ${n.unwrap} = $$item;`);
+      else {
+        ctx.writeLine(`let ${n.keywords.join(', ')};`);
+        ctx.writeLine(`$runtime.prefixPush(() => (${n.unwrap} = $$item));`);
+      }
+    });
+  } else {
+    rx = right.trim().split(/\s*\,\s*/);
+    assert(rx.length <= 2, `Wrong #each expression '${data.value}'`);
+    itemName = rx[0];
+    indexName = rx[1] || null;
     if(keyName) {
-        this.detectDependency(keyName);
-        keyFunction = xNode('function', {
-            inline: true,
-            arrow: true,
-            args: [itemName, 'i'],
-            body: [xNode('block', {
-                index: indexName,
-                key: keyName
-            }, (ctx, data) => {
-                if(data.key == data.index) ctx.writeLine('return i;');
-                else ctx.writeLine(`return ${data.key};`);
-            })]
-        });
-    };
-
-    let bind;
-    if(itemData.source) {
-        bind = xNode('function', {
-            inline: true,
-            arrow: true,
-            args: ['$ctx', '$parentElement', itemName, indexName],
-            body: [
-                `let $cd = $ctx.cd;`,
-                bind0,
-                itemData.source,
-                xNode(ctx => {
-                    ctx.writeLine(`$ctx.rebind = function(_${indexName}, _${itemName}) {`);
-                    ctx.indent++;
-                    ctx.writeLine(`${indexName} = _${indexName};`);
-                    ctx.writeLine(`${itemName} = _${itemName};`);
-                    ctx.indent--;
-                    ctx.writeLine(`};`);
-                })
-            ]
-        });
-    } else {
-        bind = xNode('function', {
-            inline: true,
-            arrow: true,
-            args: ['$ctx'],
-            body: [`$ctx.rebind = $runtime.noop;`]
-        });
+      if(keyName == itemName) keyFunction = 'noop';
+      else {
+        let keyLink = { [itemName]: '$$item' };
+        if(indexName) keyLink[indexName] = '$index';
+        makeKeyFunction(keyLink);
+      }
     }
+  }
+  assert(isSimpleName(itemName), `Wrong name '${itemName}'`);
 
-    const template = xNode('template', {
-        inline: true,
-        body: itemData.tpl,
-        svg: itemData.svg
+  let rebind;
+  if(!this.script.readOnly) {
+    if(!indexName && keyName == itemName) rebind = null;
+    else {
+      rebind = xNode('block', {
+        itemName,
+        indexName
+      }, (ctx, n) => {
+        if(n.indexName) ctx.write(`(_${n.itemName}, _${n.indexName}) => {${n.itemName}=_${n.itemName}; ${n.indexName}=_${n.indexName};}`);
+        else ctx.write(`(_${n.itemName}) => {${n.itemName}=_${n.itemName};}`);
+      });
+    }
+  }
+
+  let nodeItems = trimEmptyNodes(data.mainBlock);
+  if(!nodeItems.length) nodeItems = [data.mainBlock[0]];
+
+  let itemBlock, block = this.buildBlock({ body: nodeItems }, {
+    allowSingleBlock: !blockPrefix,
+    each: {
+      blockPrefix,
+      rebind,
+      itemName,
+      indexName
+    }
+  });
+
+  if(block.singleBlock) {
+    itemBlock = xNode('each-component', {
+      block: block.singleBlock,
+      rebind,
+      itemName,
+      indexName
+    }, (ctx, n) => {
+      ctx.write(`$runtime.makeEachSingleBlock((${n.itemName}`);
+      if(n.indexName) ctx.write(`, ${n.indexName}`);
+      ctx.write(') => [');
+      ctx.indent++;
+      ctx.write(true);
+      if(n.rebind) ctx.add(n.rebind);
+      else ctx.write('null');
+      ctx.write(',', true);
+      ctx.add(n.block);
+      ctx.indent--;
+      ctx.write(true, '])');
     });
+  } else itemBlock = block.block;
 
-    this.require('$cd');
-    const source = xNode('each', {
-        keyFunction,
-        template,
-        bind
-    }, (ctx, data) => {
-        ctx.writeLine(`$runtime.$$eachBlock($cd, ${option.elName}, ${option.onlyChild?1:0}, () => (${arrayName}),`);
-        ctx.indent++;
-        ctx.writeIndent();
-        if(data.keyFunction === 'noop') ctx.write('$runtime.noop');
-        else if(data.keyFunction) ctx.build(data.keyFunction);
-        else ctx.write('$runtime.eachDefaultKey');
-        ctx.write(`,\n`);
-        ctx.writeIndent();
-        ctx.build(data.template);
-        ctx.write(`,\n`);
-        ctx.writeIndent();
-        ctx.build(data.bind);
-        ctx.write(`);\n`);
-        ctx.indent--;
+  let elseBlock = null;
+  if(data.elseBlock) {
+    let block = this.buildBlock({ body: data.elseBlock }, {
+      allowSingleBlock: false
     });
-    this.detectDependency(arrayName);
+    elseBlock = block.block;
+  }
 
-    return {source};
-};
+  const source = xNode('each', {
+    keyFunction,
+    block: itemBlock,
+    elseBlock,
+    label: option.label,
+    onlyChild: option.onlyChild
+  }, (ctx, n) => {
+    let el = n.onlyChild ? n.label : n.label.name;
+    let mode = 0;
+    if(n.onlyChild) mode = 1;
+    else if(!n.label.node) mode = 2;
+    ctx.writeLine(`$runtime.$$eachBlock(${el}, ${mode}, () => (${arrayName}),`);
+    ctx.indent++;
+    ctx.write(true);
+    if(n.keyFunction === 'noop') ctx.write('$runtime.noop');
+    else if(n.keyFunction) ctx.add(n.keyFunction);
+    else ctx.write('$runtime.eachDefaultKey');
+    ctx.write(',');
+    ctx.add(n.block);
+    if(n.elseBlock) {
+      ctx.write(', $runtime.makeEachElseBlock(');
+      ctx.add(n.elseBlock);
+      ctx.write(')');
+    }
+    ctx.indent--;
+    ctx.write(true, ');', true);
+  });
+  this.detectDependency(arrayName);
+
+  return { source };
+}
