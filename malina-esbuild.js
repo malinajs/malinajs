@@ -11,9 +11,13 @@ process.argv.includes('-w') ? process.env.WATCH = 1 : null;
 
 const esbuildConfigPath = path.join(process.cwd(),'esbuild.config.js');
 const derverConfigPath = path.join(process.cwd(),'derver.config.js');
+const malinaConfigPath = path.join(process.cwd(), 'malina.config.js');
 
 const esbuildConfig = fs.existsSync(esbuildConfigPath) ? require(esbuildConfigPath) : {};
 const derverConfig = fs.existsSync(derverConfigPath) ? require(derverConfigPath) : {};
+const malinaConfig = fs.existsSync(malinaConfigPath)
+    ? require(malinaConfigPath)
+    : {};
 
 // Executable
 
