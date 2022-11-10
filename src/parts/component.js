@@ -2,7 +2,7 @@ import { assert, detectExpressionType, isSimpleName, unwrapExp, trimEmptyNodes }
 import { xNode } from '../xnode.js';
 
 
-export function makeComponent(node) {
+export function makeComponent(node, option={}) {
   let propList = node.attributes;
 
   this.require('$context');
@@ -12,8 +12,8 @@ export function makeComponent(node) {
   let slotBlocks = [];
   let anchorBlocks = [];
 
-  let componentName = node.name;
-  if(componentName != 'component' && this.config.autoimport) {
+  let componentName = option.self ? '$$selfComponent' : node.name;
+  if(componentName != 'component' && this.config.autoimport && !option.self) {
     let imported = this.script.autoimport[componentName] || this.script.importedNames.includes(componentName) ||
       this.script.rootVariables[componentName] || this.script.rootFunctions[componentName];
 

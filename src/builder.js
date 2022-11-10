@@ -337,7 +337,13 @@ export function buildBlock(data, option = {}) {
         if(n.name == 'malina' && !option.malinaElement) {
           let b;
           if(n.elArg == 'portal') b = this.attachPortal(n);
-          else b = this.attachHead(n);
+          else if(['window', 'body', 'head'].includes(n.elArg)) b = this.attachHead(n);
+          else if(n.elArg == 'self') {
+            this.glob.$$selfComponent.$value();
+            const label = requireLabel();
+            let component = this.makeComponent(n, {self: true});
+            binds.push(insertComponent(component, label));
+          } else throw 'Wrong tag';
           b && binds.push(b);
           return;
         }
@@ -357,23 +363,7 @@ export function buildBlock(data, option = {}) {
             } else {
               const label = requireLabel();
               let component = this.makeComponent(n);
-              binds.push(xNode('insert-component', {
-                component: component.bind,
-                reference: component.reference,
-                label
-              }, (ctx, n) => {
-                if(n.reference) {
-                  ctx.write(true, `${n.reference} = `);
-                  ctx.add(n.component);
-                  if(n.label.node) ctx.write(true, `$runtime.insertBlock(${n.label.name}, ${n.reference});`);
-                  else ctx.write(true, `$runtime.addBlock(${n.label.name}, ${n.reference});`);
-                } else {
-                  if(n.label.node) ctx.write(true, `$runtime.insertBlock(${n.label.name}, `);
-                  else ctx.write(true, `$runtime.addBlock(${n.label.name}, `);
-                  ctx.add(n.component);
-                  ctx.write(');');
-                }
-              }));
+              binds.push(insertComponent(component, label));
             }
           } else {
             if(isRoot) requireFragment = true;
@@ -792,4 +782,24 @@ function wrapException(e, n) {
     else if(n.type == 'if') e.details = n.parts?.[0]?.value.trim() || 'if-block';
   }
   throw e;
+}
+
+function insertComponent(component, label) {
+  return xNode('insert-component', {
+    component: component.bind,
+    reference: component.reference,
+    label
+  }, (ctx, n) => {
+    if(n.reference) {
+      ctx.write(true, `${n.reference} = `);
+      ctx.add(n.component);
+      if(n.label.node) ctx.write(true, `$runtime.insertBlock(${n.label.name}, ${n.reference});`);
+      else ctx.write(true, `$runtime.addBlock(${n.label.name}, ${n.reference});`);
+    } else {
+      if(n.label.node) ctx.write(true, `$runtime.insertBlock(${n.label.name}, `);
+      else ctx.write(true, `$runtime.addBlock(${n.label.name}, `);
+      ctx.add(n.component);
+      ctx.write(');');
+    }
+  })
 }

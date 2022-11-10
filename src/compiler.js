@@ -23,7 +23,7 @@ import { makeEventProp } from './event-prop.js';
 import { makeKeepAlive } from './parts/keep-alive.js';
 
 
-export const version = '0.7.2-a7';
+export const version = '0.7.2-a8';
 
 
 export async function compile(source, config = {}) {
@@ -78,7 +78,8 @@ export async function compile(source, config = {}) {
       rootCD: xNode('root-cd', false),
       apply: xNode('apply', false),
       componentFn: xNode('componentFn', false),
-      $onMount: xNode('$onMount', false)
+      $onMount: xNode('$onMount', false),
+      $$selfComponent: xNode('$$selfComponent', false)
     },
     require: function(...args) {
       for(let name of args) {
@@ -175,10 +176,21 @@ export async function compile(source, config = {}) {
       $compile: [ctx.module.head, ctx.module.code, ctx.module.body, ctx.glob.rootCD],
       name: config.name,
       componentFn: ctx.glob.componentFn
-    }, (ctx, n) => {
-      if(config.exportDefault) ctx.write(true, 'export default ');
-      else ctx.write(true, `const ${n.name} = `);
-      ctx.add(n.componentFn);
+    }, (ctx2, n) => {
+      if(config.exportDefault) {
+        if(ctx.glob.$$selfComponent.value) {
+          ctx2.write(true, 'const $$selfComponent = ');
+          ctx2.add(n.componentFn);
+          ctx2.write(true, 'export default $$selfComponent;');
+        } else {
+          ctx2.write(true, 'export default ');
+          ctx2.add(n.componentFn);
+        }
+      } else {
+        assert(!ctx.glob.$$selfComponent.value, 'Not supported');
+        ctx2.write(true, `const ${n.name} = `);
+        ctx2.add(n.componentFn);
+      }
     }));
 
     ctx.result = xBuild(result);
