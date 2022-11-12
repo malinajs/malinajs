@@ -8,3 +8,4 @@ export * from '../parts/each.runtime';
 export { configure, __app_onerror, isFunction } from './utils';
 export * from '../parts/slot.runtime';
 export * from '../parts/keep-alive.runtime';
+export * from '../parts/select.runtime.js';

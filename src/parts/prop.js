@@ -147,18 +147,34 @@ export function bindProp(prop, node, element) {
     }
 
     assert(['value', 'checked', 'valueAsNumber', 'valueAsDate', 'selectedIndex'].includes(attr), 'Not supported: ' + prop.content);
-    assert(arg.length == 0);
     assert(detectExpressionType(exp) == 'identifier', 'Wrong bind name: ' + prop.content);
-    if(attr == 'value' && ['number', 'range'].includes(inputType)) attr = 'valueAsNumber';
+    assert(arg.length == 0);
     this.detectDependency(exp);
+    let argName = '$$a' + (this.uniqIndex++);
 
-    let argName = 'a' + (this.uniqIndex++);
+    if(node.name == 'select' && attr == 'value') {
+      return {
+        bind: xNode('bindInput', {
+          el: element.bindName(),
+          exp,
+          attr,
+          argName
+        }, (ctx, n) => {
+          ctx.write(true, `$runtime.selectElement(${n.el}, () => ${n.exp}, ${n.argName} => {${n.exp} = ${n.argName}; $$apply();});`);
+        })
+      }
+    }
+
+    if(attr == 'value' && ['number', 'range'].includes(inputType)) attr = 'valueAsNumber';
 
     return {
       bind: xNode('bindInput', {
-        el: element.bindName()
+        el: element.bindName(),
+        exp,
+        attr,
+        argName
       }, (ctx, n) => {
-        ctx.writeLine(`$runtime.bindInput(${n.el}, '${attr}', () => ${exp}, ${argName} => {${exp} = ${argName}; $$apply();});`);
+        ctx.write(true, `$runtime.bindInput(${n.el}, '${n.attr}', () => ${n.exp}, ${n.argName} => {${n.exp} = ${n.argName}; $$apply();});`);
       })
     };
   } else if(name == 'style' && arg) {
@@ -389,6 +405,17 @@ export function bindProp(prop, node, element) {
       let hasElement = prop.value.includes('$element');
 
       if(node.spreading) return node.spreading.push(`${name}: ${exp}`);
+
+      if(node.name == 'option' && name == 'value') {
+        return {
+          bind: xNode('bindOptionValue', {
+            el: element.bindName(),
+            exp
+          }, (ctx, n) => {
+            ctx.write(true, `$runtime.selectOption(${n.el}, () => (${n.exp}));`);
+          })
+        }
+      }
 
       const propList = {
         hidden: true,

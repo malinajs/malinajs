@@ -17,6 +17,7 @@
 * optional deep checking for passed props: prop={value} prop|deep={value}
 * keep-alive
 * malina:self
+* handler for element "select"
 
 ## 0.6.x
 
