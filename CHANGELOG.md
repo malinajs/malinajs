@@ -18,6 +18,7 @@
 * keep-alive
 * malina:self
 * handler for element "select"
+* handler for "radio" input
 
 ## 0.6.x
 

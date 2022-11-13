@@ -119,7 +119,7 @@ export function bindProp(prop, node, element) {
         ctx.write(');');
       })
     };
-  } else if(name == 'bind') {
+  } else if(name == 'bind' && arg) {
     if(this.script.readOnly) {
       this.warning('script read-only conflicts with bind: ' + node.openTag);
       return;

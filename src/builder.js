@@ -1,5 +1,6 @@
 import { svgElements, last, replaceKeyword, assert, Q } from './utils.js';
 import { xNode } from './xnode.js';
+import { radioInput } from './parts/radio.js';
 
 
 export function buildRuntime() {
@@ -425,8 +426,15 @@ export function buildBlock(data, option = {}) {
             ctx.writeLine(`$runtime.spreadAttributes(${n.el}, () => ({${n.props.join(', ')}}));`);
           }));
         }
+
+        if(n.name == 'input') {
+          const b = radioInput.call(this, n, el);
+          b && binds.push(b);
+        }
+
         let bindTail = [];
         n.attributes.forEach(p => {
+          if(p._skip) return;
           let b = this.bindProp(p, n, el);
           if(b) {
             if(b.bind) binds.push(b.bind);
