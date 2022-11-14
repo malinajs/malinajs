@@ -11,9 +11,13 @@ process.argv.includes('-w') ? process.env.WATCH = 1 : null;
 
 const esbuildConfigPath = path.join(process.cwd(),'esbuild.config.js');
 const derverConfigPath = path.join(process.cwd(),'derver.config.js');
+const malinaConfigPath = path.join(process.cwd(), 'malina.config.js');
 
 const esbuildConfig = fs.existsSync(esbuildConfigPath) ? require(esbuildConfigPath) : {};
 const derverConfig = fs.existsSync(derverConfigPath) ? require(derverConfigPath) : {};
+const malinaConfig = fs.existsSync(malinaConfigPath)
+    ? require(malinaConfigPath)
+    : {};
 
 // Executable
 
@@ -56,7 +60,18 @@ module.exports = {
 
 function malinaPlugin(options={}){
 
-    const cssModules = new Map();
+   const cssModules = new Map();
+
+   options = {
+      ...malinaConfig({}, ''),
+      ...options,
+   };
+  
+    const filter = new RegExp(
+        !options.extension
+           ? `(html|xht|ma)$`
+           : `(${options.extension.join('|')})$`
+    );
 
     if(options.displayVersion !== false) console.log('! Malina.js', malina.version);
 
@@ -79,7 +94,7 @@ function malinaPlugin(options={}){
             });
 
             build.onLoad(
-                { filter: /\.(xht|ma|html)$/ }, 
+                { filter }, 
                 async (args) => {
 
                     let source = await fsp.readFile(args.path, 'utf8');
