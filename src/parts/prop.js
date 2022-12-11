@@ -425,6 +425,7 @@ export function bindProp(prop, node, element) {
         selected: true,
         innerHTML: true,
         innerText: true,
+        multiple: node.name == 'select',
         src: true,
         readonly: 'readOnly'
       };

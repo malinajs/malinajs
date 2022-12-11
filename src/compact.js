@@ -93,8 +93,9 @@ export function compactDOM() {
         if(prev && next) {
           if(prev.type == 'node' && next.type == 'node') {
             if(isTable(prev) && isTable(next) ||
-                            prev.name == 'li' && next.name == 'li' ||
-                            prev.name == 'div' && next.name == 'div') {
+                prev.name == 'li' && next.name == 'li' ||
+                parentNode?.type == 'node' && parentNode?.name == 'select' && prev.name == 'option' && next.name == 'option' ||
+                prev.name == 'div' && next.name == 'div') {
               body.splice(i, 1);
               continue;
             }
@@ -112,6 +113,10 @@ export function compactDOM() {
             continue;
           }
           if((p == 'li' || n == 'li') && (parentNode.type == 'node' && parentNode.name == 'ul')) {
+            body.splice(i, 1);
+            continue;
+          }
+          if((p == 'option' || n == 'option') && (parentNode.type == 'node' && parentNode.name == 'select')) {
             body.splice(i, 1);
             continue;
           }
