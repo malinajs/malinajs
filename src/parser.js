@@ -455,7 +455,7 @@ export function parseText(source) {
       else result.push({ ...p });
     }
   });
-  result = result.map(p => p.type == 'text' ? '`' + Q(p.value) + '`' : '(' + p.value + ')').join('+');
+  result = '`' + result.map(p => p.type == 'text' ? Q(p.value) : '${' + p.value + '}').join('') + '`';
   return { result, parts, staticText };
 }
 
