@@ -40,7 +40,7 @@ export function awaitBlock(label, parentLabel, relation, fn, build_main, build_t
     } else first = last = $dom;
     if(parentLabel) label.appendChild($dom);
     else label.parentNode.insertBefore($dom, label);
-    safeGroupCall2(mountList, destroyList);
+    safeGroupCall2(mountList, destroyList, 1);
     cd_component(parentCD).$apply();
   }
 

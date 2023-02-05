@@ -38,7 +38,7 @@ export const makeEachElseBlock = (fn) => {
       } else first = last = $dom;
       cd_attach(parentCD, $cd);
       parentNode.insertBefore($dom, mode ? null : label);
-      safeGroupCall2(share.current_mountList, destroyList);
+      safeGroupCall2(share.current_mountList, destroyList, 1);
     } finally {
       share.current_destroyList = share.current_mountList = share.current_cd = null;
     }
@@ -199,7 +199,7 @@ export function $$eachBlock(label, mode, fn, getKey, bind, buildElseBlock) {
         } else ctx.first = ctx.last = $dom;
         parentNode.insertBefore($dom, nextNode);
         nextNode = ctx.first;
-        safeGroupCall2(m, d);
+        safeGroupCall2(m, d, 1);
         if(d.length) {
           ctx.d = d;
           p_destroy = 1;

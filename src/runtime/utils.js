@@ -27,9 +27,9 @@ export const safeGroupCall = list => {
   }
 };
 
-export const safeGroupCall2 = (list, resultList) => {
+export const safeGroupCall2 = (list, resultList, onlyFunction) => {
   list?.forEach(fn => {
     let r = safeCall(fn);
-    r && resultList.push(r);
+    r && (!onlyFunction || isFunction(r)) && resultList.push(r);
   });
 };
