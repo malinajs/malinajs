@@ -1,22 +1,34 @@
 
-import { addEvent, $watch } from '../runtime/cd.js';
+import { addEvent, $watch, isArray } from '../runtime/cd.js';
 import { $tick } from '../runtime/base.js';
 
 
 export const selectElement = (el, getter, setter) => {
   addEvent(el, 'change', () => {
-    let op = el.querySelector(':checked');
-    if(op?.$$value) {
-      let value = op.$$value();
-      setter(value);
-      w.value = value;
-    }
+    let value = [];
+    el.querySelectorAll(':checked').forEach(o => {
+      value.push(o.$$value ? o.$$value() : o.value);
+    });
+    value = el.multiple ? value : value[0];
+    setter(value);
+    w.value = value;
   });
   const update = () => {
-    for(let op of el.options) {
-      if(op.$$value?.() === w.value) {
-        op.selected = true;
+    let value = w.value;
+    if(el.multiple) {
+      if(isArray(value)) {
+        for(let o of el.options) {
+          const option_value = o.$$value ? o.$$value() : o.value;
+          o.selected = value.indexOf(option_value) != -1;
+        }
         return;
+      }
+    } else {
+      for(let o of el.options) {
+        if((o.$$value ? o.$$value() : o.value) === value) {
+          o.selected = true;
+          return;
+        }
       }
     }
     el.selectedIndex = -1;

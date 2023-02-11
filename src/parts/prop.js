@@ -406,13 +406,13 @@ export function bindProp(prop, node, element) {
 
       if(node.spreading) return node.spreading.push(`${name}: ${exp}`);
 
-      if(node.name == 'option' && name == 'value') {
+      if(node.name == 'option' && name == 'value' && isExpression(prop.value)) {
         return {
           bind: xNode('bindOptionValue', {
             el: element.bindName(),
-            exp
+            value: getExpression()
           }, (ctx, n) => {
-            ctx.write(true, `$runtime.selectOption(${n.el}, () => (${n.exp}));`);
+            ctx.write(true, `$runtime.selectOption(${n.el}, () => (${n.value}));`);
           })
         }
       }
