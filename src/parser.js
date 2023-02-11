@@ -542,7 +542,7 @@ export const parseAttibutes = (source, option={}) => {
           const value = raw.substring(1, raw.length - 1);
           result.push({name, value, raw, content: r.sub(start)});
         } else {
-          const value = r.readIf(/^\S+/);
+          const value = r.readIf(/^[^\s<>]+/);
           result.push({name, value, raw: value, content: r.sub(start)});
         }
       } else {
