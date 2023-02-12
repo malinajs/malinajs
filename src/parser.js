@@ -456,7 +456,12 @@ export function parseText(source) {
     }
   });
   result = '`' + result.map(p => p.type == 'text' ? Q(p.value) : '${' + p.value + '}').join('') + '`';
-  return { result, parts, staticText };
+  return {
+    result,
+    parts,
+    staticText,
+    binding: parts.length == 1 && parts[0].type == 'exp' ? parts[0].value : null
+  };
 }
 
 

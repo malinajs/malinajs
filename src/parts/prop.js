@@ -406,11 +406,11 @@ export function bindProp(prop, node, element) {
 
       if(node.spreading) return node.spreading.push(`${name}: ${exp}`);
 
-      if(node.name == 'option' && name == 'value' && isExpression(prop.value)) {
+      if(node.name == 'option' && name == 'value' && parsed.binding) {
         return {
           bind: xNode('bindOptionValue', {
             el: element.bindName(),
-            value: getExpression()
+            value: parsed.binding
           }, (ctx, n) => {
             ctx.write(true, `$runtime.selectOption(${n.el}, () => (${n.value}));`);
           })
@@ -433,7 +433,7 @@ export function bindProp(prop, node, element) {
       let n = xNode('bindAttribute', {
         $wait: ['apply'],
         name,
-        exp,
+        exp: propList[name] && parsed.binding ? parsed.binding : exp,
         hasElement,
         el: element.bindName()
       }, (ctx, data) => {
