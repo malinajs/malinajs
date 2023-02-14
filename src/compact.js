@@ -1,6 +1,42 @@
 import { last } from './utils.js';
 
 
+const walk = (node, fn) => {
+  switch(node.type) {
+    case 'node':
+    case 'slot':
+    case 'block':
+    case 'fragment':
+    case 'root':
+      if(node.body) fn(node.body, node);
+      break
+    case 'each':
+      if(node.mainBlock) fn(node.mainBlock, node);
+      if(node.elseBlock) fn(node.elseBlock, node);
+      break
+    case 'await':
+      if(node.parts.main) fn(node.parts.main, node);
+      if(node.parts.then) fn(node.parts.then, node);
+      if(node.parts.catch) fn(node.parts.catch, node);
+      break
+    case 'if':
+      node.parts.forEach(p => {
+        if(p.body) fn(p.body, node);
+      })
+      if(node.elsePart) fn(node.elsePart, node);
+      break
+    case 'text':
+    case 'comment':
+    case 'script':
+    case 'style':
+    case 'systag':
+    case 'template':
+      break
+    default:
+      throw `Not implemented: ${node.type}`;
+  }
+}
+
 export function compactDOM() {
   let data = this.DOM;
 
@@ -40,29 +76,7 @@ export function compactDOM() {
         }
       } else {
         if(node.type == 'node' && (node.name == 'pre' || node.name == 'textarea')) continue;
-        switch(node.type) {
-          case 'node':
-          case 'slot':
-          case 'block':
-          case 'fragment':
-            if(node.body) go(node.body, node);
-            break
-          case 'each':
-            if(node.mainBlock) go(node.mainBlock, node);
-            if(node.elseBlock) go(node.elseBlock, node);
-            break
-          case 'await':
-            if(node.parts.main) go(node.parts.main, node);
-            if(node.parts.then) go(node.parts.then, node);
-            if(node.parts.catch) go(node.parts.catch, node);
-            break
-          case 'if':
-            node.parts.forEach(p => {
-              if(p.body) go(p.body, node);
-            })
-            if(node.elsePart) go(node.elsePart, node);
-            break
-        }
+        walk(node, go);
       }
     }
 
@@ -169,4 +183,23 @@ export function compactDOM() {
   data.body = trimNodes(data.body);
 
   go(data.body);
+}
+
+export function compactFull() {
+  const go = (body) => {
+    let i = 0;
+    while (i < body.length) {
+      let n = body[i];
+      if(n.type == 'text') {
+        n.value = n.value.trim();
+        if(!n.value) {
+          body.splice(i, 1);
+          continue;
+        }
+      } else walk(n, go);
+      i++;
+    }
+  };
+
+  walk(this.DOM, go);
 }

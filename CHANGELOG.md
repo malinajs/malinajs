@@ -19,6 +19,7 @@
 * malina:self
 * handler for element "select"
 * handler for "radio" input
+* optional removing all empty text nodes: option.compact = 'full'
 
 ## 0.6.x
 

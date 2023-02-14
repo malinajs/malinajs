@@ -1,6 +1,6 @@
 import { assert, use_context } from './utils.js';
 import { xNode, xBuild } from './xnode.js';
-import { compactDOM } from './compact.js';
+import { compactDOM, compactFull } from './compact.js';
 import { parseHTML, parseText } from './parser';
 export { parseHTML } from './parser';
 import * as codelib from './code';
@@ -23,7 +23,7 @@ import { makeEventProp } from './event-prop.js';
 import { makeKeepAlive } from './parts/keep-alive.js';
 
 
-export const version = '0.7.2-a11';
+export const version = '0.7.2-a12';
 
 
 export async function compile(source, config = {}) {
@@ -103,7 +103,7 @@ export async function compile(source, config = {}) {
     parseHTML: function() {
       this.DOM = parseHTML(this.source);
     },
-    compactDOM,
+    compactDOM: config.compact == 'full' ? compactFull : compactDOM,
 
     script: null,
     scriptNodes: null,
