@@ -3,7 +3,6 @@
   "version": "0.7.2-a12",
   "license": "MIT",
   "scripts": {
-    "prepare": "npm run build",
     "build": "npm run build_runtime && rollup -c",
     "build_runtime": "rollup -c ./rollup.config.runtime.js",
     "build_app": "NODE_PATH=.. rollup -c rollup.config.app.js && uglifyjs ./example/public/app.js -o ./example/public/app.min.js -m -c",
