@@ -12,7 +12,7 @@ export const use_context = (context, fn) => {
   let prev = current_context;
   try {
     current_context = context;
-    fn();
+    return fn();
   } finally {
     current_context = prev;
   }

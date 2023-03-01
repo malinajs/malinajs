@@ -298,7 +298,8 @@ export function buildBlock(data, option = {}) {
             let bindText = xNode('bindText', {
               $wait: ['apply'],
               el: textNode.bindName(),
-              exp: pe.result
+              exp: pe.result,
+              parsedExpression: pe
             }, (ctx, n) => {
               if(this.inuse.apply) {
                 ctx.writeLine(`$runtime.bindText(${n.el}, () => ${n.exp});`);

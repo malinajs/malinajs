@@ -445,23 +445,28 @@ export function parseText(source) {
   assert(step == 0, 'Wrong expression: ' + source);
   let staticText = null;
   if(!parts.some(p => p.type == 'exp')) staticText = parts.map(p => p.type == 'text' ? p.value : '').join('');
-  let result = [];
-  parts.forEach(p => {
-    if(p.type == 'js') return;
-    if(p.type == 'exp') result.push(p);
-    else {
-      let l = last(result);
-      if(l?.type == 'text') l.value += p.value;
-      else result.push({ ...p });
-    }
-  });
-  result = '`' + result.map(p => p.type == 'text' ? Q(p.value) : '${' + p.value + '}').join('') + '`';
-  return {
-    result,
+
+  let pe = {
     parts,
     staticText,
-    binding: parts.length == 1 && parts[0].type == 'exp' ? parts[0].value : null
+    binding: parts.length == 1 && parts[0].type == 'exp' ? parts[0].value : null,
+    getResult() {
+      let result = [];
+      this.parts.forEach(p => {
+        if(p.type == 'js') return;
+        if(p.type == 'exp') result.push(p);
+        else {
+          let l = last(result);
+          if(l?.type == 'text') l.value += p.value;
+          else result.push({ ...p });
+        }
+      });
+
+      return '`' + result.map(p => p.type == 'text' ? Q(p.value) : '${' + p.value + '}').join('') + '`';
+    }
   };
+  pe.result = pe.getResult();
+  return pe;
 }
 
 

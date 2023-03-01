@@ -204,7 +204,7 @@ export async function compile(source, config = {}) {
 async function hook(ctx, name) {
   for(let i = 0; i < ctx.config.plugins.length; i++) {
     const fn = ctx.config.plugins[i][name];
-    if(fn) await fn(ctx);
+    if(fn) await use_context(ctx, () => fn(ctx));
   }
 }
 
