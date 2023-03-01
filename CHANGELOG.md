@@ -20,6 +20,7 @@
 * handler for element "select"
 * handler for "radio" input
 * optional removing all empty text nodes: option.compact = 'full'
+* pluggin 'static-text'
 
 ## 0.6.x
 
