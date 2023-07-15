@@ -470,7 +470,8 @@ export function parseText(source) {
 }
 
 
-export const parseBinding = (reader) => {
+export const parseBinding = (source) => {
+  const reader = new Reader(source);
   let start = reader.index;
 
   assert(reader.read() === '{', 'Bind error');
@@ -513,7 +514,7 @@ export const parseBinding = (reader) => {
     const raw = reader.sub(start);
     return {
       raw,
-      value: raw.substring(1, raw.length - 1),
+      value: raw.substring(1, raw.length - 1).trim(),
     };
   }
 };
