@@ -10,7 +10,7 @@ export const eachDefaultKey = (item, index, array) => isObject(array[0]) ? item 
 export const makeEachBlock = (fr, fn) => {
   return (item, index) => {
     let $dom = fr.cloneNode(true);
-    return [$dom, fn($dom, item, index)];
+    return [$dom, fn?.($dom, item, index)];
   };
 };
 

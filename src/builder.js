@@ -737,7 +737,7 @@ export function buildBlock(data, option = {}) {
       each: option.each,
       parentElement: option.parentElement
     }, (ctx, n) => {
-      if(n.each && !ctx.isEmpty(n.innerBlock)) {
+      if(n.each) {
         ctx.write('$runtime.makeEachBlock(');
       } else {
         ctx.write('$runtime.makeBlock(');
