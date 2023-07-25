@@ -1,5 +1,4 @@
 const { build } = require('esbuild');
-const { derver } = require('derver');
 const malina = require('malinajs');
 const fsp = require('fs/promises');
 const fs = require('fs');
@@ -20,6 +19,7 @@ const derverConfig = fs.existsSync(derverConfigPath) ? require(derverConfigPath)
 if(!module.parent){
 
     if(process.env.WATCH){
+        const { derver } = require('derver');
         esbuild({
             minify: false,
             incremental: true
@@ -64,7 +64,7 @@ function malinaPlugin(options={}){
         name: 'malina-plugin',
         setup(build) {
             build.onResolve({ filter: /^malinajs$/ }, async (args) => {
-                const runtime = await build.resolve('malinajs/runtime.js', {resolveDir: args.resolveDir});
+                const runtime = await build.resolve('malinajs/runtime.js', {resolveDir: args.resolveDir, kind: args.kind});
                 return {
                     path: runtime.path,
                     sideEffects: false
