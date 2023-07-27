@@ -16,7 +16,7 @@ class Reader {
       assert(pattern.source[0] == '^');
       const rx = this.source.substring(this.index).match(pattern);
       assert(rx && rx.index == 0, 'Wrong syntax');
-      let r = rx[1] || rx[0];
+      let r = rx[rx.length-1];
       this.index += rx[0].length;
       return r;
     } else throw 'Not implemented';
