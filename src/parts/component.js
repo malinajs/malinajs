@@ -75,7 +75,7 @@ export function makeComponent(node, option={}) {
             childName: slot.name,
             parentName: parentSlot.elArg || 'default'
           }, (ctx, n) => {
-            ctx.writeLine(`slots.${n.childName} = $option.slots?.${n.parentName};`);
+            ctx.write(true, `${n.childName}: $option.slots?.${n.parentName}`);
           }));
           return;
         }
