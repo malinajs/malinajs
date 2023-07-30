@@ -23,7 +23,7 @@ import { makeEventProp } from './event-prop.js';
 import { makeKeepAlive } from './parts/keep-alive.js';
 
 
-export const version = '0.7.8';
+export const version = '0.7.9';
 
 
 export async function compile(source, config = {}) {
@@ -42,6 +42,7 @@ export async function compile(source, config = {}) {
     css: true,
     passClass: true,
     immutable: false,
+    deepCheckingProps: false,
     useGroupReferencing: true
   }, config);
 

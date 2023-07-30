@@ -15,6 +15,7 @@
 * else-if
 * refactoring $onMount
 * optional deep checking for passed props: prop={value} prop|deep={value}
+* option "deepCheckingProps" for deep checking for props by default, :prop|deep
 * keep-alive
 * malina:self
 * handler for element "select"
