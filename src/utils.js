@@ -140,7 +140,7 @@ export const genId = () => {
 
 
 export const extractKeywords = (exp) => {
-  let ast = acorn.parse(exp, { sourceType: 'module', ecmaVersion: 12, ecmaVersion: 'latest' });
+  let ast = acorn.parse(exp, { sourceType: 'module', ecmaVersion: 'latest' });
 
   const keys = new Set();
   const rec = (n) => {

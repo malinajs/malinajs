@@ -1,5 +1,5 @@
+import acorn from 'acorn';
 import { assert, last, Q, unwrapExp } from './utils.js';
-
 
 class Reader {
   constructor(source) {
@@ -91,48 +91,28 @@ export function parseHTML(source) {
   const reader = new Reader(source);
 
   const readScript = (reader) => {
-    const start = reader.index;
+    class ScriptParser extends acorn.Parser {
+      readToken_lt_gt(code) {
+        if (this.input.slice(this.pos, this.pos + 9) == '</script>') {
+          return this.finishToken(acorn.tokTypes.eof);
+        }
+        return super.readToken_lt_gt(code);
+      }
 
-    const readRegExp = () => {
-      assert(reader.read() == '/');
-      let a, p, q;
-      while(true) {
-        p = a;
-        a = reader.read();
-        if(q) {
-          if(a != q) continue;
-          if(p == '\\') continue;
-          q = null;
-          continue;
+      scan() {
+        this.nextToken();
+        while (this.type !== acorn.tokTypes.eof) {
+          this.parseStatement(null, true, null);
         }
-        if(a == '[' && p != '\\') q = ']';
-        if(a == '/' && p != '\\') return;
+        return this.end;
       }
-    };
-
-    while(true) {
-      if(reader.probeQuote()) {
-        reader.readString();
-        continue;
-      }
-      if(reader.probe('/')) {
-        if(reader.readIf('//')) {
-          while(reader.read() != '\n');
-          continue;
-        }
-        if(reader.readIf('/*')) {
-          while(true) {
-            if(reader.read() == '*' && reader.readIf('/')) break;
-          }
-          continue;
-        }
-        readRegExp();
-        continue;
-      }
-      if(reader.readIf('</script>')) {
-        return reader.sub(start, reader.index - 9);
-      } else reader.read();
     }
+
+    let start = reader.index;
+    let parser = new ScriptParser({ ecmaVersion: 'latest', sourceType: 'module' }, reader.source, start);
+    let end = parser.scan();
+    reader.index = end + 9;
+    return reader.sub(start, end);
   }
 
   const readStyle = () => {
