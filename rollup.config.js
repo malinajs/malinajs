@@ -1,5 +1,4 @@
 
-// import commonjs from '@rollup/plugin-commonjs';
 import resolve from '@rollup/plugin-node-resolve';
 
 
@@ -18,6 +17,14 @@ export default [{
 	output: {
     file: './malina.mjs',
 		format: 'es'
+	},
+	plugins: [resolve()]
+}, {
+	input: './src/compiler.js',
+	output: {
+    file: './malina.js',
+    name: 'malina',
+		format: 'umd'
 	},
 	plugins: [resolve()]
 }];
