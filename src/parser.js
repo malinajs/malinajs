@@ -1,4 +1,5 @@
-import acorn from 'acorn';
+
+import * as acorn from 'acorn';
 import { assert, last, Q, unwrapExp } from './utils.js';
 
 class Reader {

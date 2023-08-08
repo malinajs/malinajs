@@ -1,4 +1,4 @@
-import csstree from 'css-tree';
+import csstree from './ext/csstree.js';
 import { assert, genId as utilsGenId, last } from '../utils.js';
 import nwsapi from './ext/nwsapi';
 

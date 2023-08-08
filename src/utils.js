@@ -1,5 +1,6 @@
-import acorn from 'acorn';
-import astring from 'astring';
+
+import * as acorn from 'acorn';
+import * as astring from 'astring';
 
 let current_context;
 
