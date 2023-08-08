@@ -15,20 +15,7 @@
  *  http://javascript.nwbox.com/nwsapi/nwsapi.js
  */
 
-(function Export(global, factory) {
-
-  'use strict';
-
-  if (typeof module == 'object' && typeof exports == 'object') {
-    module.exports = factory;
-  } else if (typeof define == 'function' && define['amd']) {
-    define(factory);
-  } else {
-    global.NW || (global.NW = { });
-    global.NW.Dom = factory(global, Export);
-  }
-
-})(this, function Factory(global, Export) {
+export default function Factory(global, Export) {
 
   var version = 'nwsapi-2.2.0',
 
@@ -1811,4 +1798,4 @@
 
   return Dom;
 
-});
+};
