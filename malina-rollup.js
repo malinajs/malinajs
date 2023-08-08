@@ -1,9 +1,7 @@
 
-const malina = require('malinajs');
+import * as malina from 'malinajs/malina.mjs';
 
-module.exports = malinaRollup;
-
-function malinaRollup(option = {}) {
+export default function malinaRollup(option = {}) {
     if(option.displayVersion !== false) console.log('! Malina.js', malina.version);
     if(!option.extension) option.extension = ['html', 'ma', 'xht'];
     let content_cache = {};
@@ -34,7 +32,6 @@ function malinaRollup(option = {}) {
         },
         async resolveId(name, importer) {
             if(content_cache[name]) return name;
-            if(name == 'malinajs') return await this.resolve('malinajs/runtime.js', importer, {skipSelf: true});
             return null;
         },
         load(id) {

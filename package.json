@@ -3,15 +3,9 @@
   "version": "0.8.0-a1",
   "license": "MIT",
   "scripts": {
-    "build": "npm run build_runtime && rollup -c",
-    "build_runtime": "rollup -c ./rollup.config.runtime.js",
-    "build_app": "NODE_PATH=.. rollup -c rollup.config.app.js && uglifyjs ./example/public/app.js -o ./example/public/app.min.js -m -c",
-    "terser": "terser ./example/public/app.js -o ./example/public/app.min2.js -m -c",
-    "build_app_es5": "NODE_PATH=.. babel ./example/public/app.js -o ./example/public/app.es5.js --presets babel-preset-es2015 && uglifyjs ./example/public/app.es5.js -o ./example/public/app.es5.min.js -m -c",
-    "web": "http-server ./example/public",
+    "build": "rollup -c",
     "test": "NODE_PATH=.. node ./node_modules/.bin/mocha ./test/run.js",
     "test-debug": "NODE_PATH=.. node --inspect-brk ./node_modules/.bin/mocha ./test/run.js",
-    "brotli": "brotli --input /app/malinajs/example/public/app.min.js --output /app/malinajs/example/public/app.min.js.br; brotli --input /app/malinajs/example/public/app.min2.js --output /app/malinajs/example/public/app.min2.js.br",
     "fix": "npx standardx --fix ./src/"
   },
   "devDependencies": {

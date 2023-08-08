@@ -1,4 +1,8 @@
 
+## 0.8.x
+* upgrade dependencies: acorn, astring, rollup...
+* compiler with included dependencies
+
 ## 0.7.x
 * refactoring, optimization, fixes
 * export function
