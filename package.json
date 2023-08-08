@@ -20,7 +20,8 @@
     "jsdom": "^16.4.0",
     "mocha": "^8.2.1",
     "rollup": "^3.27.2",
-    "standardx": "^7.0.0"
+    "standardx": "^7.0.0",
+    "@rollup/plugin-node-resolve": "^15.1.0"
   },
   "type": "module",
   "main": "runtime.js",

@@ -1,19 +1,23 @@
 
-import commonjs from '@rollup/plugin-commonjs';
+// import commonjs from '@rollup/plugin-commonjs';
+import resolve from '@rollup/plugin-node-resolve';
+
 
 export default [{
+  input: './src/runtime/index.js',
+  output: {
+    file: './runtime.js',
+    format: 'es'
+  },
+  onwarn(w, warn) {
+    if(w.code == 'ILLEGAL_REASSIGNMENT' && w.message.includes('import "share"')) return;
+    warn(w);
+  }
+}, {
 	input: './src/compiler.js',
 	output: {
-		sourcemap: true,
-		format: 'umd',
-		file: './malina.js',
-		name: 'malina',
-		globals: {
-			acorn: 'acorn',
-			astring: 'astring',
-			'css-tree': 'css-tree'
-		}
-    },
-	external: ['acorn', 'astring', 'css-tree'],
-	plugins: [commonjs()]
+    file: './malina.mjs',
+		format: 'es'
+	},
+	plugins: [resolve()]
 }];
