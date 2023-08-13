@@ -145,11 +145,13 @@ export const keyComparator = (w, value) => {
 
 
 export const fire = w => {
-  if(w.cmp) w.cmp(w, w.fn());
+  let value = w.fn();
+  if(w.cmp) w.cmp(w, value);
   else {
-    w.value = w.fn();
+    w.value = value;
     w.cb(w.value);
   }
+  return value;
 };
 
 export function $digest($cd, flag) {
