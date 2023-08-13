@@ -163,8 +163,7 @@ export const callComponentDyn = (component, context, option = {}, propFn, cmp, s
       $component.$push?.(value);
       $component.$apply?.();
     }, { value: {}, idle: true, cmp });
-    fire(parentWatch);
-    option.props = parentWatch.value;
+    option.props = fire(parentWatch);
   }
 
   if(classFn) {
