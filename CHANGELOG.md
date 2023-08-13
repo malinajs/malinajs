@@ -2,6 +2,7 @@
 ## 0.8.x
 * upgrade dependencies: acorn, astring, rollup...
 * compiler with included dependencies
+* autoSubscribe is off by default
 
 ## 0.7.x
 * refactoring, optimization, fixes

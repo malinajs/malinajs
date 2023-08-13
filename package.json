@@ -20,6 +20,7 @@
   "type": "module",
   "main": "runtime.js",
   "files": [
+    "malina.mjs",
     "malina.js",
     "runtime.js",
     "malina-rollup.js",

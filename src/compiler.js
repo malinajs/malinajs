@@ -27,15 +27,13 @@ export const version = '0.8.0-a1';
 
 
 export async function compile(source, config = {}) {
-  if(config.localConfig !== false && config.path) config = loadConfig(config.path, config);
-
   config = Object.assign({
     name: 'widget',
     exportDefault: true,
     inlineTemplate: false,
     hideLabel: false,
     compact: true,
-    autoSubscribe: true,
+    autoSubscribe: false,
     cssGenId: null,
     plugins: [],
     debug: true,
@@ -43,7 +41,10 @@ export async function compile(source, config = {}) {
     passClass: true,
     immutable: false,
     deepCheckingProps: false,
-    useGroupReferencing: true
+    useGroupReferencing: true,
+    preserveComments: false,
+    debugLabel: false,
+    autoimport: null
   }, config);
 
   const ctx = {
@@ -226,33 +227,6 @@ function detectDependency(data) {
       if(p.type == 'exp' || p.type == 'js') check(p.value);
     }
   }
-}
-
-
-function loadConfig(filename, option) {
-  const fs = require('fs');
-  let result = Object.assign({}, option);
-  if(result.plugins) result.plugins = result.plugins.slice();
-
-  let localConfig;
-  let parts = filename.split(/[/\\]/);
-  for(let i = parts.length - 1; i > 1; i--) {
-    let local = parts.slice(0, i).join('/') + '/malina.config.js';
-    if(fs.existsSync(local)) {
-      localConfig = local;
-      break;
-    }
-  }
-
-  if(localConfig) {
-    const confFn = require(localConfig);
-    if(typeof (confFn) == 'function') result = confFn(result, filename);
-    else result = confFn;
-  }
-  if(!result.path) result.path = filename;
-  if(!result.name) result.name = filename.match(/([^/\\]+)\.\w+$/)[1];
-
-  return result;
 }
 
 
