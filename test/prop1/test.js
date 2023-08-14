@@ -1,9 +1,9 @@
 
-const assert = require('assert');
-const {tick} = require('../lib');
+import assert from 'assert';
+import {tick} from '../lib.js';
 
 
-async function main(build) {
+export async function main(build) {
     const {document} = await build({hideLabel: true});
 
     await tick();
@@ -11,5 +11,3 @@ async function main(build) {
     let text = document.body.textContent.trim().replace(/\s+/g, ' ');
     assert.strictEqual(text, '1: [Child: undefined, default] 2: [Child: true, true] 3: [Child: 123, abc]');
 }
-
-module.exports = {main};

@@ -1,5 +1,5 @@
 
-import { mount } from 'malinajs/runtime.js';
+import { mount } from 'malinajs';
 import App from 'main.xht';
 
 document.body.innerHTML = '';

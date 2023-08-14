@@ -1,9 +1,9 @@
 
-const assert = require('assert');
-const {tick} = require('../lib');
+import assert from 'assert';
+import {tick} from '../lib.js';
 
 
-async function main(build) {
+export async function main(build) {
     const {document, app} = await build({hideLabel: true});
 
     await tick();
@@ -30,5 +30,3 @@ async function main(build) {
     assert.strictEqual(app.name, 'system');
     assert.strictEqual(text(), '[system:20.04 LTS] [$props={"value":"20.04 LTS","name":"system","ext":"unix"}] [$attrs={"ext":"unix"}]');
 }
-
-module.exports = {main};

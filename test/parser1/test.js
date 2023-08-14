@@ -1,9 +1,9 @@
 
-const assert = require('assert');
-const {tick} = require('../lib');
+import assert from 'assert';
+import {tick} from '../lib.js';
 
 
-async function main(build) {
+export async function main(build) {
     const {document} = await build();
 
     await tick();
@@ -20,7 +20,4 @@ async function main(build) {
 
     assert.strictEqual(divs[0].innerHTML, '2');
     assert.strictEqual(divs[1].innerHTML, "'");
-
 }
-
-module.exports = {main};

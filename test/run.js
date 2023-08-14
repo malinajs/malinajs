@@ -1,5 +1,6 @@
 
-const lib = require('./lib');
+import lib from './lib.js';
+
 
 async function main() {
     let tests = [
@@ -33,7 +34,7 @@ main();
 
 
 async function check(name) {
-    const test = require(`./${name}/test`);
+    const test = await import(`./${name}/test.js`);
 
     async function build(option) {
         return await lib.build(name, option);

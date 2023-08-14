@@ -1,9 +1,9 @@
 
-const assert = require('assert');
-const {tick} = require('../lib');
+import assert from 'assert';
+import {tick} from '../lib.js';
 
 
-async function main(build) {
+export async function main(build) {
     let context = {
         click: 0,
         click2: 0,
@@ -74,5 +74,3 @@ async function main(build) {
 
     check([3, 1, 1, 1, 'btn-5', 1, 1]);
 }
-
-module.exports = {main};

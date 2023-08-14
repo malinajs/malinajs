@@ -4,8 +4,8 @@
   "license": "MIT",
   "scripts": {
     "build": "rollup -c",
-    "test": "NODE_PATH=.. node ./node_modules/.bin/mocha ./test/run.js",
-    "test-debug": "NODE_PATH=.. node --inspect-brk ./node_modules/.bin/mocha ./test/run.js",
+    "test": "mocha ./test/run.js",
+    "test-debug": "node --inspect-brk ./node_modules/.bin/mocha ./test/run.js",
     "fix": "npx standardx --fix ./src/"
   },
   "devDependencies": {

@@ -1,9 +1,9 @@
 
-const assert = require('assert');
-const {tick, equalClass} = require('../lib');
+import assert from 'assert';
+import {tick, equalClass} from '../lib.js';
 
 
-async function main(build) {
+export async function main(build) {
     const {document} = await build();
 
     await tick();
@@ -22,5 +22,3 @@ async function main(build) {
     assert.strictEqual('h1{color:red}div.c1 b.c1 h2{color:green}.root.c1 span.c1 div h3{color:blue}', styles[0].innerHTML);
 
 }
-
-module.exports = {main};

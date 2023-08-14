@@ -1,10 +1,10 @@
 
-const assert = require('assert');
-const malinajs = require('malinajs');
+import assert from 'assert';
+import { parseHTML } from '../../malina.mjs';
 
 
-async function main() {
-  let root = malinajs.parseHTML(`
+export async function main() {
+  let root = parseHTML(`
     <div>
       <h1 title="header" *{someValue('start end')}>Title</h1>
       <hr {* $element.value = "A B"}>
@@ -231,5 +231,3 @@ async function main() {
   }
 
 }
-
-module.exports = { main };
