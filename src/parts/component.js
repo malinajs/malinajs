@@ -152,8 +152,7 @@ export function makeComponent(node, option={}) {
     if(name[0] == '#') {
       assert(!value, 'Wrong ref');
       name = name.substring(1);
-      assert(isSimpleName(name), name);
-      this.checkRootName(name);
+      assert(detectExpressionType(name) == 'identifier', name);
       reference = name;
       return;
     } else if(name[0] == ':' || name.startsWith('bind:')) {
