@@ -236,13 +236,20 @@ export function attchExportedFragment(node, label, componentName) {
         ctx.add(n.slot.template);
         ctx.write(')');
       } else {
-        ctx.write('$runtime.makeBlockBound(');
-        ctx.add(n.slot.template);
-        ctx.write(', ($parentElement) => {', true);
-        ctx.indent++;
-        ctx.add(n.slot.source);
-        ctx.indent--;
-        ctx.write(true, '})');
+        ctx.add(xNode('make-block', {
+          $wait: ['apply'],
+          template: n.slot.template,
+          source: n.slot.source
+        }, (ctx, n) => {
+          if(this.inuse.apply) ctx.write('$runtime.makeBlockBound(');
+          else ctx.write('$runtime.makeBlock(');
+          ctx.add(n.template);
+          ctx.write(', ($parentElement) => {', true);
+          ctx.indent++;
+          ctx.add(n.source);
+          ctx.indent--;
+          ctx.write(true, '})');
+        }));
       }
     } else missed = ', null';
 

@@ -149,6 +149,18 @@ export function xNode(_type, _data, _handler) {
     xNode(data, handler)
     xNode(handler)
     xNode(xNode, data, handler)
+
+    $wait - wait for a node be processed
+    $hold - hold a node from processing
+
+      xNode('name', {
+        $wait: ['apply', 'rootCD', anotherNode],
+        $hold: ['apply', 'anotherNode']
+      }, (ctx, node) => {
+        this.inuse.apply    // check if apply is used
+        this.inuse.rootCD   // check if rootCD is used
+        node.$wait[0].value // check value of first node in $wait
+      })
   */
   if(_type instanceof xNode) {
     let n = _type;
