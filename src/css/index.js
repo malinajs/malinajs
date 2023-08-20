@@ -1,6 +1,7 @@
 import csstree from './ext/csstree.js';
 import { assert, genId as utilsGenId, last } from '../utils.js';
 import nwsapi from './ext/nwsapi';
+import { xNode } from '../xnode.js';
 
 
 export function processCSS() {
@@ -283,6 +284,18 @@ export function processCSS() {
     }
     assert(sel.local && sel.local !== true);
     return sel.local;
+  };
+
+  self.resolveAsNode = function(classList, wrap) {
+    return xNode('resolve-class', { classList, wrap }, (ctx, n) => {
+      let className = {};
+      n.classList.forEach(sel => {
+        if(sel.$selector) sel = this.resolve(sel);
+        className[sel] = true;
+      });
+      className = Object.keys(className).join(' ');
+      if(className) ctx.write(`${n.wrap[0]}${className}${n.wrap[1]}`);
+    });
   };
 
   self.getContent = function() {

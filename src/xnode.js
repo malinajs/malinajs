@@ -353,14 +353,10 @@ xNode.init = {
           });
         }
 
-        let className = {};
-        node.class.forEach(sel => {
-          if(sel.$selector) sel = get_context().css.resolve(sel);
-          className[sel] = true;
-        });
-        className = Object.keys(className).join(' ');
-        if(className) ctx.write(` class="${className}"`);
-
+        if (node.class.size) {
+          ctx.add(get_context().css.resolveAsNode(node.class, [' class="', '"']));
+        }
+        
         if(node.children.length) {
           ctx.write('>');
           node.children.forEach(n => ctx.build(n));
