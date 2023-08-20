@@ -452,13 +452,13 @@ export function buildBlock(data, option = {}) {
               ctx.writeLine(`${elName}.setAttribute('${a.name}', \`${Q(a.value)}\`);`);
             });
           }));
+
           binds.push(xNode('bindClasses', { el }, (ctx, n) => {
             let el = n.el;
+            if (!el.class.size) return;
             let elName = el.bindName();
-            if(el.class.size) {
-              let className = Array.from(el.class.values()).join(' ');
-              ctx.writeLine(`${elName}.className += ' ${className}';`);
-            }
+            ctx.add(this.css.resolveAsNode(el.class, [`${elName}.className += ' `, `';`]));
+            ctx.write(true);
           }));
         }
         bindTail.forEach(b => binds.push(b));
