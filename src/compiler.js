@@ -127,7 +127,7 @@ export async function compile(source, config = {}) {
     }
   };
 
-  use_context(ctx, () => setup.call(ctx));
+  use_context(ctx, setup);
 
   await hook(ctx, 'dom:before');
   ctx.parseHTML();
@@ -154,7 +154,7 @@ export async function compile(source, config = {}) {
   await hook(ctx, 'js:before');
   ctx.js_parse();
   await hook(ctx, 'js');
-  use_context(ctx, () => ctx.js_transform());
+  use_context(ctx, ctx.js_transform);
   await hook(ctx, 'js:after');
 
   await hook(ctx, 'css:before');
@@ -163,38 +163,38 @@ export async function compile(source, config = {}) {
   await hook(ctx, 'css');
 
   await hook(ctx, 'runtime:before');
-  use_context(ctx, () => ctx.buildRuntime());
+  use_context(ctx, ctx.buildRuntime);
   await hook(ctx, 'runtime');
 
   await hook(ctx, 'build:before');
 
-  use_context(ctx, () => {
-    const result = ctx.result = xNode('block');
+  use_context(ctx, function() {
+    const result = this.result = xNode('block');
     result.push('import * as $runtime from \'malinajs/runtime.js\';');
     result.push('import { $watch, $tick } from \'malinajs/runtime.js\';');
-    result.push(ctx.module.top);
+    result.push(this.module.top);
     result.push(xNode('componentFn-wrapper', {
-      $compile: [ctx.module.head, ctx.module.code, ctx.module.body, ctx.glob.rootCD],
+      $compile: [this.module.head, this.module.code, this.module.body, this.glob.rootCD],
       name: config.name,
-      componentFn: ctx.glob.componentFn
-    }, (ctx2, n) => {
+      componentFn: this.glob.componentFn
+    }, (ctx, n) => {
       if(config.exportDefault) {
-        if(ctx.glob.$$selfComponent.value) {
-          ctx2.write(true, 'const $$selfComponent = ');
-          ctx2.add(n.componentFn);
-          ctx2.write(true, 'export default $$selfComponent;');
+        if(this.glob.$$selfComponent.value) {
+          ctx.write(true, 'const $$selfComponent = ');
+          ctx.add(n.componentFn);
+          ctx.write(true, 'export default $$selfComponent;');
         } else {
-          ctx2.write(true, 'export default ');
-          ctx2.add(n.componentFn);
+          ctx.write(true, 'export default ');
+          ctx.add(n.componentFn);
         }
       } else {
-        assert(!ctx.glob.$$selfComponent.value, 'Not supported');
-        ctx2.write(true, `const ${n.name} = `);
-        ctx2.add(n.componentFn);
+        assert(!this.glob.$$selfComponent.value, 'Not supported');
+        ctx.write(true, `const ${n.name} = `);
+        ctx.add(n.componentFn);
       }
     }));
 
-    ctx.result = xBuild(result);
+    this.result = xBuild(result);
   });
 
   await hook(ctx, 'build');
@@ -205,7 +205,7 @@ export async function compile(source, config = {}) {
 async function hook(ctx, name) {
   for(let i = 0; i < ctx.config.plugins.length; i++) {
     const fn = ctx.config.plugins[i][name];
-    if(fn) await use_context(ctx, () => fn(ctx));
+    if(fn) await use_context(ctx, () => fn.call(ctx, ctx));
   }
 }
 
