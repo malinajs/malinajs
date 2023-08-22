@@ -3,6 +3,7 @@
 * upgrade dependencies: acorn, astring, rollup...
 * compiler with included dependencies
 * autoSubscribe is off by default
+* config loader moved out of compiler
 
 ## 0.7.x
 * refactoring, optimization, fixes

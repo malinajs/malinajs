@@ -13,18 +13,18 @@ export default [{
     warn(w);
   }
 }, {
-	input: './src/compiler.js',
-	output: {
+  input: './src/compiler.js',
+  output: {
     file: './malina.mjs',
-		format: 'es'
-	},
-	plugins: [resolve()]
+    format: 'es'
+  },
+  plugins: [resolve()]
 }, {
-	input: './src/compiler.js',
-	output: {
+  input: './src/compiler.js',
+  output: {
     file: './malina.js',
     name: 'malina',
-		format: 'umd'
-	},
-	plugins: [resolve()]
+    format: 'umd'
+  },
+  plugins: [resolve()]
 }];
