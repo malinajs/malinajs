@@ -127,19 +127,26 @@ export function makeEachBlock(data, option) {
   if(block.singleBlock) {
     itemBlock = xNode('each-component', {
       block: block.singleBlock,
+      reference: block.reference,
       rebind,
       itemName,
       indexName
     }, (ctx, n) => {
       ctx.write(`$runtime.makeEachSingleBlock((${n.itemName}`);
-      if(n.indexName) ctx.write(`, ${n.indexName}`);
+      if (n.indexName) ctx.write(`, ${n.indexName}`);
       ctx.write(') => [');
       ctx.indent++;
       ctx.write(true);
-      if(n.rebind) ctx.add(n.rebind);
+      if (n.rebind) ctx.add(n.rebind);
       else ctx.write('null');
       ctx.write(',', true);
-      ctx.add(n.block);
+      if (n.reference) {
+        ctx.write(true, `(${n.reference} = `);
+        ctx.add(n.block);
+        ctx.write(')', true);
+      } else {
+        ctx.add(n.block);
+      }
       ctx.indent--;
       ctx.write(true, '])');
     });
