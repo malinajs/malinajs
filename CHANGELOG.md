@@ -4,6 +4,7 @@
 * compiler with included dependencies
 * autoSubscribe is off by default
 * config loader moved out of compiler
+* deprecate functions onMount, onDestroy
 
 ## 0.7.x
 * refactoring, optimization, fixes

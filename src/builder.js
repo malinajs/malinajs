@@ -103,10 +103,6 @@ export function buildRuntime() {
     runtime.push(bb.source);
   }
 
-
-  if(this.script.onMount) runtime.push('$runtime.$onMount(onMount);');
-  if(this.script.onDestroy) runtime.push('$runtime.$onDestroy(onDestroy);');
-
   runtime.push(xNode('addStyle', ctx => {
     if(!this.css.active()) return;
     let style = this.css.getContent();

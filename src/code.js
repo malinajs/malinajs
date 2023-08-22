@@ -71,9 +71,6 @@ export function transform() {
     }
   });
 
-  result.onMount = rootFunctions.onMount;
-  result.onDestroy = rootFunctions.onDestroy;
-
   const funcTypes = {
     FunctionDeclaration: 1,
     FunctionExpression: 1,
