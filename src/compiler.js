@@ -1,8 +1,12 @@
+
+export { parseHTML, parseText, parseBinding, parseAttibutes } from './parser.js';
+export { xNode, xBuild } from './xnode.js';
+export { use_context, get_context } from './utils.js';
+
 import { assert, use_context } from './utils.js';
 import { xNode, xBuild } from './xnode.js';
 import { compactDOM, compactFull } from './compact.js';
 import { parseHTML, parseText } from './parser';
-export { parseHTML } from './parser';
 import * as codelib from './code';
 import { buildRuntime, buildBlock } from './builder';
 import { processCSS } from './css/index';
