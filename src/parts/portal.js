@@ -19,7 +19,6 @@ export function attachPortal(node) {
   if(mount) mount = unwrapExp(mount);
 
   const result = xNode('portal', {
-    $compile: [bb.source],
     mount,
     source: bb.source,
     template: bb.template

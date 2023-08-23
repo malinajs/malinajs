@@ -25,7 +25,7 @@ function xWriter(node) {
     this.indent--;
   };
 
-  this.add = this.build = function(n) {
+  this.add = function(n) {
     if(n === null) return;
     assert(n instanceof xNode);
     assert(!n.$inserted, 'already inserted');
@@ -53,23 +53,20 @@ function xWriter(node) {
 export function xBuild(node) {
   let pending, trace;
   const resolve = n => {
-    n.$compile?.forEach(c => {
-      c != null && resolve(c);
-    });
-    if(!n.$done) {
+    if (n.__resolving) return;
+    n.__resolving = true;
+
+    if (!n.$done) {
       let ready = true;
-      if(n.$wait?.length) {
-        const allDone = n.$wait.every(i => {
-          if(i == null) return true;
-          assert(i instanceof xNode, '$wait supports only xNode');
-          if(!i.$done) trace.push(`${n.$type} -> ${i.$type}`);
-          return i.$done;
-        });
-        if(!allDone) {
-          pending++;
-          ready = false;
-        }
-      }
+      n.$wait?.forEach(i => {
+        if (i == null) return;
+        assert(i instanceof xNode, '$wait supports only xNode');
+        if (i.$done) return;
+        resolve(i);
+        if (i.$done) return;
+        ready = false;
+        trace.push(`${n.$type} -> ${i.$type}`);
+      });
       if(ready) {
         let w = new xWriter(n);
         n.$handler(w, n);
@@ -82,7 +79,10 @@ export function xBuild(node) {
         if(r?.node instanceof xNode) resolve(r.node);
       });
     } else pending++;
+
+    n.__resolving = false;
   };
+
   let depth;
   for(depth = 10; depth > 0; depth--) {
     pending = 0;
@@ -151,17 +151,20 @@ export function xNode(_type, _data, _handler) {
     xNode(xNode, data, handler)
 
     $wait - wait for a node be processed
-    $hold - hold a node from processing
+    $hold - hold a node from processing, such node must be created before building
 
       xNode('name', {
         $wait: ['apply', 'rootCD', anotherNode],
-        $hold: ['apply', 'anotherNode']
+        $hold: ['apply', anotherNode]
       }, (ctx, node) => {
-        this.inuse.apply    // check if apply is used
-        this.inuse.rootCD   // check if rootCD is used
-        node.$wait[0].value // check value of first node in $wait
+        this.inuse.apply      // check if apply is used
+        this.inuse.rootCD     // check if rootCD is used
+        node.$wait[0].value   // check value of first node in $wait
+        ctx.add(childNode);   // insert a node
+        ...
       })
   */
+
   if(_type instanceof xNode) {
     let n = _type;
     if(isFunction(_handler)) {
@@ -217,9 +220,9 @@ export function xNode(_type, _data, _handler) {
   this.$inserted = false;
   this.$result = [];
 
-  this.$value = function(value) {
+  this.$value = function(value=true) {
     assert(!this.$done, 'Attempt to set active, depends node is already resolved');
-    this.value = value === undefined ? true : value;
+    this.value = value;
   };
   resolveDependecies(this);
   return this;
@@ -238,7 +241,7 @@ const resolveDependecies = node => {
   }
 
   if(node.$hold) {
-    node.$hold.forEach(n => {
+    node.$hold = node.$hold.map(n => {
       if(typeof (n) == 'string') {
         const context = get_context();
         assert(context.glob[n], `Wrong dependency '${n}'`);
@@ -247,8 +250,8 @@ const resolveDependecies = node => {
       assert(!n.$done, 'Attempt to add dependecy, but node is already resolved');
       if(!n.$wait) n.$wait = [];
       n.$wait.push(node);
+      return n;
     });
-    delete node.$hold;
   }
 };
 
@@ -279,7 +282,7 @@ xNode.init = {
         if(n == null) return;
         if(typeof n == 'string') {
           if(n) ctx.writeLine(n);
-        } else ctx.build(n);
+        } else ctx.add(n);
       });
       if(node.scope) {
         ctx.indent--;
@@ -336,7 +339,7 @@ xNode.init = {
     },
     handler: (ctx, node) => {
       if(node.inline) {
-        node.children.forEach(n => ctx.build(n));
+        node.children.forEach(n => ctx.add(n));
       } else {
         assert(node.name, 'No node name');
         ctx.write(`<${node.name}`);
@@ -359,7 +362,7 @@ xNode.init = {
         
         if(node.children.length) {
           ctx.write('>');
-          node.children.forEach(n => ctx.build(n));
+          node.children.forEach(n => ctx.add(n));
           ctx.write(`</${node.name}>`);
         } else {
           if(node.voidTag) ctx.write('/>');

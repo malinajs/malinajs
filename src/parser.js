@@ -495,7 +495,7 @@ export const parseBinding = (source) => {
     const raw = reader.sub(start);
     return {
       raw,
-      value: raw.substring(1, raw.length - 1).trim(),
+      value: raw.substring(1, raw.length - 1).trim()
     };
   }
 };

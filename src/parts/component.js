@@ -122,13 +122,12 @@ export function makeComponent(node, option={}) {
       assert(isSimpleName(name));
 
       anchorBlocks.push(xNode('anchor', {
-        $compile: [block],
         name,
         block
       }, (ctx, n) => {
         ctx.write(`${n.name}: $runtime.makeAnchor((el) => {`);
         ctx.indent++;
-        ctx.build(n.block);
+        ctx.add(n.block);
         ctx.indent--;
         ctx.write(true, '})');
       }));

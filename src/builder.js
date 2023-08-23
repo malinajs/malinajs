@@ -67,7 +67,7 @@ export function buildRuntime() {
     }));
   }
 
-  let runtime = xNode('block', { scope: true, $compile: [] });
+  let runtime = xNode('block', { scope: true });
   this.module.body.push(runtime);
 
   let bb = this.buildBlock(this.DOM, {
@@ -382,7 +382,6 @@ export function buildBlock(data, option = {}) {
           let slot = this.attachSlot(slotName, n);
 
           binds.push(xNode('attach-slot', {
-            $compile: [slot],
             label: requireLabel(),
             slot
           }, (ctx, n) => {
@@ -727,7 +726,7 @@ export function buildBlock(data, option = {}) {
     else template.inline = true;
 
     result.block = xNode('block', {
-      $compile: [innerBlock],
+      $wait: [innerBlock],
       innerBlock,
       tpl: template,
       each: option.each,

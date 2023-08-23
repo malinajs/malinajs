@@ -14,7 +14,7 @@ export function attachHead(n) {
       }, (ctx, n) => {
         if(n.target == 'window') ctx.writeLine(`let ${n.name} = window;`);
         else ctx.writeLine(`let ${n.name} = document.body;`);
-        ctx.build(n.source);
+        ctx.add(n.source);
       });
     }
   } else if(n.elArg == 'head') {
@@ -51,7 +51,6 @@ export function attachHead(n) {
       });
       d.source = bb.source;
       d.template = bb.template;
-      d.$compile = [d.source];
 
       this.require('$onDestroy');
     }

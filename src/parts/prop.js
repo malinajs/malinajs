@@ -115,7 +115,7 @@ export function bindProp(prop, node, element) {
       }, (ctx, n) => {
         if(n.rootModifier) ctx.write(true, `$$addRootEvent(${n.el}, '${n.event}', `);
         else ctx.write(true, `$runtime.addEvent(${n.el}, '${n.event}', `);
-        ctx.build(n.fn);
+        ctx.add(n.fn);
         ctx.write(');');
       })
     };

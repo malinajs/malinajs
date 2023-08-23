@@ -174,32 +174,28 @@ export async function compile(source, config = {}) {
   await hook(ctx, 'build:before');
 
   use_context(ctx, function() {
-    const result = this.result = xNode('block');
-    result.push('import * as $runtime from \'malinajs/runtime.js\';');
-    result.push('import { $watch, $tick } from \'malinajs/runtime.js\';');
-    result.push(this.module.top);
-    result.push(xNode('componentFn-wrapper', {
-      $compile: [this.module.head, this.module.code, this.module.body, this.glob.rootCD],
-      name: config.name,
-      componentFn: this.glob.componentFn
-    }, (ctx, n) => {
-      if(config.exportDefault) {
+    const root = xNode('root', {}, (ctx, n) => {
+      ctx.write(true, `import * as $runtime from 'malinajs/runtime.js';`);
+      ctx.write(true, 'import { $watch, $tick } from \'malinajs/runtime.js\';');
+      ctx.add(this.module.top);
+      const componentFn = this.glob.componentFn;
+      if(this.config.exportDefault) {
         if(this.glob.$$selfComponent.value) {
           ctx.write(true, 'const $$selfComponent = ');
-          ctx.add(n.componentFn);
+          ctx.add(componentFn);
           ctx.write(true, 'export default $$selfComponent;');
         } else {
           ctx.write(true, 'export default ');
-          ctx.add(n.componentFn);
+          ctx.add(componentFn);
         }
       } else {
         assert(!this.glob.$$selfComponent.value, 'Not supported');
-        ctx.write(true, `const ${n.name} = `);
-        ctx.add(n.componentFn);
+        ctx.write(true, `const ${this.config.name} = `);
+        ctx.add(componentFn);
       }
-    }));
+    });
 
-    this.result = xBuild(result);
+    this.result = xBuild(root);
   });
 
   await hook(ctx, 'build');

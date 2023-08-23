@@ -34,7 +34,7 @@ export function makeFragment(node) {
   }
 
   return xNode('fragment', {
-    $compile: [block.source],
+    $wait: [block.source],
     name,
     props,
     external,
@@ -122,7 +122,7 @@ export function attachFragment(node) {
   let { props, events, forwardAllEvents, staticProps } = parseAttibutes.call(this, node.attributes);
 
   return xNode('call-fragment', {
-    $compile: [slot?.source],
+    $wait: [slot?.source],
     forwardAllEvents,
     name,
     events,
@@ -163,7 +163,7 @@ export function attachFragment(node) {
         } else {
           assert(e.fn);
           ctx.write(`${e.name}: `);
-          ctx.build(e.fn);
+          ctx.add(e.fn);
         }
       });
       ctx.write('}');
@@ -214,8 +214,7 @@ export function attchExportedFragment(node, label, componentName) {
   let body = trimEmptyNodes(node.body || []);
   if(body.length) {
     data.slot = this.buildBlock({ body }, { inline: true });
-    data.$compile = [data.slot.source];
-    data.$wait = [data.slot.requireCD];
+    data.$wait = [data.slot.requireCD, data.slot.source];
     // assert(!data.slot.template.svg, 'SVG is not supported for exported fragment');
   }
 
@@ -269,7 +268,7 @@ export function attchExportedFragment(node, label, componentName) {
         } else {
           assert(e.fn);
           ctx.write(`${e.name}: `);
-          ctx.build(e.fn);
+          ctx.add(e.fn);
         }
       });
       ctx.write('}');
