@@ -7,9 +7,6 @@ function I(value = 0) {
 
 
 function xWriter(node) {
-  const ctx = get_context();
-  this.inuse = ctx.inuse;
-
   this.indent = 0;
   this.write = function(...args) {
     for(let i of args) {
@@ -35,7 +32,6 @@ function xWriter(node) {
 
   this.isEmpty = function(n) {
     if(n == null) return true;
-    if(n.$type == 'if:bind') return false;
     assert(n.$done, 'Node is not built');
     return !n.$result.some(r => {
       if(typeof (r) == 'string') return true;
@@ -50,8 +46,9 @@ function xWriter(node) {
 }
 
 
-export function xBuild(node) {
+export function xBuild(node, option={}) {
   let pending, trace;
+
   const resolve = n => {
     if (n.__resolving) return;
     n.__resolving = true;
@@ -91,7 +88,7 @@ export function xBuild(node) {
     if(!pending) break;
   }
   if(!depth) {
-    trace.forEach(i => get_context().warning(` * ${i}`));
+    option.warning?.('(i) Circular dependency:\n' + trace.map(s => ` * ${s}`).join('\n'));
     throw new Error('xNode: Circular dependency');
   }
 
@@ -394,7 +391,8 @@ xNode.init = {
     }
   },
   template: (ctx, node) => {
-    let template = xBuild(node.body);
+    const config = get_context().config;
+    let template = xBuild(node.body, {warning: config.warning});
     let convert, cloneNode = node.cloneNode;
     if(node.svg) {
       convert = '$runtime.svgToFragment';
@@ -404,7 +402,7 @@ xNode.init = {
       cloneNode = false;
       if(!node.raw) template = htmlEntitiesToText(template);
     } else {
-      if(get_context().config.hideLabel) convert = '$runtime.htmlToFragmentClean';
+      if(config.hideLabel) convert = '$runtime.htmlToFragmentClean';
       else convert = '$runtime.htmlToFragment';
       template = template.replace(/<!---->/g, '<>');
     }

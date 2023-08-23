@@ -195,7 +195,7 @@ export async function compile(source, config = {}) {
       }
     });
 
-    this.result = xBuild(root);
+    this.result = xBuild(root, {warning: this.config.warning});
   });
 
   await hook(ctx, 'build');

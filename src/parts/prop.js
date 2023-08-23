@@ -216,7 +216,7 @@ export function bindProp(prop, node, element) {
           hasElement
         }, (ctx, n) => {
           if(n.hasElement) ctx.writeLine(`let $element=${n.el};`);
-          if(ctx.inuse.apply) {
+          if(this.inuse.apply) {
             ctx.writeLine(`$runtime.bindStyle(${n.el}, '${n.styleName}', () => (${n.exp}));`);
           } else {
             ctx.writeLine(`${n.el}.style.${toCamelCase(n.styleName)} = ${n.exp};`);
@@ -237,7 +237,7 @@ export function bindProp(prop, node, element) {
           args,
           el: element.bindName()
         }, (ctx, n) => {
-          if(ctx.inuse.apply && n.args) {
+          if(this.inuse.apply && n.args) {
             ctx.writeLine(`$runtime.bindAction(${n.el}, ${n.name}${n.args}, $runtime.__bindActionSubscribe);`);
           } else {
             ctx.writeLine(`$runtime.bindAction(${n.el}, ${n.name}${n.args});`);
@@ -259,7 +259,7 @@ export function bindProp(prop, node, element) {
         ctx.goIndent(() => {
           if(n.hasElement) ctx.writeLine(`let $element=${n.el};`);
           ctx.writeLine(n.exp);
-          if(ctx.inuse.apply) ctx.writeLine('$$apply();');
+          if(this.inuse.apply) ctx.writeLine('$$apply();');
         });
         ctx.writeLine('});');
       })
@@ -331,14 +331,14 @@ export function bindProp(prop, node, element) {
           }
         }
 
-        if(ctx.inuse.resolveClass) {
-          if(ctx.inuse.apply) {
+        if(this.inuse.resolveClass) {
+          if(this.inuse.apply) {
             ctx.write(true, `$runtime.bindClassExp(${n.el}, () => $$resolveClass((${n.exp})${base}))`);
           } else {
             ctx.write(true, `$runtime.setClassToElement(${n.el}, $$resolveClass((${n.exp})${base}));`);
           }
         } else {
-          if(ctx.inuse.apply) {
+          if(this.inuse.apply) {
             ctx.write(true, `$runtime.bindClassExp(${n.el}, () => (${n.exp})${base})`);
           } else {
             ctx.write(true, `$runtime.setClassToElement(${n.el}, ${n.exp}${base});`);
@@ -440,13 +440,13 @@ export function bindProp(prop, node, element) {
         if(data.hasElement) ctx.writeLine(`let $element=${data.el};`);
         if(propList[name]) {
           let propName = propList[name] === true ? name : propList[name];
-          if(ctx.inuse.apply) {
+          if(this.inuse.apply) {
             ctx.writeLine(`$watch(() => (${data.exp}), (value) => {${data.el}.${propName} = value;});`);
           } else {
             ctx.writeLine(`${data.el}.${propName} = ${data.exp};`);
           }
         } else {
-          if(ctx.inuse.apply) {
+          if(this.inuse.apply) {
             ctx.writeLine(`$runtime.bindAttribute(${data.el}, '${data.name}', () => (${data.exp}));`);
           } else {
             ctx.writeLine(`$runtime.bindAttributeBase(${data.el}, '${data.name}', ${data.exp});`);

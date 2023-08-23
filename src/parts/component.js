@@ -324,7 +324,7 @@ export function makeComponent(node, option={}) {
       ctx.indent--;
       ctx.write(true, '}');
     }
-    if(n.$class.length && !ctx.inuse.apply) {
+    if(n.$class.length && !this.inuse.apply) {
       if(comma) ctx.write(', ');
       comma = true;
       ctx.write(`$class: {${n.$class.join(', ')}}`);
@@ -350,7 +350,7 @@ export function makeComponent(node, option={}) {
       ctx.write(',\n', true, `($$_value) => ({${n.propsSetter.join(', ')}} = $$_value)`);
     } else other += ', null';
 
-    if(n.$class.length && ctx.inuse.apply) {
+    if(n.$class.length && this.inuse.apply) {
       if(other) ctx.write(other);
       other = '';
       ctx.write(',\n', true, `() => ({${n.$class.join(', ')}})`);

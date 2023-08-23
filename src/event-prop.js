@@ -132,7 +132,7 @@ export function makeEventProp(prop, requireElement) {
     mods,
     globalFunction
   }, (ctx, n) => {
-    if(n.handlerName && !ctx.inuse.apply && !n.mods) return ctx.write(n.handlerName);
+    if(n.handlerName && !this.inuse.apply && !n.mods) return ctx.write(n.handlerName);
     ctx.write('($event) => { ');
     if(n.mods) ctx.write(n.mods, ' ');
     if(n.handlerName) ctx.write(`${n.handlerName}($event);`);
@@ -140,7 +140,7 @@ export function makeEventProp(prop, requireElement) {
       if(last(n.exp) != ';') n.exp += ';';
       ctx.write(`${n.exp}`);
     } else if(n.func) ctx.write(`(${n.func})($event);`);
-    if(ctx.inuse.apply && !n.globalFunction) ctx.write(' $$apply();');
+    if(this.inuse.apply && !n.globalFunction) ctx.write(' $$apply();');
     ctx.write('}');
   });
 
