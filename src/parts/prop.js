@@ -85,10 +85,10 @@ export function bindProp(prop, node, element) {
           bind: xNode('forwardAllEvents', {
             el: element.bindName()
           }, (ctx, data) => {
-            ctx.writeLine('for(let event in $events)');
-            ctx.goIndent(() => {
-              ctx.writeLine(`$runtime.addEvent(${data.el}, event, $events[event]);`);
-            });
+            ctx.write(true, 'for(let event in $events)');
+            this.indent++;
+            ctx.write(true, `$runtime.addEvent(${data.el}, event, $events[event]);`);
+            this.indent--;
           })
         };
       }
@@ -255,12 +255,12 @@ export function bindProp(prop, node, element) {
         element,
         hasElement
       }, (ctx, n) => {
-        ctx.writeLine('$tick(() => {');
-        ctx.goIndent(() => {
-          if(n.hasElement) ctx.writeLine(`let $element=${n.el};`);
-          ctx.writeLine(n.exp);
-          if(this.inuse.apply) ctx.writeLine('$$apply();');
-        });
+        ctx.writeLine('$runtime.$tick(() => {');
+        this.indent++;
+        if(n.hasElement) ctx.writeLine(`let $element=${n.el};`);
+        ctx.writeLine(n.exp);
+        if(this.inuse.apply) ctx.writeLine('$$apply();');
+        this.indent--;
         ctx.writeLine('});');
       })
     };

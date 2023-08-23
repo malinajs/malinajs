@@ -15,12 +15,6 @@ function xWriter(node) {
     }
   };
   this.writeLine = function(s) { this.write(true, s); };
-  this.writeIndent = function() { this.write(true); };
-  this.goIndent = fn => {
-    this.indent++;
-    fn();
-    this.indent--;
-  };
 
   this.add = function(n) {
     if(n === null) return;

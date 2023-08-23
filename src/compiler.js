@@ -176,7 +176,7 @@ export async function compile(source, config = {}) {
   use_context(ctx, function() {
     const root = xNode('root', {}, (ctx, n) => {
       ctx.write(true, `import * as $runtime from 'malinajs/runtime.js';`);
-      ctx.write(true, 'import { $watch, $tick } from \'malinajs/runtime.js\';');
+      ctx.write(true, 'import { $watch } from \'malinajs/runtime.js\';');
       ctx.add(this.module.top);
       const componentFn = this.glob.componentFn;
       if(this.config.exportDefault) {
