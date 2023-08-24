@@ -87,11 +87,13 @@ const _compareDeep = (a, b, lvl) => {
   let a1 = isArray(b);
   if(a0 !== a1) return true;
 
-  if(a0) {
+  if (a0) {
     if(a.length !== b.length) return true;
     for(let i = 0; i < a.length; i++) {
       if(_compareDeep(a[i], b[i], lvl - 1)) return true;
     }
+  } else if (a instanceof Date) {
+    if(b instanceof Date) return +a !== +b;
   } else {
     let set = {};
     for(let k in a) {
