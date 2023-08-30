@@ -84,8 +84,7 @@ export async function compile(source, config = {}) {
       rootCD: xNode('root-cd', () => {}),
       apply: xNode('apply'),
       componentFn: xNode('componentFn'),
-      $onMount: xNode('$onMount'),
-      $$selfComponent: xNode('$$selfComponent')
+      $onMount: xNode('$onMount')
     },
     require: function(...args) {
       for(let name of args) {
@@ -180,7 +179,7 @@ export async function compile(source, config = {}) {
       ctx.add(this.module.top);
       const componentFn = this.glob.componentFn;
       if(this.config.exportDefault) {
-        if(this.glob.$$selfComponent.value) {
+        if(componentFn.self) {
           ctx.write(true, 'const $$selfComponent = ');
           ctx.add(componentFn);
           ctx.write(true, 'export default $$selfComponent;');
@@ -189,7 +188,7 @@ export async function compile(source, config = {}) {
           ctx.add(componentFn);
         }
       } else {
-        assert(!this.glob.$$selfComponent.value, 'Not supported');
+        assert(!componentFn.self, 'Not supported');
         ctx.write(true, `const ${this.config.name} = `);
         ctx.add(componentFn);
       }

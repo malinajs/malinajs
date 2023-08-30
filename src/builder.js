@@ -343,7 +343,7 @@ export function buildBlock(data, option = {}) {
           if(n.elArg == 'portal') b = this.attachPortal(n);
           else if(['window', 'body', 'head'].includes(n.elArg)) b = this.attachHead(n);
           else if(n.elArg == 'self') {
-            this.glob.$$selfComponent.$value();
+            this.glob.componentFn.self = true;
             const label = requireLabel();
             let component = this.makeComponent(n, {self: true});
             binds.push(insertComponent(component, label));
