@@ -170,9 +170,10 @@ export function xNode(type, ...args) {
   this.$inserted = false;
   this.$result = [];
 
-  this.$value = function(value=true) {
+  this.$setValue = function(value=true) {
     assert(!this.$done, 'Attempt to set active, depends node is already resolved');
-    this.value = value;
+    if (typeof(value) == 'object') Object.assign(this, value);
+    else this.value = value;
   };
   resolveDependecies(this);
   return this;

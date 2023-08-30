@@ -28,7 +28,7 @@ export function makeKeepAlive(node) {
 
   if(!key) key = `() => '$$${this.uniqIndex++}'`;
 
-  this.glob.keepAliveStore.$value();
+  this.glob.keepAliveStore.$setValue();
 
   return xNode('keep-alive', {
     block,

@@ -91,7 +91,7 @@ export async function compile(source, config = {}) {
         let deps = true;
         if(name == '$props:no-deps') { name = '$props'; deps = false; }
         if(name == 'apply' && ctx.script.readOnly) {
-          ctx.glob.apply.$value('readOnly');
+          ctx.glob.apply.$setValue('readOnly');
           continue;
         }
         if(ctx.inuse[name] == null) ctx.inuse[name] = 0;
@@ -99,7 +99,7 @@ export async function compile(source, config = {}) {
         if(!deps) continue;
         if(name == '$attributes') ctx.require('$props');
         if(name == '$props' && !ctx.script.readOnly) ctx.require('apply', 'rootCD');
-        if(['apply', '$onMount', '$component', 'componentFn', 'rootCD'].includes(name)) ctx.glob[name].$value(true);
+        if(['apply', '$onMount', '$component', 'componentFn', 'rootCD'].includes(name)) ctx.glob[name].$setValue();
       }
     },
     detectDependency,
