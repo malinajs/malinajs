@@ -7,7 +7,7 @@ export function attachHead(n) {
     let name = 'el' + (this.uniqIndex++);
     let block = this.buildBlock({ body: [n] }, { malinaElement: true, inline: true, oneElement: name, bindAttributes: true });
     if(block.source) {
-      return xNode('block', {
+      return xNode('attach-head', {
         name,
         target: n.elArg,
         source: block.source

@@ -3,7 +3,7 @@ import { xNode } from '../xnode.js';
 
 export function makeHtmlBlock(exp, label) {
   this.detectDependency(exp);
-  return xNode('block', {
+  return xNode('html-block', {
     $wait: ['apply'],
     label,
     exp

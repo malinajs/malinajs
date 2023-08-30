@@ -1,5 +1,5 @@
 import { svgElements, last, replaceKeyword, assert, Q } from './utils.js';
-import { xNode } from './xnode.js';
+import { xNode, resolveDependecies } from './xnode.js';
 import { radioInput } from './parts/radio.js';
 
 
@@ -8,14 +8,17 @@ export function buildRuntime() {
     if(this.inuse.$events) ctx.write(true, 'const $events = $option.events || {};');
   }));
 
-  this.module.head.push(xNode(this.glob.$component, {
-    $hold: ['componentFn']
-  }, (ctx, n) => {
-    if(n.value) {
-      this.require('componentFn');
-      ctx.write(true, 'const $component = $runtime.current_component;');
+  Object.assign(this.glob.$component, {
+    $hold: ['componentFn'],
+    $handler: (ctx, n) => {
+      if(n.value) {
+        this.require('componentFn');
+        ctx.write(true, 'const $component = $runtime.current_component;');
+      }
     }
-  }));
+  });
+  resolveDependecies(this.glob.$component);
+  this.module.head.push(this.glob.$component);
 
   this.module.head.push(xNode('$context', {
     $hold: ['componentFn']
@@ -32,25 +35,28 @@ export function buildRuntime() {
     if(n.value) ctx.write(true, `const $$keepAliveStore = new Map();`);
   }));
 
-  this.module.top.push(xNode(this.glob.$onMount, {
-  }, (ctx, n) => {
+  this.glob.$onMount.$handler = (ctx, n) => {
     if(n.value) ctx.write(true, `import { $onMount } from 'malinajs/runtime.js';`);
-  }));
+  }
+  this.module.top.push(this.glob.$onMount);
 
   this.module.top.push(xNode('$onDestroy', (ctx) => {
     if(this.inuse.$onDestroy) ctx.write(true, `import { $onDestroy } from 'malinajs/runtime.js';`);
   }));
 
-  this.module.head.unshift(xNode(this.glob.apply, {
+  Object.assign(this.glob.apply, {
     $hold: ['componentFn'],
-    $wait: ['rootCD']
-  }, (ctx, n) => {
-    if(n.value || this.inuse.rootCD) {
-      this.require('componentFn');
-      if(n.value == 'readOnly') ctx.writeLine('const $$apply = $runtime.noop;');
-      else ctx.writeLine('const $$apply = $runtime.makeApply();');
+    $wait: ['rootCD'],
+    $handler: (ctx, n) => {
+      if(n.value || this.inuse.rootCD) {
+        this.require('componentFn');
+        if(n.value == 'readOnly') ctx.writeLine('const $$apply = $runtime.noop;');
+        else ctx.writeLine('const $$apply = $runtime.makeApply();');
+      }
     }
-  }));
+  });
+  resolveDependecies(this.glob.apply);
+  this.module.head.unshift(this.glob.apply);
 
   this.module.head.push(xNode('$emit', (ctx) => {
     if(this.inuse.$emit) ctx.write(true, 'const $emit = $runtime.makeEmitter($option);');
@@ -67,7 +73,7 @@ export function buildRuntime() {
     }));
   }
 
-  let runtime = xNode('block', { scope: true });
+  let runtime = xNode.block({ scope: true });
   this.module.body.push(runtime);
 
   let bb = this.buildBlock(this.DOM, {
@@ -149,9 +155,9 @@ export function buildRuntime() {
 
 
 export function buildBlock(data, option = {}) {
-  let rootTemplate = xNode('node', { inline: true });
+  let rootTemplate = xNode.node({ inline: true });
   let rootSVG = false, requireFragment = option.template?.requireFragment;
-  let binds = xNode('block');
+  let binds = xNode.block();
   let result = {};
   let inuse = Object.assign({}, this.inuse);
 
@@ -241,7 +247,7 @@ export function buildBlock(data, option = {}) {
     const requireLabel = (final, noParent) => {
       if(labelRequest) {
         if(labelRequest.final) {
-          labelRequest.set(tpl.push(xNode('node:comment', { label: true, value: '' })));
+          labelRequest.set(tpl.push(xNode.nodeComment({ label: true, value: '' })));
         } else {
           if(final) labelRequest.final = true;
           if(noParent) labelRequest.noParent = true;
@@ -261,7 +267,7 @@ export function buildBlock(data, option = {}) {
         resolve() {
           assert(!labelRequest.node);
           if(labelRequest.noParent) {
-            labelRequest.set(tpl.push(xNode('node:comment', { label: true, value: '' })));
+            labelRequest.set(tpl.push(xNode.nodeComment({ label: true, value: '' })));
           } else if(isRoot) {
             assert(!tpl._boundName);
             labelRequest.name = tpl._boundName = option.parentElement
@@ -277,9 +283,8 @@ export function buildBlock(data, option = {}) {
     const bindNode = (n, nodeIndex) => {
       if(n.type === 'text') {
         let prev = tpl.getLast();
-        // if(prev?.$type == 'node:text' && prev._boundName) tpl.push(xNode('node:comment', { label: true }));
         if(prev?.$type == 'node:text' && labelRequest) {
-          labelRequest.set(tpl.push(xNode('node:comment', { label: true })));
+          labelRequest.set(tpl.push(xNode.nodeComment({ label: true })));
         }
 
         if(n.value.indexOf('{') >= 0) {
@@ -308,11 +313,13 @@ export function buildBlock(data, option = {}) {
             if(p.type != 'js') return;
             let exp = p.value;
             if(!exp.endsWith(';')) exp += ';';
-            binds.push(xNode('block', {
-              body: [
-                replaceKeyword(exp, (name) => name == '$element' ? textNode.bindName() : null, true)
-              ]
+
+            binds.push(xNode('inline-js', {
+              value: replaceKeyword(exp, (name) => name == '$element' ? textNode.bindName() : null, true)
+            }, (ctx, n) => {
+              ctx.write(true, n.value);
             }));
+
           });
 
           labelRequest?.set(textNode);
@@ -322,13 +329,12 @@ export function buildBlock(data, option = {}) {
         }
 
       } else if(n.type === 'template') {
-        const templateNode = xNode('node', {
+        const templateNode = xNode.baseNode('node:template', {
           openTag: n.openTag,
           content: n.content
-        });
-        templateNode.$handler = (ctx, n) => {
+        }, (ctx, n) => {
           ctx.write(n.openTag, n.content, '</template>');
-        };
+        });
         tpl.push(templateNode);
         labelRequest?.set(templateNode);
       } else if(n.type === 'node') {
@@ -354,7 +360,7 @@ export function buildBlock(data, option = {}) {
               // dyn-component
               if(isRoot) {
                 requireFragment = true;
-                if(!tpl.getLast()) tpl.push(xNode('node:comment', { label: true }));
+                if(!tpl.getLast()) tpl.push(xNode.nodeComment({ label: true }));
               }
               const label = requireLabel(true, isRoot);
               binds.push(this.makeComponentDyn(n, label));
@@ -407,7 +413,7 @@ export function buildBlock(data, option = {}) {
           return;
         }
 
-        let el = xNode('node', { name: n.name });
+        let el = xNode.node({ name: n.name });
         if(option.oneElement) el._boundName = option.oneElement;
         tpl.push(el);
         labelRequest?.set(el);
@@ -487,7 +493,7 @@ export function buildBlock(data, option = {}) {
         } else {
           if(isRoot) {
             requireFragment = true;
-            if(!tpl.getLast()) tpl.push(xNode('node:comment', { label: true }));
+            if(!tpl.getLast()) tpl.push(xNode.nodeComment({ label: true }));
           }
           let eachBlock = this.makeEachBlock(n, { label: requireLabel(true, isRoot) });
           binds.push(eachBlock.source);
@@ -496,7 +502,7 @@ export function buildBlock(data, option = {}) {
       } else if(n.type === 'if') {
         if(isRoot) {
           requireFragment = true;
-          if(!tpl.getLast()) tpl.push(xNode('node:comment', { label: true }));
+          if(!tpl.getLast()) tpl.push(xNode.nodeComment({ label: true }));
         }
         binds.push(this.makeifBlock(n, requireLabel(true, isRoot)));
         return;
@@ -508,7 +514,7 @@ export function buildBlock(data, option = {}) {
         if(name == 'html') {
           if(isRoot) {
             requireFragment = true;
-            if(!tpl.getLast()) tpl.push(xNode('node:comment', { label: true }));
+            if(!tpl.getLast()) tpl.push(xNode.nodeComment({ label: true }));
           }
           binds.push(this.makeHtmlBlock(exp, requireLabel(true, true)));
           return;
@@ -516,7 +522,7 @@ export function buildBlock(data, option = {}) {
       } else if(n.type === 'await') {
         if(isRoot) {
           requireFragment = true;
-          if(!tpl.getLast()) tpl.push(xNode('node:comment', { label: true }));
+          if(!tpl.getLast()) tpl.push(xNode.nodeComment({ label: true }));
         }
         binds.push(this.makeAwaitBlock(n, requireLabel(true, isRoot)));
         return;
@@ -539,7 +545,7 @@ export function buildBlock(data, option = {}) {
 
   let innerBlock = null;
   if(binds.body.length) {
-    innerBlock = xNode('block');
+    innerBlock = xNode.block();
     if(!option.oneElement) {
       innerBlock.push(xNode('bindNodes', {
         tpl: rootTemplate,
@@ -717,7 +723,7 @@ export function buildBlock(data, option = {}) {
   }
 
   if(!option.inline) {
-    let template = xNode('template', {
+    let template = xNode.template({
       body: rootTemplate,
       svg: rootSVG,
       requireFragment
@@ -760,7 +766,7 @@ export function buildBlock(data, option = {}) {
       ctx.write(')');
     });
   } else {
-    result.template = xNode('template', {
+    result.template = xNode.template({
       body: rootTemplate,
       svg: rootSVG,
       requireFragment

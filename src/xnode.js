@@ -41,11 +41,12 @@ function xWriter(node) {
 
 
 export function xBuild(node, option={}) {
-  let pending, trace;
+  let pending, trace, active;
 
   const resolve = n => {
     if (n.__resolving) return;
     n.__resolving = true;
+    active = n;
 
     if (!n.$done) {
       let ready = true;
@@ -78,7 +79,12 @@ export function xBuild(node, option={}) {
   for(depth = 10; depth > 0; depth--) {
     pending = 0;
     trace = [];
-    resolve(node);
+    try {
+      resolve(node);
+    } catch (e) {
+      if (active) console.log('# Error node', active);
+      throw e;
+    }
     if(!pending) break;
   }
   if(!depth) {
@@ -133,13 +139,10 @@ export function xBuild(node, option={}) {
 const noop = () => {};
 
 
-export function xNode(_type, _data, _handler) {
+export function xNode(type, ...args) {
   /*
     xNode(type, data, handler)
     xNode(type, handler)
-    xNode(data, handler)
-    xNode(handler)
-    xNode(xNode, data, handler)
 
     $wait - wait for a node be processed
     $hold - hold a node from processing, such node must be created before building
@@ -156,54 +159,10 @@ export function xNode(_type, _data, _handler) {
       })
   */
 
-  if(_type instanceof xNode) {
-    let n = _type;
-    if(isFunction(_handler)) {
-      Object.assign(n, _data);
-      n.$handler = _handler;
-    } else {
-      assert(!_handler && isFunction(_data), 'Wrong xNode usage');
-      n.$handler = _data;
-    }
-    resolveDependecies(n);
-    return n;
-  }
-  if(!(this instanceof xNode)) return new xNode(_type, _data, _handler);
+  let [data, handler] = args.length == 2 ? args : [{}, args[0]];
 
-  let type, data, handler;
-  if(typeof _type == 'string') {
-    type = _type;
-    if(_data === false && !_handler) {
-      handler = noop;
-      data = null;
-    } else if(_handler === false && typeof (_data) == 'object') {
-      handler = noop;
-      data = _data;
-    } else if(typeof _data == 'function') {
-      assert(!_handler);
-      handler = _data;
-    } else {
-      data = _data;
-      handler = _handler;
-    }
-  } else if(typeof _type == 'function') {
-    assert(!_data && !_handler);
-    handler = _type;
-  } else {
-    assert(typeof _type == 'object');
-    data = _type;
-    handler = _data;
-  }
-
-  if(!handler) handler = xNode.init[type];
-  assert(handler);
-
-  if(data) Object.assign(this, data);
-  if(handler.init) {
-    handler.init(this);
-    handler = handler.handler;
-    assert(handler);
-  }
+  if(!(this instanceof xNode)) return new xNode(type, data, handler);
+  Object.assign(this, data);
 
   this.$type = type;
   this.$handler = handler;
@@ -219,7 +178,7 @@ export function xNode(_type, _data, _handler) {
   return this;
 }
 
-const resolveDependecies = node => {
+export const resolveDependecies = node => {
   if(node.$wait) {
     node.$wait = node.$wait.map(n => {
       if(typeof (n) == 'string') {
@@ -246,145 +205,128 @@ const resolveDependecies = node => {
   }
 };
 
-xNode.init = {
-  raw: (ctx, node) => {
-    ctx.writeLine(node.value);
-  },
-  block: {
-    init: (node) => {
-      if(!node.body) node.body = [];
-      node.push = function(child) {
-        assert(arguments.length == 1, 'Wrong xNode');
-        if(typeof child == 'string') child = xNode('raw', { value: child });
-        this.body.push(child);
-      };
-      node.unshift = function(child) {
-        assert(arguments.length == 1, 'Wrong xNode');
-        if(typeof child == 'string') child = xNode('raw', { value: child });
-        this.body.unshift(child);
-      };
-    },
-    handler: (ctx, node) => {
-      if(node.scope) {
-        ctx.writeLine('{');
-        ctx.indent++;
-      }
-      node.body.forEach(n => {
-        if(n == null) return;
-        if(typeof n == 'string') {
-          if(n) ctx.writeLine(n);
-        } else ctx.add(n);
-      });
-      if(node.scope) {
-        ctx.indent--;
-        ctx.writeLine('}');
-      }
-    }
-  },
-  function: {
-    init: (node) => {
-      if(!node.args) node.args = [];
-      xNode.init.block.init(node);
-    },
-    handler: (ctx, node) => {
-      if(!node.inline) ctx.write(true);
 
-      if(node.arrow) {
-        if(node.name) ctx.write(`let ${node.name} = `);
-      } else {
-        ctx.write('function');
-        if(node.name) ctx.write(' ' + node.name);
-      }
-      ctx.write(`(${node.args.join(', ')}) `);
-      if(node.arrow) ctx.write('=> ');
-      ctx.write('{', true);
+xNode.raw = value => {
+  return xNode('raw', {value}, (ctx, node) => {
+    ctx.write(true, node.value);
+  });
+};
+
+
+xNode.block = (data={}) => {
+  return xNode('block', {
+    body: [],
+    push(child) {
+      assert(arguments.length == 1, 'Wrong xNode');
+      if(typeof child == 'string') child = xNode.raw(child);
+      this.body.push(child);
+    },
+    unshift(child) {
+      assert(arguments.length == 1, 'Wrong xNode');
+      if(typeof child == 'string') child = xNode.raw(child);
+      this.body.unshift(child);
+    },
+    ...data
+  }, (ctx, node) => {
+    if(node.scope) {
+      ctx.writeLine('{');
       ctx.indent++;
-      xNode.init.block.handler(ctx, node);
-      ctx.indent--;
-      if(node.inline) ctx.write(true, '}');
-      else ctx.writeLine('}');
     }
-  },
-  node: {
-    init: (node) => {
-      node.children = [];
-      node.attributes = [];
-      node.class = new Set();
-      node.voidTag = false;
+    node.body.forEach(n => {
+      if(n == null) return;
+      if(typeof n == 'string') {
+        if(n) ctx.writeLine(n);
+      } else ctx.add(n);
+    });
+    if(node.scope) {
+      ctx.indent--;
+      ctx.writeLine('}');
+    }
+  });
+};
 
-      node.bindName = xNode.init.node.bindName;
-      node.getLast = () => last(node.children);
-      node.push = function(n) {
-        if(typeof n == 'string') {
-          let p = last(this.children);
-          if(p && p.$type == 'node:text') {
-            p.value += n;
-            return p;
-          }
-          n = xNode('node:text', { value: n });
-        }
-        assert(n instanceof xNode);
-        this.children.push(n);
-        return n;
-      };
-    },
-    handler: (ctx, node) => {
-      if(node.inline) {
-        node.children.forEach(n => ctx.add(n));
-      } else {
-        assert(node.name, 'No node name');
-        ctx.write(`<${node.name}`);
 
-        if(node.attributes.length) {
-          node.attributes.forEach(p => {
-            if(p.name == 'class') {
-              if(p.value) p.value.split(/\s+/).forEach(name => node.class.add(name));
-              return;
-            }
-
-            if(p.value) ctx.write(` ${p.name}="${p.value}"`);
-            else ctx.write(` ${p.name}`);
-          });
-        }
-
-        if (node.class.size) {
-          ctx.add(get_context().css.resolveAsNode(node.class, [' class="', '"']));
-        }
-        
-        if(node.children.length) {
-          ctx.write('>');
-          node.children.forEach(n => ctx.add(n));
-          ctx.write(`</${node.name}>`);
-        } else {
-          if(node.voidTag) ctx.write('/>');
-          else ctx.write(`></${node.name}>`);
-        }
-      }
-    },
-    bindName: function() {
+xNode.baseNode = (type, data, handler) => {
+  return xNode(type, {
+    bindName() {
       if(!this._boundName) this._boundName = `el${get_context().uniqIndex++}`;
       return this._boundName;
-    }
-  },
-  'node:text': {
-    init: (node) => {
-      node.bindName = xNode.init.node.bindName;
     },
-    handler: (ctx, node) => {
-      ctx.write(node.value);
-    }
-  },
-  'node:comment': {
-    init: (node) => {
-      node.bindName = xNode.init.node.bindName;
+    ...data
+  }, handler);
+};
+
+
+xNode.node = (data) => {
+  return xNode.baseNode('node', {
+    children: [],
+    attributes: [],
+    class: new Set(),
+    voidTag: false,
+    getLast() { return last(this.children) },
+    push(n) {
+      if(typeof n == 'string') {
+        let p = last(this.children);
+        if(p && p.$type == 'node:text') {
+          p.value += n;
+          return p;
+        }
+        n = xNode.baseNode('node:text', { value: n }, (ctx, node) => {
+          ctx.write(node.value);
+        });
+      }
+      assert(n instanceof xNode);
+      this.children.push(n);
+      return n;
     },
-    handler: (ctx, node) => {
-      const context = get_context();
-      if(context.config.debug && context.config.debugLabel) ctx.write(`<!-- ${node.value} -->`);
-      else ctx.write('<!---->');
+    ...data
+  }, (ctx, node) => {
+    if(node.inline) {
+      node.children.forEach(n => ctx.add(n));
+    } else {
+      assert(node.name, 'No node name');
+      ctx.write(`<${node.name}`);
+
+      if(node.attributes.length) {
+        node.attributes.forEach(p => {
+          if(p.name == 'class') {
+            if(p.value) p.value.split(/\s+/).forEach(name => node.class.add(name));
+            return;
+          }
+
+          if(p.value) ctx.write(` ${p.name}="${p.value}"`);
+          else ctx.write(` ${p.name}`);
+        });
+      }
+
+      if (node.class.size) {
+        ctx.add(get_context().css.resolveAsNode(node.class, [' class="', '"']));
+      }
+      
+      if(node.children.length) {
+        ctx.write('>');
+        node.children.forEach(n => ctx.add(n));
+        ctx.write(`</${node.name}>`);
+      } else {
+        if(node.voidTag) ctx.write('/>');
+        else ctx.write(`></${node.name}>`);
+      }
     }
-  },
-  template: (ctx, node) => {
+  });
+};
+
+
+xNode.nodeComment = (data) => {
+  return xNode.baseNode('node:comment', data, (ctx, node) => {
+    const config = get_context().config;
+    if(config.debug && config.debugLabel) ctx.write(`<!-- ${node.value} -->`);
+    else ctx.write('<!---->');
+  });
+};
+
+
+xNode.template = (data) => {
+  return xNode('template', data, (ctx, node) => {
     const config = get_context().config;
     let template = xBuild(node.body, {warning: config.warning});
     let convert, cloneNode = node.cloneNode;
@@ -416,5 +358,5 @@ xNode.init = {
         ctx.write(`, ${opt});`);
       } else ctx.write(');');
     }
-  }
+  });
 };

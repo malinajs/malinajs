@@ -80,12 +80,12 @@ export async function compile(source, config = {}) {
 
     inuse: {},
     glob: {
-      $component: xNode('$component', false),
-      rootCD: xNode('root-cd', false),
-      apply: xNode('apply', false),
-      componentFn: xNode('componentFn', false),
-      $onMount: xNode('$onMount', false),
-      $$selfComponent: xNode('$$selfComponent', false)
+      $component: xNode('$component'),
+      rootCD: xNode('root-cd', () => {}),
+      apply: xNode('apply'),
+      componentFn: xNode('componentFn'),
+      $onMount: xNode('$onMount'),
+      $$selfComponent: xNode('$$selfComponent')
     },
     require: function(...args) {
       for(let name of args) {
@@ -125,10 +125,10 @@ export async function compile(source, config = {}) {
     buildRuntime,
 
     module: {
-      top: xNode('block'),
-      head: xNode('block'),
-      code: xNode('block'),
-      body: xNode('block')
+      top: xNode.block(),
+      head: xNode.block(),
+      code: xNode.block(),
+      body: xNode.block()
     }
   };
 
@@ -174,7 +174,7 @@ export async function compile(source, config = {}) {
   await hook(ctx, 'build:before');
 
   use_context(ctx, function() {
-    const root = xNode('root', {}, (ctx, n) => {
+    const root = xNode('root', (ctx) => {
       ctx.write(true, `import * as $runtime from 'malinajs/runtime.js';`);
       ctx.write(true, 'import { $watch } from \'malinajs/runtime.js\';');
       ctx.add(this.module.top);
@@ -231,23 +231,23 @@ function detectDependency(data) {
 
 
 function setup() {
-  this.glob.componentFn = xNode(this.glob.componentFn, {
+  Object.assign(this.glob.componentFn, {
     $wait: [this.glob.rootCD],
-    body: [this.module.head, this.module.code, this.module.body]
-  }, (ctx, n) => {
-    if(n.value || this.glob.rootCD.value) {
-      n.value = true;
-      ctx.write('$runtime.makeComponent($option => {');
+    module: this.module,
+    $handler: (ctx, n) => {
+      if (this.glob.rootCD.value) n.value = true;
+
+      if (n.value) ctx.write('$runtime.makeComponent($option => {');
+      else ctx.write('($option={}) => {', true);
+
       ctx.indent++;
-      ctx.add(xNode('block', { body: n.body }));
+      ctx.add(this.module.head);
+      ctx.add(this.module.code);
+      ctx.add(this.module.body);
       ctx.indent--;
-      ctx.write(true, '});', true);
-    } else {
-      ctx.write('($option={}) => {', true);
-      ctx.indent++;
-      ctx.add(xNode('block', { body: n.body }));
-      ctx.indent--;
-      ctx.write(true, '}');
+
+      if (n.value) ctx.write(true, '});');
+      else ctx.write(true, '}');
     }
   });
 }

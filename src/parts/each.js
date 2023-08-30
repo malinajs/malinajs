@@ -101,7 +101,7 @@ export function makeEachBlock(data, option) {
   if(!this.script.readOnly) {
     if(!indexName && keyName == itemName) rebind = null;
     else {
-      rebind = xNode('block', {
+      rebind = xNode('rebind', {
         itemName,
         indexName
       }, (ctx, n) => {

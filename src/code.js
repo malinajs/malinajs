@@ -195,7 +195,7 @@ export function transform() {
     };
   }
 
-  let watchers = xNode('block');
+  let watchers = xNode.block();
 
   const makeWatch = (n) => {
     function assertExpression(n) {
@@ -347,7 +347,7 @@ export function transform() {
 
     if(!constantProps && !this.script.readOnly) this.require('apply');
 
-    this.module.code.push(xNode('ast', { body: resultBody.slice(0, lastPropIndex) }));
+    this.module.code.push(nodeAst({ body: resultBody.slice(0, lastPropIndex) }));
 
     this.module.code.push(xNode('props', {
       props: this.script.props,
@@ -378,7 +378,7 @@ export function transform() {
       }
     }));
 
-    this.module.code.push(xNode('ast', { body: resultBody.slice(lastPropIndex) }));
+    this.module.code.push(nodeAst({ body: resultBody.slice(lastPropIndex) }));
   } else {
     this.module.head.push(xNode('no-props', ctx => {
       if(this.inuse.$props && this.inuse.$attributes) {
@@ -393,14 +393,14 @@ export function transform() {
       }
     }));
 
-    this.module.code.push(xNode('ast', { body: resultBody }));
+    this.module.code.push(nodeAst({ body: resultBody }));
   }
 
   this.module.top.push(xNode('autoimport', (ctx) => {
     Object.values(this.script.autoimport).forEach(l => ctx.writeLine(l));
   }));
 
-  this.module.top.push(xNode('ast', { body: imports }));
+  this.module.top.push(nodeAst({ body: imports }));
   this.module.code.push(watchers);
 
   if(this.scriptNodes[0] && this.scriptNodes[0].attributes.some(a => a.name == 'property') && this.script.props.length && !this.script.readOnly) {
@@ -454,13 +454,15 @@ const generator = Object.assign({
 }, astring.baseGenerator);
 
 
-xNode.init.ast = (ctx, node) => {
-  if(!node.body.length) return;
-  let code = astring.generate({
-    type: 'CustomBlock',
-    body: node.body
-  }, { generator, startingIndentLevel: 0 });
-  code.split(/\n/).forEach(s => {
-    if(s) ctx.write(true, s);
+function nodeAst(data) {
+  return xNode('ast', data, (ctx, node) => {
+    if(!node.body.length) return;
+    let code = astring.generate({
+      type: 'CustomBlock',
+      body: node.body
+    }, { generator, startingIndentLevel: 0 });
+    code.split(/\n/).forEach(s => {
+      if(s) ctx.write(true, s);
+    });
   });
 };

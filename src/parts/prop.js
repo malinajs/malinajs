@@ -347,7 +347,7 @@ export function bindProp(prop, node, element) {
       });
       return { bind };
     } else {
-      let bind = xNode('block');
+      let bind = xNode.block();
       props.forEach(prop => {
         if(prop.name == 'class') {
           prop.value && prop.value.trim().split(/\s+/).forEach(name => {
