@@ -32,8 +32,6 @@ export const version = '0.8.0-a1';
 
 export async function compile(source, config = {}) {
   config = Object.assign({
-    name: 'widget',
-    exportDefault: true,
     inlineTemplate: false,
     hideLabel: false,
     compact: true,
@@ -178,18 +176,13 @@ export async function compile(source, config = {}) {
       ctx.write(true, 'import { $watch } from \'malinajs/runtime.js\';');
       ctx.add(this.module.top);
       const componentFn = this.glob.componentFn;
-      if(this.config.exportDefault) {
-        if(componentFn.self) {
-          ctx.write(true, 'const $$selfComponent = ');
-          ctx.add(componentFn);
-          ctx.write(true, 'export default $$selfComponent;');
-        } else {
-          ctx.write(true, 'export default ');
-          ctx.add(componentFn);
-        }
+
+      if(componentFn.self) {
+        ctx.write(true, 'const $$selfComponent = ');
+        ctx.add(componentFn);
+        ctx.write(true, 'export default $$selfComponent;');
       } else {
-        assert(!componentFn.self, 'Not supported');
-        ctx.write(true, `const ${this.config.name} = `);
+        ctx.write(true, 'export default ');
         ctx.add(componentFn);
       }
     });

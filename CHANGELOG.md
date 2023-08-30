@@ -5,6 +5,7 @@
 * autoSubscribe is off by default
 * config loader moved out of compiler
 * deprecate functions onMount, onDestroy
+* deprecate config.exportDefault
 
 ## 0.7.x
 * refactoring, optimization, fixes
