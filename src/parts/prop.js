@@ -11,10 +11,10 @@ export function bindProp(prop, node, element) {
     let exp = pe.parts[0].value;
     if(!exp.endsWith(';')) exp += ';';
     return {
-      bind: xNode('block', {
-        body: [
-          replaceKeyword(exp, (name) => name == '$element' ? element.bindName() : null, true)
-        ]
+      bind: xNode('inline-js', {
+        exp: replaceKeyword(exp, (name) => name == '$element' ? element.bindName() : null, true)
+      }, (ctx, n) => {
+        ctx.write(true, n.exp);
       })
     };
   }
