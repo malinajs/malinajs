@@ -1,5 +1,5 @@
 import { svgElements, last, replaceKeyword, assert, Q } from './utils.js';
-import { xNode, resolveDependecies } from './xnode.js';
+import { xNode } from './xnode.js';
 import { radioInput } from './parts/radio.js';
 
 
@@ -8,16 +8,12 @@ export function buildRuntime() {
     if(this.inuse.$events) ctx.write(true, 'const $events = $option.events || {};');
   }));
 
-  Object.assign(this.glob.$component, {
-    $hold: ['componentFn'],
-    $handler: (ctx, n) => {
-      if(n.value) {
-        this.require('componentFn');
-        ctx.write(true, 'const $component = $runtime.current_component;');
-      }
+  this.glob.$component.$handler = (ctx, n) => {
+    if(n.value) {
+      this.require('componentFn');
+      ctx.write(true, 'const $component = $runtime.current_component;');
     }
-  });
-  resolveDependecies(this.glob.$component);
+  };
   this.module.head.push(this.glob.$component);
 
   this.module.head.push(xNode('$context', {
@@ -44,18 +40,13 @@ export function buildRuntime() {
     if(this.inuse.$onDestroy) ctx.write(true, `import { $onDestroy } from 'malinajs/runtime.js';`);
   }));
 
-  Object.assign(this.glob.apply, {
-    $hold: ['componentFn'],
-    $wait: ['rootCD'],
-    $handler: (ctx, n) => {
-      if(n.value || this.inuse.rootCD) {
-        this.require('componentFn');
-        if(n.value == 'readOnly') ctx.writeLine('const $$apply = $runtime.noop;');
-        else ctx.writeLine('const $$apply = $runtime.makeApply();');
-      }
+  this.glob.apply.$handler = (ctx, n) => {
+    if(n.value || this.inuse.rootCD) {
+      this.require('componentFn');
+      if(n.value == 'readOnly') ctx.writeLine('const $$apply = $runtime.noop;');
+      else ctx.writeLine('const $$apply = $runtime.makeApply();');
     }
-  });
-  resolveDependecies(this.glob.apply);
+  };
   this.module.head.unshift(this.glob.apply);
 
   this.module.head.push(xNode('$emit', (ctx) => {

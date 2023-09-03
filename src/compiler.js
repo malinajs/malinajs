@@ -4,7 +4,7 @@ export { xNode, xBuild } from './xnode.js';
 export { use_context, get_context } from './utils.js';
 
 import { assert, use_context } from './utils.js';
-import { xNode, xBuild } from './xnode.js';
+import { xNode, xBuild, resolveDependecies } from './xnode.js';
 import { compactDOM, compactFull } from './compact.js';
 import { parseHTML, parseText } from './parser';
 import * as codelib from './code';
@@ -78,26 +78,27 @@ export async function compile(source, config = {}) {
 
     inuse: {},
     glob: {
-      $component: xNode('$component'),
+      $component: xNode('$component', { $hold: ['componentFn'] }),
       rootCD: xNode('root-cd', () => {}),
-      apply: xNode('apply'),
+      apply: xNode('apply', { $hold: ['componentFn'], $wait: ['rootCD'] }),
       componentFn: xNode('componentFn'),
-      $onMount: xNode('$onMount')
+      $onMount: xNode('$onMount'),
+      $props: xNode('$props'),
+      $attributes: xNode('$attributes')
     },
     require: function(...args) {
       for(let name of args) {
-        let deps = true;
-        if(name == '$props:no-deps') { name = '$props'; deps = false; }
-        if(name == 'apply' && ctx.script.readOnly) {
+        if (name == 'apply!ro') {
+          if (!ctx.script.readOnly) ctx.require('apply');
+          continue;
+        }
+        if (name == 'apply' && ctx.script.readOnly) {
           ctx.glob.apply.$setValue('readOnly');
           continue;
         }
-        if(ctx.inuse[name] == null) ctx.inuse[name] = 0;
+        if (ctx.inuse[name] == null) ctx.inuse[name] = 0;
         ctx.inuse[name]++;
-        if(!deps) continue;
-        if(name == '$attributes') ctx.require('$props');
-        if(name == '$props' && !ctx.script.readOnly) ctx.require('apply', 'rootCD');
-        if(['apply', '$onMount', '$component', 'componentFn', 'rootCD'].includes(name)) ctx.glob[name].$setValue();
+        if (['apply', '$onMount', '$component', 'componentFn', 'rootCD', '$props', '$attributes'].includes(name)) ctx.glob[name].$setValue();
       }
     },
     detectDependency,
@@ -187,6 +188,7 @@ export async function compile(source, config = {}) {
       }
     });
 
+    for (let k in this.glob) resolveDependecies(this.glob[k]);
     this.result = xBuild(root, {warning: this.config.warning});
   });
 
@@ -205,8 +207,11 @@ async function hook(ctx, name) {
 
 function detectDependency(data) {
   const check = name => {
-    for(let k of ['$props', '$attributes', '$emit', '$context']) {
-      if(name.includes(k)) this.require(k);
+    for (let k of ['$props', '$attributes', '$emit', '$context']) {
+      if (name.includes(k)) {
+        this.require(k);
+        if (k == '$props' || k == '$attributes') this.require('apply!ro');
+      }
     }
   };
 

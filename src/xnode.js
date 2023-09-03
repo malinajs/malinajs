@@ -47,6 +47,7 @@ export function xBuild(node, option={}) {
     if (n.__resolving) return;
     n.__resolving = true;
     active = n;
+    resolveDependecies(n, {check: true});
 
     if (!n.$done) {
       let ready = true;
@@ -142,6 +143,7 @@ const noop = () => {};
 export function xNode(type, ...args) {
   /*
     xNode(type, data, handler)
+    xNode(type, data)
     xNode(type, handler)
 
     $wait - wait for a node be processed
@@ -159,9 +161,20 @@ export function xNode(type, ...args) {
       })
   */
 
-  let [data, handler] = args.length == 2 ? args : [{}, args[0]];
+  if(!(this instanceof xNode)) return new xNode(type, ...args);
 
-  if(!(this instanceof xNode)) return new xNode(type, data, handler);
+  let data, handler;
+  if (args.length == 2) {
+    [data, handler] = args;
+  } else {
+    if (isFunction(args[0])) {
+      handler = args[0];
+      data = {};
+    } else {
+      data = args[0];
+    }
+  }
+
   Object.assign(this, data);
 
   this.$type = type;
@@ -175,32 +188,37 @@ export function xNode(type, ...args) {
     if (typeof(value) == 'object') Object.assign(this, value);
     else this.value = value;
   };
-  resolveDependecies(this);
+  get_context(false) && resolveDependecies(this);
   return this;
 }
 
-export const resolveDependecies = node => {
-  if(node.$wait) {
+export const resolveDependecies = (node, option) => {
+  if (node.$wait) {
     node.$wait = node.$wait.map(n => {
       if(typeof (n) == 'string') {
         const context = get_context();
-        assert(context.glob[n], `Wrong dependency '${n}'`);
-        n = context.glob[n];
+        if (context.glob[n]) n = context.glob[n];
+        else if (option?.check) throw new Error(`Wrong dependency '${n}'`);
       }
       return n;
     });
   }
 
-  if(node.$hold) {
+  if (node.$hold) {
     node.$hold = node.$hold.map(n => {
       if(typeof (n) == 'string') {
         const context = get_context();
-        assert(context.glob[n], `Wrong dependency '${n}'`);
-        n = context.glob[n];
+        if (context.glob[n]) n = context.glob[n];
+        else if (option?.check) throw new Error(`Wrong dependency '${n}'`);
+        else return n;
       }
-      assert(!n.$done, 'Attempt to add dependecy, but node is already resolved');
+
       if(!n.$wait) n.$wait = [];
-      n.$wait.push(node);
+      if (!n.$wait.includes(node)) {
+        assert(!n.$done, 'Attempt to add dependecy, but node is already resolved');
+        n.$wait.push(node);
+      }
+
       return n;
     });
   }

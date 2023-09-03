@@ -20,7 +20,7 @@ export function parse() {
     comments: []
   };
   if(source) {
-    this.script.readOnly = this.scriptNodes.some(n => n.attributes.some(a => a.name == 'read-only'));
+    this.script.readOnly = this.scriptNodes.some(n => n.attributes.some(a => a.name == 'read-only' || a.name == 'readonly'));
 
     if(!this.script.readOnly) {
       source = source.split(/\n/).map(line => {
@@ -37,8 +37,8 @@ export function parse() {
     };
     this.script.ast = acorn.parse(source, { sourceType: 'module', ecmaVersion: 'latest', onComment });
 
-    if(source.includes('$props')) this.require('$props');
-    if(source.includes('$attributes')) this.require('$attributes');
+    if(source.includes('$props')) this.require('$props', 'apply!ro');
+    if(source.includes('$attributes')) this.require('$attributes', 'apply!ro');
     if(source.includes('$emit')) this.require('$emit');
     if(source.includes('$onDestroy')) this.require('$onDestroy');
     if(source.includes('$onMount')) this.require('$onMount');
@@ -287,7 +287,14 @@ export function transform() {
     });
   }
 
-  let exportedFunctions = [];
+  let exportedFunctions = xNode('exported-functions', {
+    $hold: ['$component'],
+    list: []
+  }, (ctx, n) => {
+    if(!n.list.length) return;
+    this.require('$component');
+    for(let name of n.list) ctx.write(true, `$component.${name} = ${name};`);
+  });
 
   ast.body.forEach(n => {
     if(n.type == 'ImportDeclaration') {
@@ -305,7 +312,7 @@ export function transform() {
       return;
     } else if(n.type == 'ExportNamedDeclaration') {
       if(n.declaration.type == 'FunctionDeclaration') {
-        exportedFunctions.push(n.declaration.id.name);
+        exportedFunctions.list.push(n.declaration.id.name);
         resultBody.push(n.declaration);
         return;
       }
@@ -323,7 +330,7 @@ export function transform() {
           }
         }
         result.props.push(p);
-        this.require('$props:no-deps');
+        this.require('$props');
         lastPropIndex = resultBody.length;
       });
       return;
@@ -340,61 +347,79 @@ export function transform() {
     resultBody.push(n);
   });
 
-  if(lastPropIndex != null) {
-    this.module.head.push(xNode('$props', ctx => {
-      if(this.inuse.$props) ctx.write(true, 'let $props = $option.props || {};');
-    }));
 
-    if(!constantProps && !this.script.readOnly) this.require('apply');
+  let blockHead = [];
+  let blockTail = [];
+  if (lastPropIndex != null) {
+    blockHead = resultBody.slice(0, lastPropIndex);
+    blockTail = resultBody.slice(lastPropIndex);
+  } else {
+    blockTail = resultBody;
+  }
 
-    this.module.code.push(nodeAst({ body: resultBody.slice(0, lastPropIndex) }));
+  const $props = xNode('$props', (ctx, n) => {
+    n.value && ctx.add(n.value);
+  });
+  this.module.head.push($props);
 
-    this.module.code.push(xNode('props', {
-      props: this.script.props,
-      constantProps
-    }, (ctx, n) => {
-      if(this.inuse.$attributes) {
-        let pa = n.props.map(p => {
-          if(p.value === void 0) return `${p.name}`;
+  this.module.code.push(nodeAst({ body: blockHead }));
+  this.module.code.push(xNode('$props-update', {
+    $hold: ['apply', '$props', '$attributes', $props],
+    constantProps,
+    head: $props
+  }, (ctx, n) => {
+    const props = this.script.props;
+    const $props = this.glob.$props.value;
+    const $attributes = this.glob.$attributes.value;
+    const readOnly = this.script.readOnly;
+
+    if (props.length) {
+      // exported props
+      n.head.value = xNode('$props', {}, (ctx, n) => {
+        ctx.write(true, 'let $props = $option.props || {};');
+      });
+      if(!n.constantProps && !readOnly) this.require('apply');
+
+      if ($attributes) {
+        let pa = props.map(p => {
+          if (p.value === void 0) return `${p.name}`;
           return `${p.name}=${p.value}`;
         }).join(', ');
         ctx.write(true, `let {${pa}, ...$attributes} = $props;`);
 
-        if(!this.script.readOnly && !n.constantProps) {
-          ctx.write(true, `$runtime.current_component.$push = ($$props) => ({${n.props.map(p => p.name + '=' + p.name).join(', ')}, ...$attributes} = $props = $$props);`);
-          ctx.write(true, `$runtime.current_component.$exportedProps = () => ({${n.props.map(p => p.name).join(', ')}});`);
+        if(!readOnly && !n.constantProps) {
+          ctx.write(true, `$runtime.current_component.$push = ($$props) => ({${props.map(p => p.name + '=' + p.name).join(', ')}, ...$attributes} = $props = $$props);`);
+          ctx.write(true, `$runtime.current_component.$exportedProps = () => ({${props.map(p => p.name).join(', ')}});`);
         }
-      } else if(this.inuse.$props) {
-        let pa = n.props.map(p => {
-          if(p.value === void 0) return `${p.name}`;
+      } else {
+        let pa = props.map(p => {
+          if (p.value === void 0) return `${p.name}`;
           return `${p.name}=${p.value}`;
         }).join(', ');
         ctx.write(true, `let {${pa}} = $props;`);
 
-        if(!this.script.readOnly && !n.constantProps) {
-          ctx.write(true, `$runtime.current_component.$push = ($$props) => ({${n.props.map(p => p.name + '=' + p.name).join(', ')}} = $props = $$props);`);
-          ctx.write(true, `$runtime.current_component.$exportedProps = () => ({${n.props.map(p => p.name).join(', ')}});`);
+        if(!readOnly && !n.constantProps) {
+          ctx.write(true, `$runtime.current_component.$push = ($$props) => ({${props.map(p => p.name + '=' + p.name).join(', ')}} = $props = $$props);`);
+          ctx.write(true, `$runtime.current_component.$exportedProps = () => ({${props.map(p => p.name).join(', ')}});`);
         }
       }
-    }));
-
-    this.module.code.push(nodeAst({ body: resultBody.slice(lastPropIndex) }));
-  } else {
-    this.module.head.push(xNode('no-props', ctx => {
-      if(this.inuse.$props && this.inuse.$attributes) {
-        ctx.write(true, 'let $props = $option.props || {}, $attributes = $props;');
-        if(!this.script.readOnly) ctx.write(true, '$runtime.current_component.$push = ($$props) => $props = $attributes = $$props;');
-      } else if(this.inuse.$props) {
-        ctx.write(true, 'let $props = $option.props || {};');
-        if(!this.script.readOnly) ctx.write(true, '$runtime.current_component.$push = ($$props) => $props = $$props;');
-      } else if(this.inuse.$attributes) {
-        ctx.write(true, 'let $attributes = $option.props || {};');
-        if(!this.script.readOnly) ctx.write(true, '$runtime.current_component.$push = ($$props) => $attributes = $$props;');
-      }
-    }));
-
-    this.module.code.push(nodeAst({ body: resultBody }));
-  }
+    } else {
+      // no exported props
+      n.head.value = xNode('no-props', ctx => {
+        if($props && $attributes) {
+          ctx.write(true, 'let $props = $option.props || {}, $attributes = $props;');
+          if(!readOnly) ctx.write(true, '$runtime.current_component.$push = ($$props) => $props = $attributes = $$props;');
+        } else if($props) {
+          ctx.write(true, 'let $props = $option.props || {};');
+          if(!readOnly) ctx.write(true, '$runtime.current_component.$push = ($$props) => $props = $$props;');
+        } else if($attributes) {
+          ctx.write(true, 'let $attributes = $option.props || {};');
+          if(!readOnly) ctx.write(true, '$runtime.current_component.$push = ($$props) => $attributes = $$props;');
+        }
+      });
+    }
+  }));
+  this.module.code.push(nodeAst({ body: blockTail }));
 
   this.module.top.push(xNode('autoimport', (ctx) => {
     Object.values(this.script.autoimport).forEach(l => ctx.writeLine(l));
@@ -414,14 +439,7 @@ export function transform() {
     }));
   }
 
-  this.module.code.push(xNode('exported-functions', {
-    $hold: ['$component'],
-    list: exportedFunctions
-  }, (ctx, n) => {
-    if(!n.list.length) return;
-    this.require('$component');
-    for(let name of n.list) ctx.write(true, `$component.${name} = ${name};`);
-  }));
+  this.module.code.push(exportedFunctions);
 }
 
 

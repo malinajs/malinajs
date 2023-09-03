@@ -4,8 +4,8 @@ import * as astring from 'astring';
 
 let current_context;
 
-export const get_context = () => {
-  assert(current_context, 'Out of context');
+export const get_context = (check) => {
+  if (check !== false) assert(current_context, 'Out of context');
   return current_context;
 };
 
@@ -28,7 +28,10 @@ export { svgElements };
 export const last = a => a[a.length - 1];
 
 export function assert(x, info) {
-  if(!x) throw info || (new Error('AssertError'));
+  if (x) return;
+  if (!info) new Error('AssertError');
+  if (typeof(info) == 'string') throw new Error(info);
+  throw info;
 }
 
 export function replace(s, from, to, count) {
