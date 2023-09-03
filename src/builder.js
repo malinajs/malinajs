@@ -43,8 +43,7 @@ export function buildRuntime() {
   this.glob.apply.$handler = (ctx, n) => {
     if(n.value || this.inuse.rootCD) {
       this.require('componentFn');
-      if(n.value == 'readOnly') ctx.writeLine('const $$apply = $runtime.noop;');
-      else ctx.writeLine('const $$apply = $runtime.makeApply();');
+      ctx.writeLine('const $$apply = $runtime.makeApply();');
     }
   };
   this.module.head.unshift(this.glob.apply);
@@ -53,7 +52,7 @@ export function buildRuntime() {
     if(this.inuse.$emit) ctx.write(true, 'const $emit = $runtime.makeEmitter($option);');
   }));
 
-  if(this.config.autoSubscribe && !this.script.readOnly) {
+  if(this.config.autoSubscribe) {
     this.module.head.push(xNode('autoSubscribe', {
       $hold: ['apply'],
       names: this.script.autosubscribeNames
@@ -119,7 +118,7 @@ export function buildRuntime() {
     else ctx.writeLine('return {$dom: $parentElement};');
   }));
 
-  if(!this.script.readOnly && this.css.active() && this.css.containsExternal()) this.require('apply', 'rootCD');
+  if(this.css.active() && this.css.containsExternal()) this.require('apply', 'rootCD');
 
   this.module.head.push(xNode('resolveClass', (ctx) => {
     if(!this.inuse.resolveClass) return;

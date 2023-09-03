@@ -121,7 +121,7 @@ export function makeEventProp(prop, requireElement) {
   if(needPrevent && !preventInserted) mods.push('$event.preventDefault();');
   mods = mods.join(' ');
 
-  if(!this.script.readOnly) this.require('apply');
+  this.require('apply');
 
   // this.checkRootName(handler);
 

@@ -120,11 +120,6 @@ export function bindProp(prop, node, element) {
       })
     };
   } else if(name == 'bind' && arg) {
-    if(this.script.readOnly) {
-      this.warning('script read-only conflicts with bind: ' + node.openTag);
-      return;
-    }
-
     this.require('apply');
     let exp;
     arg = arg.split(/[:|]/);

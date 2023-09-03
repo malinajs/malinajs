@@ -48,10 +48,6 @@ export function makeAwaitBlock(node, label) {
     parts[2] = this.buildBlock({ body: node.parts.catch }, { extraArguments: args });
   }
 
-  if(this.script.readOnly) {
-    this.warning('script read-only conflicts with await');
-    return;
-  }
   this.detectDependency(exp);
   this.require('apply');
 

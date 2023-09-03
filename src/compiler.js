@@ -88,14 +88,6 @@ export async function compile(source, config = {}) {
     },
     require: function(...args) {
       for(let name of args) {
-        if (name == 'apply!ro') {
-          if (!ctx.script.readOnly) ctx.require('apply');
-          continue;
-        }
-        if (name == 'apply' && ctx.script.readOnly) {
-          ctx.glob.apply.$setValue('readOnly');
-          continue;
-        }
         if (ctx.inuse[name] == null) ctx.inuse[name] = 0;
         ctx.inuse[name]++;
         if (['apply', '$onMount', '$component', 'componentFn', 'rootCD', '$props', '$attributes'].includes(name)) ctx.glob[name].$setValue();
@@ -210,7 +202,7 @@ function detectDependency(data) {
     for (let k of ['$props', '$attributes', '$emit', '$context']) {
       if (name.includes(k)) {
         this.require(k);
-        if (k == '$props' || k == '$attributes') this.require('apply!ro');
+        if (k == '$props' || k == '$attributes') this.require('apply');
       }
     }
   };

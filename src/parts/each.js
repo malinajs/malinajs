@@ -75,11 +75,8 @@ export function makeEachBlock(data, option) {
       unwrap,
       keywords
     }, (ctx, n) => {
-      if(this.script.readOnly) ctx.writeLine(`let ${n.unwrap} = $$item;`);
-      else {
-        ctx.writeLine(`let ${n.keywords.join(', ')};`);
-        ctx.writeLine(`$runtime.prefixPush(() => (${n.unwrap} = $$item));`);
-      }
+      ctx.writeLine(`let ${n.keywords.join(', ')};`);
+      ctx.writeLine(`$runtime.prefixPush(() => (${n.unwrap} = $$item));`);
     });
   } else {
     rx = right.trim().split(/\s*\,\s*/);
@@ -98,17 +95,15 @@ export function makeEachBlock(data, option) {
   assert(isSimpleName(itemName), `Wrong name '${itemName}'`);
 
   let rebind;
-  if(!this.script.readOnly) {
-    if(!indexName && keyName == itemName) rebind = null;
-    else {
-      rebind = xNode('rebind', {
-        itemName,
-        indexName
-      }, (ctx, n) => {
-        if(n.indexName) ctx.write(`(_${n.itemName}, _${n.indexName}) => {${n.itemName}=_${n.itemName}; ${n.indexName}=_${n.indexName};}`);
-        else ctx.write(`(_${n.itemName}) => {${n.itemName}=_${n.itemName};}`);
-      });
-    }
+  if(!indexName && keyName == itemName) rebind = null;
+  else {
+    rebind = xNode('rebind', {
+      itemName,
+      indexName
+    }, (ctx, n) => {
+      if(n.indexName) ctx.write(`(_${n.itemName}, _${n.indexName}) => {${n.itemName}=_${n.itemName}; ${n.indexName}=_${n.indexName};}`);
+      else ctx.write(`(_${n.itemName}) => {${n.itemName}=_${n.itemName};}`);
+    });
   }
 
   let nodeItems = trimEmptyNodes(data.mainBlock);

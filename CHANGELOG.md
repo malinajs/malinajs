@@ -6,6 +6,7 @@
 * config loader moved out of compiler
 * deprecate functions onMount, onDestroy
 * deprecate config.exportDefault
+* deprecate script.readOnly
 
 ## 0.7.x
 * refactoring, optimization, fixes

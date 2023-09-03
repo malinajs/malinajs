@@ -15,30 +15,26 @@ export function parse() {
     props: [],
     rootVariables: {},
     rootFunctions: {},
-    readOnly: false,
     autoimport: {},
     comments: []
   };
   if(source) {
-    this.script.readOnly = this.scriptNodes.some(n => n.attributes.some(a => a.name == 'read-only' || a.name == 'readonly'));
+    source = source.split(/\n/).map(line => {
+      let rx = line.match(/^(\s*)\/\/(.*)$/);
+      if(!rx) return line;
+      let code = rx[2].trim();
+      if(code != '!no-check') return line;
+      return rx[1] + '$$_noCheck;';
+    }).join('\n');
 
-    if(!this.script.readOnly) {
-      source = source.split(/\n/).map(line => {
-        let rx = line.match(/^(\s*)\/\/(.*)$/);
-        if(!rx) return line;
-        let code = rx[2].trim();
-        if(code != '!no-check') return line;
-        return rx[1] + '$$_noCheck;';
-      }).join('\n');
-    }
     const onComment = (isBlockComment, value, start, end) => {
       if(isBlockComment) return;
       this.script.comments.push({ start, end, value });
     };
     this.script.ast = acorn.parse(source, { sourceType: 'module', ecmaVersion: 'latest', onComment });
 
-    if(source.includes('$props')) this.require('$props', 'apply!ro');
-    if(source.includes('$attributes')) this.require('$attributes', 'apply!ro');
+    if(source.includes('$props')) this.require('$props', 'apply');
+    if(source.includes('$attributes')) this.require('$attributes', 'apply');
     if(source.includes('$emit')) this.require('$emit');
     if(source.includes('$onDestroy')) this.require('$onDestroy');
     if(source.includes('$onMount')) this.require('$onMount');
@@ -178,7 +174,7 @@ export function transform() {
       }
     }
   }
-  if(!this.script.readOnly) walk(ast, null, transformNode);
+  walk(ast, null, transformNode);
 
   function makeVariable(name) {
     return {
@@ -371,14 +367,13 @@ export function transform() {
     const props = this.script.props;
     const $props = this.glob.$props.value;
     const $attributes = this.glob.$attributes.value;
-    const readOnly = this.script.readOnly;
 
     if (props.length) {
       // exported props
       n.head.value = xNode('$props', {}, (ctx, n) => {
         ctx.write(true, 'let $props = $option.props || {};');
       });
-      if(!n.constantProps && !readOnly) this.require('apply');
+      if(!n.constantProps) this.require('apply');
 
       if ($attributes) {
         let pa = props.map(p => {
@@ -387,7 +382,7 @@ export function transform() {
         }).join(', ');
         ctx.write(true, `let {${pa}, ...$attributes} = $props;`);
 
-        if(!readOnly && !n.constantProps) {
+        if(!n.constantProps) {
           ctx.write(true, `$runtime.current_component.$push = ($$props) => ({${props.map(p => p.name + '=' + p.name).join(', ')}, ...$attributes} = $props = $$props);`);
           ctx.write(true, `$runtime.current_component.$exportedProps = () => ({${props.map(p => p.name).join(', ')}});`);
         }
@@ -398,7 +393,7 @@ export function transform() {
         }).join(', ');
         ctx.write(true, `let {${pa}} = $props;`);
 
-        if(!readOnly && !n.constantProps) {
+        if(!n.constantProps) {
           ctx.write(true, `$runtime.current_component.$push = ($$props) => ({${props.map(p => p.name + '=' + p.name).join(', ')}} = $props = $$props);`);
           ctx.write(true, `$runtime.current_component.$exportedProps = () => ({${props.map(p => p.name).join(', ')}});`);
         }
@@ -408,13 +403,13 @@ export function transform() {
       n.head.value = xNode('no-props', ctx => {
         if($props && $attributes) {
           ctx.write(true, 'let $props = $option.props || {}, $attributes = $props;');
-          if(!readOnly) ctx.write(true, '$runtime.current_component.$push = ($$props) => $props = $attributes = $$props;');
+          ctx.write(true, '$runtime.current_component.$push = ($$props) => $props = $attributes = $$props;');
         } else if($props) {
           ctx.write(true, 'let $props = $option.props || {};');
-          if(!readOnly) ctx.write(true, '$runtime.current_component.$push = ($$props) => $props = $$props;');
+          ctx.write(true, '$runtime.current_component.$push = ($$props) => $props = $$props;');
         } else if($attributes) {
           ctx.write(true, 'let $attributes = $option.props || {};');
-          if(!readOnly) ctx.write(true, '$runtime.current_component.$push = ($$props) => $attributes = $$props;');
+          ctx.write(true, '$runtime.current_component.$push = ($$props) => $attributes = $$props;');
         }
       });
     }
@@ -428,7 +423,7 @@ export function transform() {
   this.module.top.push(nodeAst({ body: imports }));
   this.module.code.push(watchers);
 
-  if(this.scriptNodes[0] && this.scriptNodes[0].attributes.some(a => a.name == 'property') && this.script.props.length && !this.script.readOnly) {
+  if(this.scriptNodes[0] && this.scriptNodes[0].attributes.some(a => a.name == 'property') && this.script.props.length) {
     this.require('apply');
     this.module.code.push(xNode('external-property', {
       props: this.script.props

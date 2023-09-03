@@ -170,7 +170,6 @@ export function makeComponent(node, option={}) {
       assert(detectExpressionType(outer) == 'identifier', 'Wrong bind name: ' + outer);
       this.detectDependency(outer);
 
-      if(this.script.readOnly) this.warning('Conflict: read-only and 2-way binding to component');
       this.require('apply');
       staticProps = false;
 
