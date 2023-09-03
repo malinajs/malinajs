@@ -4,9 +4,9 @@ import { xNode } from '../xnode.js';
 
 
 export function radioInput(node, el) {
+  // Usage: <input type="radio" name={value} value={it} />
   assert(node.name == 'input');
-  const aType = node.attributes.find(a => a.name == 'type');
-  if(!aType || aType.value != 'radio') return null;
+  if (!node.attributes.some(a => a.name == 'type' && a.value == 'radio')) return null;
   const aName = node.attributes.find(a => a.name == 'name');
   if(!aName.value.startsWith('{')) return null;
   const aValue = node.attributes.find(a => a.name == 'value');
