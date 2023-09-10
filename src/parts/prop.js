@@ -433,7 +433,7 @@ export function bindProp(prop, node, element) {
       let n = xNode('bindAttribute', {
         $wait: ['apply'],
         name,
-        exp: propList[name] && parsed.binding ? parsed.binding : exp,
+        exp: (propList[name] || isExpression(prop.raw)) && parsed.binding ? parsed.binding : exp,
         hasElement,
         el: element.bindName()
       }, (ctx, data) => {
