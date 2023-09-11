@@ -528,22 +528,24 @@ export const parseAttibutes = (source, option={}) => {
       if(r.readIf('=')) {
         if(r.probe('{')) {
           const {raw} = parseBinding(r);
-          result.push({name, value: raw, raw, content: r.sub(start)});
+          result.push({name, value: raw, raw, content: r.sub(start), type: 'exp'});
         } else if(r.probeQuote()) {
           const raw = r.readString();
           const value = raw.substring(1, raw.length - 1);
-          result.push({name, value, raw, content: r.sub(start)});
+          result.push({name, value, raw, content: r.sub(start), type: 'text'});
         } else {
           const value = r.readIf(/^[^\s<>]+/);
-          result.push({name, value, raw: value, content: r.sub(start)});
+          result.push({name, value, raw: value, content: r.sub(start), type: 'word'});
         }
       } else {
         let value;
         if(name[0] == '{' && last(name) == '}' && !name.startsWith('{...')) {
           value = name;
           name = unwrapExp(name);
+          result.push({name, value, raw: value, content: r.sub(start), type: 'exp'});
+        } else {
+          result.push({name, value, raw: value, content: r.sub(start), type: 'attribute'});
         }
-        result.push({name, value, raw: value, content: r.sub(start)});
       }
     }
   }

@@ -72,7 +72,8 @@ export async function main() {
           "content": "title=\"header\"",
           "name": "title",
           "value": "header",
-          "raw": '"header"'
+          "raw": '"header"',
+          "type": "text"
         },
         {
             "content": "*{someValue('start end')}",
@@ -126,19 +127,22 @@ export async function main() {
           "content": "id=1",
           "name": "id",
           "value": "1",
-          "raw": '1'
+          "raw": '1',
+          "type": "word"
         },
         {
           "content": "name|mod:val={someBinding(\"text\", 2 + 5)}",
           "name": "name|mod:val",
           "value": "{someBinding(\"text\", 2 + 5)}",
-          "raw": "{someBinding(\"text\", 2 + 5)}"
+          "raw": "{someBinding(\"text\", 2 + 5)}",
+          "type": "exp"
         },
         {
           "name": "bind",
           "value": "{bind}",
           "raw": "{bind}",
-          "content": "{bind}"
+          "content": "{bind}",
+          "type": "exp"
         }
       ],
       "classes": new Set(),

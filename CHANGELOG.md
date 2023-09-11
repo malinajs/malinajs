@@ -7,6 +7,7 @@
 * deprecate functions onMount, onDestroy
 * deprecate config.exportDefault
 * deprecate script.readOnly
+* different bindings for `value={exp}` and `value="{exp}"`
 
 ## 0.7.x
 * refactoring, optimization, fixes
