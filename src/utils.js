@@ -75,6 +75,20 @@ export const isNumber = (value) => {
 };
 
 export function detectExpressionType(name) {
+  /*
+    Types:
+    * identifier
+      `bar`
+      `foo.bar`
+      `foo[x].bar`
+      `foo().bar`
+    * function
+      `(e) => { foo(e) }`
+    * function-call
+      `foo()`
+    * undefined - another type of expression
+  */
+
   if(isSimpleName(name)) return 'identifier';
 
   let ast = acorn.parse(name, { allowReturnOutsideFunction: true, ecmaVersion: 'latest' });

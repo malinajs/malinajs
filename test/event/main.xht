@@ -11,9 +11,9 @@
 </script>
 
 <button @click>1</button>
-<button @click:click2>2</button>
+<button @click=click2>2</button>
 <button @click={click}>3</button>
-<button @click={(e) => click4(e)}>4</button>
+<button @click={click4($event)}>4</button>
 <button @click={click5($element)}>btn-5</button>
 <button @click={$context.click6++}>6</button>
-<input type="text" @keyup|enter:input />
+<input type="text" @keyup|enter=input />

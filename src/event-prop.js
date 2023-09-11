@@ -9,7 +9,7 @@ export function makeEventProp(prop, requireElement) {
 
   let name = prop.name;
   if(name.startsWith('@@')) {
-    assert(!prop.value);
+    assert(!prop.raw);
     return { forward: true, name };
   }
   if(name.startsWith('on:')) name = name.substring(3);
@@ -18,54 +18,40 @@ export function makeEventProp(prop, requireElement) {
     name = name.substring(1);
   }
 
-  let event = '';
-  let modList = [], _mod = '';
-  let handler = '', exp, func;
-  let step = 0;
-  let rootModifier = false;
-  for(let a of name) {
-    if(a == '|') {
-      assert(step <= 1);
-      step = 1;
-      if(_mod) modList.push(_mod);
-      _mod = '';
-      continue;
-    }
-    if(a == ':') {
-      assert(step < 2);
-      step = 2;
-      continue;
-    }
-    if(step == 0) event += a;
-    else if(step == 1) _mod += a;
-    else if(step == 2) handler += a;
-  }
-  if(_mod) modList.push(_mod);
-
-  if(prop.value) {
-    assert(!handler);
-    exp = unwrapExp(prop.value);
-    exp = replaceKeyword(exp, (name) => {
-      if(name == '$element') return requireElement();
-    }, true);
-  } else if(!handler) handler = event;
-
-  this.detectDependency(exp || handler);
-
+  // parse event
+  let modList = name.split('|')
+  let event = modList.shift();
   let globalFunction = false;
-  if(exp) {
+
+  let handler, exp;
+  if (prop.type == 'attribute') {
+    assert(!prop.raw);
+    handler = event;
+    globalFunction = !!this.script.rootFunctions[handler];
+  } else if (prop.type == 'word') {
+    handler = prop.raw;
+    assert(detectExpressionType(handler) == 'identifier');
+    globalFunction = !!this.script.rootFunctions[handler];
+  } else if (prop.type == 'exp') {
+    exp = unwrapExp(prop.raw)
+    this.detectDependency(exp);
     let type = detectExpressionType(exp);
-    if(type == 'identifier') {
-      globalFunction = !!this.script.rootFunctions[exp];
+    if (type == 'identifier') {
       handler = exp;
       exp = null;
-    } else if(type == 'function') {
-      func = exp;
-      exp = null;
-    } else if(type?.type == 'function-call') {
+    } else if (type?.type == 'function-call') {
       globalFunction = !!this.script.rootFunctions[type.name];
+      exp = replaceKeyword(exp, (name) => {
+        if(name == '$element') return requireElement();
+      }, true);
+    } else {
+      assert(!type);
+      exp = replaceKeyword(exp, (name) => {
+        if(name == '$element') return requireElement();
+      }, true);
+      this.require('apply');
     }
-  }
+  } else assert(false);
 
   // modifiers
 
@@ -83,16 +69,14 @@ export function makeEventProp(prop, requireElement) {
   };
 
   let mods = [];
-  let needPrevent, preventInserted;
+  let rootModifier = false;
   modList.forEach(opt => {
     if(opt == 'root') {
       rootModifier = true;
       return;
     }
     if(opt == 'preventDefault' || opt == 'prevent') {
-      if(preventInserted) return;
       mods.push('$event.preventDefault();');
-      preventInserted = true;
       return;
     } else if(opt == 'stopPropagation' || opt == 'stop') {
       mods.push('$event.stopPropagation();');
@@ -118,28 +102,23 @@ export function makeEventProp(prop, requireElement) {
 
     throw 'Wrong modificator: ' + opt;
   });
-  if(needPrevent && !preventInserted) mods.push('$event.preventDefault();');
   mods = mods.join(' ');
-
-  this.require('apply');
-
-  // this.checkRootName(handler);
 
   let fn = xNode('event-callback', {
     exp,
     handlerName: handler,
-    func,
     mods,
     globalFunction
   }, (ctx, n) => {
-    if(n.handlerName && !this.inuse.apply && !n.mods) return ctx.write(n.handlerName);
+    if (n.handlerName && !n.mods && (n.globalFunction || !this.inuse.apply)) return ctx.write(n.handlerName);
     ctx.write('($event) => { ');
     if(n.mods) ctx.write(n.mods, ' ');
     if(n.handlerName) ctx.write(`${n.handlerName}($event);`);
-    else if(n.exp) {
-      if(last(n.exp) != ';') n.exp += ';';
-      ctx.write(`${n.exp}`);
-    } else if(n.func) ctx.write(`(${n.func})($event);`);
+    else {
+      assert(n.exp);
+      ctx.write(n.exp);
+      if(last(n.exp) != ';') ctx.write(';');
+    }
     if(this.inuse.apply && !n.globalFunction) ctx.write(' $$apply();');
     ctx.write('}');
   });
