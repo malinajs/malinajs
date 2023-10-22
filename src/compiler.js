@@ -23,7 +23,7 @@ import { makeEventProp } from './event-prop.js';
 import { makeKeepAlive } from './parts/keep-alive.js';
 
 
-export const version = '0.7.16';
+export const version = '0.7.17';
 
 
 export async function compile(source, config = {}) {
