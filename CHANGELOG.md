@@ -9,6 +9,7 @@
 * deprecate script.readOnly
 * different bindings for `value={exp}` and `value="{exp}"`
 * deprecate function binding `@click={(e) => click(e)}`
+* improvements for !no-check
 
 ## 0.7.x
 * refactoring, optimization, fixes

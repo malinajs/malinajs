@@ -105,7 +105,7 @@ export function transform() {
     if(!node._parent || node._parent.type != 'CallExpression') return false;
     if(node._parent.callee.type != 'MemberExpression') return false;
     let method = node._parent.callee.property.name;
-    return method == 'forEach' || method == 'map' || method == 'filter';
+    return ['forEach', 'map', 'filter', 'find', 'findIndex'].includes(method);
   }
 
   function isNoCheck(node) {
@@ -119,6 +119,10 @@ export function transform() {
         let n = node.body.body[i];
         if(!isNoCheck(n)) continue;
         node.body.body.splice(i, 1);
+        if (i > 0) {
+          node.body.body[i - 1].__stop = true;
+          return;
+        }
         return 'stop';
       }
       if(!isInLoop(node)) {
@@ -168,6 +172,7 @@ export function transform() {
       if(Array.isArray(child)) {
         for(let i = 0; i < child.length; i++) {
           walk(child[i], forParent, fn);
+          if (child[i].__stop) break;
         }
       } else {
         walk(child, forParent, fn);
