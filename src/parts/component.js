@@ -217,17 +217,18 @@ export function makeComponent(node, option={}) {
       return;
     } else if(this.config.passClass && (name == 'class' || name.startsWith('class:'))) {
       let metaClass, args = name.split(':');
-      if(args.length == 1) {
+      if (args.length == 1) {
         metaClass = '$$main';
       } else {
         assert(args.length == 2);
         metaClass = args[1];
         assert(metaClass);
+        if (!value) value = metaClass;
       }
       assert(value);
       this.css.passingClass = true;
 
-      const parsed = this.parseText(prop.value);
+      const parsed = this.parseText(value);
       this.detectDependency(parsed);
       let exp = parsed.result;
       $class.push(`${metaClass}: $$resolveClass(${exp})`);
