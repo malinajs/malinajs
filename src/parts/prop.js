@@ -399,24 +399,6 @@ export function bindProp(prop, node, element) {
     };
   } else {
     if(prop.value && prop.value.indexOf('{') >= 0) {
-      const parsed = this.parseText(prop.value);
-      this.detectDependency(parsed);
-      let exp = parsed.result;
-      let hasElement = prop.value.includes('$element');
-
-      if(node.spreading) return node.spreading.push(`${name}: ${exp}`);
-
-      if(node.name == 'option' && name == 'value' && parsed.binding) {
-        return {
-          bind: xNode('bindOptionValue', {
-            el: element.bindName(),
-            value: parsed.binding
-          }, (ctx, n) => {
-            ctx.write(true, `$runtime.selectOption(${n.el}, () => (${n.value}));`);
-          })
-        }
-      }
-
       const propList = {
         hidden: true,
         checked: true,
@@ -430,10 +412,28 @@ export function bindProp(prop, node, element) {
         readonly: 'readOnly'
       };
 
+      const parsed = this.parseText(prop.value);
+      this.detectDependency(parsed);
+      let exp = (propList[name] || isExpression(prop.raw)) && parsed.binding ? parsed.binding : parsed.result;
+      let hasElement = prop.value.includes('$element');
+
+      if(node.spreading) return node.spreading.push(name == exp ? name : `${name}: ${exp}`);
+
+      if(node.name == 'option' && name == 'value' && parsed.binding) {
+        return {
+          bind: xNode('bindOptionValue', {
+            el: element.bindName(),
+            value: parsed.binding
+          }, (ctx, n) => {
+            ctx.write(true, `$runtime.selectOption(${n.el}, () => (${n.value}));`);
+          })
+        }
+      }
+
       let n = xNode('bindAttribute', {
         $wait: ['apply'],
         name,
-        exp: (propList[name] || isExpression(prop.raw)) && parsed.binding ? parsed.binding : exp,
+        exp,
         hasElement,
         el: element.bindName()
       }, (ctx, data) => {
