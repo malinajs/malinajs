@@ -91,7 +91,21 @@ class Reader {
 export function parseHTML(source) {
   const reader = new Reader(source);
 
-  const readScript = (reader) => {
+  const readScript = (reader, tag) => {
+    tag.type = 'script';
+
+    let isJS = true;
+    for (let a of tag.attributes) {
+      if (a.name == 'lang' || a.name == 'language' || a.name == 'type') {
+        isJS = a.value.indexOf('javascript') >= 0 || a.value.indexOf('ecmascript') >= 0;
+        tag.lang = a.value;
+        break;
+      }
+    }
+    tag.content = isJS ? readScriptJS(reader) : readScriptRaw(reader);
+  }
+
+  const readScriptJS = (reader) => {
     class ScriptParser extends acorn.Parser {
       readToken_lt_gt(code) {
         if (this.input.slice(this.pos, this.pos + 9) == '</script>') {
@@ -115,6 +129,10 @@ export function parseHTML(source) {
     reader.index = end + 9;
     return reader.sub(start, end);
   }
+
+  const readScriptRaw = () => {
+    return reader.read(/^(.*?)<\/script>/s);
+  };
 
   const readStyle = () => {
     return reader.read(/^(.*?)<\/style>/s);
@@ -173,8 +191,7 @@ export function parseHTML(source) {
         let tag = readTag(reader);
         push(tag);
         if(tag.name === 'script') {
-          tag.type = 'script';
-          tag.content = readScript(reader);
+          readScript(reader, tag);
           continue;
         } else if(tag.name === 'template') {
           tag.type = 'template';
