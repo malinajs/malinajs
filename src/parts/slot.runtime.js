@@ -9,13 +9,13 @@ export const invokeSlotBase = ($component, slotName, $context, props, placeholde
 export const invokeSlot = ($component, slotName, $context, propsFn, placeholder, cmp) => {
   let $slot = $component.$option.slots?.[slotName || 'default'];
 
-  if($slot) {
+  if ($slot) {
     let push, w = new WatchObject(propsFn, value => push(value));
     Object.assign(w, { value: {}, cmp, idle: true });
     fire(w);
     let $dom = $slot($component, $context, w.value);
-    if($dom.$dom) {
-      if($dom.push) {
+    if ($dom.$dom) {
+      if ($dom.push) {
         push = $dom.push;
         share.current_cd.watchers.push(w);
       }
@@ -29,7 +29,7 @@ export const makeSlot = (fr, fn) => {
   let parentCD = share.current_cd;
   return (callerComponent, $context, props) => {
     let $dom = fr.cloneNode(true), prev = share.current_cd;
-    if(parentCD) {
+    if (parentCD) {
       let $cd = share.current_cd = cd_new();
       cd_attach(parentCD, $cd);
       share.$onDestroy(() => cd_detach($cd));

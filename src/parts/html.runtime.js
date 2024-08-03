@@ -3,7 +3,7 @@ import { $watch } from '../runtime/cd';
 
 let create = (tag, html) => {
   let fr;
-  if(tag.parentElement instanceof SVGElement) {
+  if (tag.parentElement instanceof SVGElement) {
     let t = document.createElement('template');
     t.innerHTML = '<svg>' + html + '</svg>';
     fr = t.content.firstChild;
@@ -20,13 +20,13 @@ let create = (tag, html) => {
 export function htmlBlock(tag, fn) {
   let firstElement;
   let destroy = () => {
-    if(!firstElement) return;
+    if (!firstElement) return;
     removeElements(firstElement, tag.previousSibling);
     firstElement = null;
   };
   $watch(fn, (html) => {
     destroy();
-    if(html) firstElement = create(tag, html);
+    if (html) firstElement = create(tag, html);
   });
 }
 

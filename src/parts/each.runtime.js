@@ -32,7 +32,7 @@ export const makeEachElseBlock = (fn) => {
     const parentNode = mode ? label : label.parentNode;
     try {
       let $dom = fn();
-      if($dom.nodeType == 11) {
+      if ($dom.nodeType == 11) {
         first = $dom.firstChild;
         last = $dom.lastChild;
       } else first = last = $dom;
@@ -48,7 +48,7 @@ export const makeEachElseBlock = (fn) => {
       share.destroyResults = [];
       safeGroupCall2(destroyList, share.destroyResults);
 
-      if(share.destroyResults.length) {
+      if (share.destroyResults.length) {
         const f = first, l = last;
         iterNodes(f, l, n => n.$$removing = true);
         Promise.allSettled(share.destroyResults).then(() => iterNodes(f, l, n => n.remove()));
@@ -79,30 +79,30 @@ export function $$eachBlock(label, mode, fn, getKey, bind, buildElseBlock) {
   buildElseBlock && share.$onDestroy(() => elseBlock?.());
 
   $watch(fn, (array) => {
-    if(!array) array = [];
-    if(typeof (array) == 'number') array = [...Array(array)].map((_, i) => i + 1);
-    else if(!isArray(array)) array = [];
+    if (!array) array = [];
+    if (typeof (array) == 'number') array = [...Array(array)].map((_, i) => i + 1);
+    else if (!isArray(array)) array = [];
 
     let newMapping = new Map();
     let parentNode = mode ? label : label.parentNode;
 
-    if(mapping.size) {
+    if (mapping.size) {
       let ctx, count = 0;
       vi++;
-      for(let i = 0; i < array.length; i++) {
+      for (let i = 0; i < array.length; i++) {
         ctx = mapping.get(getKey(array[i], i, array));
-        if(ctx) {
+        if (ctx) {
           ctx.a = vi;
           count++;
         }
       }
 
-      if(!count && firstNode) {
+      if (!count && firstNode) {
         share.destroyResults = [];
         eachCD.children.length = 0;
         destroyAll();
 
-        if(share.destroyResults.length) {
+        if (share.destroyResults.length) {
           p_promise = 1;
           let removedNodes = [];
           iterNodes(firstNode, onlyChild ? null : label.previousSibling, n => {
@@ -111,17 +111,17 @@ export function $$eachBlock(label, mode, fn, getKey, bind, buildElseBlock) {
           });
           Promise.allSettled(share.destroyResults).then(() => removedNodes.forEach(n => n.remove()));
         } else {
-          if(onlyChild) label.textContent = '';
+          if (onlyChild) label.textContent = '';
           else removeElements(firstNode, label.previousSibling);
         }
 
         share.destroyResults = null;
-      } else if(count < mapping.size) {
+      } else if (count < mapping.size) {
         eachCD.children = [];
         share.destroyResults = [];
         let removedNodes = [];
         mapping.forEach(ctx => {
-          if(ctx.a == vi) {
+          if (ctx.a == vi) {
             ctx.$cd && eachCD.children.push(ctx.$cd);
             return;
           }
@@ -129,7 +129,7 @@ export function $$eachBlock(label, mode, fn, getKey, bind, buildElseBlock) {
           iterNodes(ctx.first, ctx.last, n => removedNodes.push(n));
         });
 
-        if(share.destroyResults.length) {
+        if (share.destroyResults.length) {
           p_promise = 1;
           removedNodes.forEach(n => n.$$removing = true);
           Promise.allSettled(share.destroyResults).then(() => removedNodes.forEach(n => n.remove()));
@@ -140,7 +140,7 @@ export function $$eachBlock(label, mode, fn, getKey, bind, buildElseBlock) {
       }
     }
 
-    if(elseBlock && array.length) {
+    if (elseBlock && array.length) {
       elseBlock();
       elseBlock = null;
     }
@@ -148,33 +148,33 @@ export function $$eachBlock(label, mode, fn, getKey, bind, buildElseBlock) {
     let i, item, next_ctx, ctx, nextEl, key;
     let nextNode = mode ? null : label;
     i = array.length;
-    while(i--) {
+    while (i--) {
       item = array[i];
       key = getKey(item, i, array);
-      if(next_ctx) {
+      if (next_ctx) {
         ctx = next_ctx;
         next_ctx = null;
       } else ctx = mapping.get(key);
-      if(ctx) {
+      if (ctx) {
         nextEl = nextNode ? nextNode.previousSibling : parentNode.lastChild;
-        if(p_promise) while(nextEl && nextEl.$$removing) nextEl = nextEl.previousSibling;
-        if(nextEl != ctx.last) {
+        if (p_promise) while (nextEl && nextEl.$$removing) nextEl = nextEl.previousSibling;
+        if (nextEl != ctx.last) {
           let insert = true;
 
-          if(ctx.first == ctx.last && (i > 0) && nextEl) {
+          if (ctx.first == ctx.last && (i > 0) && nextEl) {
             next_ctx = mapping.get(getKey(array[i - 1], i - 1, array));
-            if(next_ctx && nextEl.previousSibling === next_ctx.last) {
+            if (next_ctx && nextEl.previousSibling === next_ctx.last) {
               parentNode.replaceChild(ctx.first, nextEl);
               insert = false;
             }
           }
 
-          if(insert) {
+          if (insert) {
             let next, el = ctx.first;
-            while(el) {
+            while (el) {
               next = el.nextSibling;
               parentNode.insertBefore(el, nextNode);
-              if(el == ctx.last) break;
+              if (el == ctx.last) break;
               el = next;
             }
           }
@@ -193,14 +193,14 @@ export function $$eachBlock(label, mode, fn, getKey, bind, buildElseBlock) {
         }
         ctx = { $cd, rebind };
         cd_attach(eachCD, $cd);
-        if($dom.nodeType == 11) {
+        if ($dom.nodeType == 11) {
           ctx.first = $dom.firstChild;
           ctx.last = $dom.lastChild;
         } else ctx.first = ctx.last = $dom;
         parentNode.insertBefore($dom, nextNode);
         nextNode = ctx.first;
         safeGroupCall2(m, d, 1);
-        if(d.length) {
+        if (d.length) {
           ctx.d = d;
           p_destroy = 1;
         }
@@ -211,7 +211,7 @@ export function $$eachBlock(label, mode, fn, getKey, bind, buildElseBlock) {
     mapping.clear();
     mapping = newMapping;
 
-    if(!array.length && !elseBlock && buildElseBlock) {
+    if (!array.length && !elseBlock && buildElseBlock) {
       elseBlock = buildElseBlock(label, mode, parentCD);
     }
   }, { cmp: compareArray });

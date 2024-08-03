@@ -4,7 +4,7 @@ import { parseBinding } from './parser.js';
 
 export function inspectProp(prop) {
   let { name, value } = prop, mod = {};
-  if(name[0] == '{') {
+  if (name[0] == '{') {
     assert(!prop.value);
     value = name;
     name = unwrapExp(name);
@@ -16,28 +16,28 @@ export function inspectProp(prop) {
 
   assert(name.match(/^([\w$_][\w\d$_.\-|]*)$/), `Wrong property: '${name}'`);
   name = toCamelCase(name);
-  if(name == 'class') name = '_class';
+  if (name == 'class') name = '_class';
 
   let statical = false;
 
-  if(value && value.includes('{')) {
+  if (value && value.includes('{')) {
     const pe = parseBinding(value);
     const v = pe.value;
     this.detectDependency(v);
 
-    if(isNumber(v)) {
+    if (isNumber(v)) {
       value = v;
       statical = true;
-    } else if(v == 'true' || v == 'false') {
+    } else if (v == 'true' || v == 'false') {
       value = v;
       statical = true;
-    } else if(v == 'null') {
+    } else if (v == 'null') {
       value = 'null';
       statical = true;
     } else {
       value = v;
     }
-  } else if(value) {
+  } else if (value) {
     value = '`' + Q(value) + '`';
     statical = true;
   } else {

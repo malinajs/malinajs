@@ -9,11 +9,11 @@ export function awaitBlock(label, parentLabel, relation, fn, build_main, build_t
   share.$onDestroy(() => safeGroupCall(destroyList));
 
   function destroyBlock() {
-    if(!first) return;
+    if (!first) return;
 
     safeGroupCall(destroyList);
     destroyList.length = 0;
-    if($cd) {
+    if ($cd) {
       cd_detach($cd);
       $cd = null;
     }
@@ -24,7 +24,7 @@ export function awaitBlock(label, parentLabel, relation, fn, build_main, build_t
   function render(builder, value) {
     destroyBlock();
 
-    if(!builder) return;
+    if (!builder) return;
     destroyList = share.current_destroyList = [];
     $cd = share.current_cd = cd_new(parentCD);
     let $dom, mountList = share.current_mountList = [];
@@ -34,11 +34,11 @@ export function awaitBlock(label, parentLabel, relation, fn, build_main, build_t
       share.current_destroyList = share.current_mountList = share.current_cd = null;
     }
     cd_attach(parentCD, $cd);
-    if($dom.nodeType == 11) {
+    if ($dom.nodeType == 11) {
       first = $dom.firstChild;
       last = $dom.lastChild;
     } else first = last = $dom;
-    if(parentLabel) label.appendChild($dom);
+    if (parentLabel) label.appendChild($dom);
     else label.parentNode.insertBefore($dom, label);
     safeGroupCall2(mountList, destroyList, 1);
     cd_component(parentCD).$apply();
@@ -46,17 +46,17 @@ export function awaitBlock(label, parentLabel, relation, fn, build_main, build_t
 
   $watch(relation, () => {
     let p = fn();
-    if(status !== 1) render(build_main);
+    if (status !== 1) render(build_main);
     status = 1;
-    if(p && p instanceof Promise) {
+    if (p && p instanceof Promise) {
       promise = p;
       promise.then(value => {
         status = 2;
-        if(promise !== p) return;
+        if (promise !== p) return;
         render(build_then, value);
       }).catch(value => {
         status = 3;
-        if(promise !== p) return;
+        if (promise !== p) return;
         render(build_catch, value);
       });
     }

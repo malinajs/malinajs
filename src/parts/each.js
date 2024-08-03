@@ -14,7 +14,7 @@ export function makeEachBlock(data, option) {
 
   // get keyName
   rx = right.match(/^(.*)\s*\(\s*([^()]+)\s*\)\s*$/s);
-  if(rx) {
+  if (rx) {
     right = rx[1];
     keyName = rx[2];
   }
@@ -29,7 +29,7 @@ export function makeEachBlock(data, option) {
   };
 
   let itemName, indexName = null, blockPrefix = null;
-  if(right[0] == '{' || right[0] == '[') {
+  if (right[0] == '{' || right[0] == '[') {
     let keywords, unwrap;
     try {
       let exp = `[${right}]`;
@@ -39,7 +39,7 @@ export function makeEachBlock(data, option) {
 
       unwrap = e.build(e.ast.elements[0]);
 
-      if(e.ast.elements.length == 2) {
+      if (e.ast.elements.length == 2) {
         let b = e.ast.elements[1];
         assert(b.type == 'Identifier');
         indexName = e.build(b);
@@ -47,23 +47,23 @@ export function makeEachBlock(data, option) {
 
       e = parseJS(`(${unwrap} = $$item)`);
       let l = e.ast.left;
-      if(l.type == 'ArrayPattern') {
+      if (l.type == 'ArrayPattern') {
         keywords = l.elements.map(p => p.name);
 
-        if(keyName) {
+        if (keyName) {
           let keyLink = {};
-          if(indexName) keyLink[indexName] = '$index';
-          for(let i in keywords) keyLink[keywords[i]] = `$$item[${i}]`;
+          if (indexName) keyLink[indexName] = '$index';
+          for (let i in keywords) keyLink[keywords[i]] = `$$item[${i}]`;
           makeKeyFunction(keyLink);
         }
       } else {
         assert(l.type == 'ObjectPattern');
         keywords = l.properties.map(p => p.key.name);
 
-        if(keyName) {
+        if (keyName) {
           let keyLink = {};
-          if(indexName) keyLink[indexName] = '$index';
-          for(let k of keywords) keyLink[k] = `$$item.${k}`;
+          if (indexName) keyLink[indexName] = '$index';
+          for (let k of keywords) keyLink[k] = `$$item.${k}`;
           makeKeyFunction(keyLink);
         }
       }
@@ -83,11 +83,11 @@ export function makeEachBlock(data, option) {
     assert(rx.length <= 2, `Wrong #each expression '${data.value}'`);
     itemName = rx[0];
     indexName = rx[1] || null;
-    if(keyName) {
-      if(keyName == itemName) keyFunction = 'noop';
+    if (keyName) {
+      if (keyName == itemName) keyFunction = 'noop';
       else {
         let keyLink = { [itemName]: '$$item' };
-        if(indexName) keyLink[indexName] = '$index';
+        if (indexName) keyLink[indexName] = '$index';
         makeKeyFunction(keyLink);
       }
     }
@@ -95,19 +95,19 @@ export function makeEachBlock(data, option) {
   assert(isSimpleName(itemName), `Wrong name '${itemName}'`);
 
   let rebind;
-  if(!indexName && keyName == itemName) rebind = null;
+  if (!indexName && keyName == itemName) rebind = null;
   else {
     rebind = xNode('rebind', {
       itemName,
       indexName
     }, (ctx, n) => {
-      if(n.indexName) ctx.write(`(_${n.itemName}, _${n.indexName}) => {${n.itemName}=_${n.itemName}; ${n.indexName}=_${n.indexName};}`);
+      if (n.indexName) ctx.write(`(_${n.itemName}, _${n.indexName}) => {${n.itemName}=_${n.itemName}; ${n.indexName}=_${n.indexName};}`);
       else ctx.write(`(_${n.itemName}) => {${n.itemName}=_${n.itemName};}`);
     });
   }
 
   let nodeItems = trimEmptyNodes(data.mainBlock);
-  if(!nodeItems.length) nodeItems = [data.mainBlock[0]];
+  if (!nodeItems.length) nodeItems = [data.mainBlock[0]];
 
   let itemBlock, block = this.buildBlock({ body: nodeItems }, {
     allowSingleBlock: !blockPrefix,
@@ -119,7 +119,7 @@ export function makeEachBlock(data, option) {
     }
   });
 
-  if(block.singleBlock) {
+  if (block.singleBlock) {
     itemBlock = xNode('each-component', {
       block: block.singleBlock,
       reference: block.reference,
@@ -148,7 +148,7 @@ export function makeEachBlock(data, option) {
   } else itemBlock = block.block;
 
   let elseBlock = null;
-  if(data.elseBlock) {
+  if (data.elseBlock) {
     let block = this.buildBlock({ body: data.elseBlock }, {
       allowSingleBlock: false
     });
@@ -164,17 +164,17 @@ export function makeEachBlock(data, option) {
   }, (ctx, n) => {
     let el = n.onlyChild ? n.label : n.label.name;
     let mode = 0;
-    if(n.onlyChild) mode = 1;
-    else if(!n.label.node) mode = 2;
+    if (n.onlyChild) mode = 1;
+    else if (!n.label.node) mode = 2;
     ctx.writeLine(`$runtime.$$eachBlock(${el}, ${mode}, () => (${arrayName}),`);
     ctx.indent++;
     ctx.write(true);
-    if(n.keyFunction === 'noop') ctx.write('$runtime.noop');
-    else if(n.keyFunction) ctx.add(n.keyFunction);
+    if (n.keyFunction === 'noop') ctx.write('$runtime.noop');
+    else if (n.keyFunction) ctx.add(n.keyFunction);
     else ctx.write('$runtime.eachDefaultKey');
     ctx.write(',');
     ctx.add(n.block);
-    if(n.elseBlock) {
+    if (n.elseBlock) {
       ctx.write(', $runtime.makeEachElseBlock(');
       ctx.add(n.elseBlock);
       ctx.write(')');

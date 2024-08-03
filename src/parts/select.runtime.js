@@ -1,4 +1,3 @@
-
 import { addEvent, $watch, isArray } from '../runtime/cd.js';
 import { $tick } from '../runtime/base.js';
 
@@ -15,17 +14,17 @@ export const selectElement = (el, getter, setter) => {
   });
   const update = () => {
     let value = w.value;
-    if(el.multiple) {
-      if(isArray(value)) {
-        for(let o of el.options) {
+    if (el.multiple) {
+      if (isArray(value)) {
+        for (let o of el.options) {
           const option_value = o.$$value ? o.$$value() : o.value;
           o.selected = value.indexOf(option_value) != -1;
         }
         return;
       }
     } else {
-      for(let o of el.options) {
-        if((o.$$value ? o.$$value() : o.value) === value) {
+      for (let o of el.options) {
+        if ((o.$$value ? o.$$value() : o.value) === value) {
           o.selected = true;
           return;
         }
@@ -37,17 +36,17 @@ export const selectElement = (el, getter, setter) => {
 
   let debounce = 0;
   el.$$update = () => {
-    if(debounce) return;
+    if (debounce) return;
     debounce = 1;
     $tick(() => {
       debounce = 0;
       update();
     });
-  }
-}
+  };
+};
 
 export const selectOption = (op, getter) => {
   op.$$value = getter;
-  if(op.parentElement?.$$update) op.parentElement.$$update();
+  if (op.parentElement?.$$update) op.parentElement.$$update();
   else $tick(() => op.parentElement?.$$update?.());
-}
+};

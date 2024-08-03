@@ -5,18 +5,18 @@ import { safeGroupCall } from '../runtime/utils';
 
 
 export const keepAlive = (store, keyFn, builder) => {
-  if(!store.$$d) store.$$d = [];
+  if (!store.$$d) store.$$d = [];
   const key = keyFn();
   let block = store.get(key);
   const parentCD = share.current_cd;
 
   share.$onDestroy(() => {
-    if(!block.fr) block.fr = new DocumentFragment();
+    if (!block.fr) block.fr = new DocumentFragment();
     iterNodes(block.first, block.last, n => block.fr.appendChild(n));
     cd_detach(block.$cd);
   });
 
-  if(block) {
+  if (block) {
     cd_attach(parentCD, block.$cd);
     return block.fr;
   } else {
@@ -30,14 +30,14 @@ export const keepAlive = (store, keyFn, builder) => {
       share.current_cd = parentCD;
     }
     cd_attach(parentCD, $cd);
-    if($dom.nodeType == 11) {
+    if ($dom.nodeType == 11) {
       first = $dom.firstChild;
       last = $dom.lastChild;
     } else first = last = $dom;
 
     store.$$d.push(() => safeGroupCall(destroyList));
-    store.set(key, block = {first, last, $cd});
+    store.set(key, block = { first, last, $cd });
 
     return $dom;
   }
-}
+};

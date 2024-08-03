@@ -5,7 +5,7 @@ import { parseAttibutes } from '../parser.js';
 
 export function makeKeepAlive(node) {
   let block;
-  if(node.body && node.body.length) {
+  if (node.body && node.body.length) {
     block = this.buildBlock({ body: trimEmptyNodes(node.body) }, { }).block;
   } else {
     this.warning(`Empty block: '${node.value}'`);
@@ -16,17 +16,17 @@ export function makeKeepAlive(node) {
 
   let key = null;
   let args = node.value.substr(6);
-  if(args) {
+  if (args) {
     args = parseAttibutes(args);
     const a = args.find(a => a.name == 'key');
-    if(a) {
+    if (a) {
       let value = a.value;
-      if(value[0] == '{') value = unwrapExp(value);
+      if (value[0] == '{') value = unwrapExp(value);
       key = `() => (${value})`;
     }
   }
 
-  if(!key) key = `() => '$$${this.uniqIndex++}'`;
+  if (!key) key = `() => '$$${this.uniqIndex++}'`;
 
   this.glob.keepAliveStore.$setValue();
 

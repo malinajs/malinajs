@@ -1,4 +1,3 @@
-
 import { addEvent, $watch } from '../runtime/cd.js';
 
 
@@ -7,6 +6,6 @@ export const radioButton = (el, getValue, getter, setter) => {
     el.checked = getValue() === value;
   });
   addEvent(el, 'change', () => {
-    if(el.checked) setter(w.value = getValue());
+    if (el.checked) setter(w.value = getValue());
   });
-}
+};

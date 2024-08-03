@@ -1,35 +1,34 @@
-
 import * as acorn from 'acorn';
 import { assert, last, Q, unwrapExp } from './utils.js';
 
 class Reader {
   constructor(source) {
-    if(source instanceof Reader) return source;
+    if (source instanceof Reader) return source;
     this.index = 0;
     this.source = source;
   }
 
   read(pattern) {
     assert(!this.end(), 'EOF');
-    if(pattern == null) {
+    if (pattern == null) {
       return this.source[this.index++];
-    } else if(pattern instanceof RegExp) {
+    } else if (pattern instanceof RegExp) {
       assert(pattern.source[0] == '^');
       const rx = this.source.substring(this.index).match(pattern);
       assert(rx && rx.index == 0, 'Wrong syntax');
-      let r = rx[rx.length-1];
+      let r = rx[rx.length - 1];
       this.index += rx[0].length;
       return r;
     } else throw 'Not implemented';
   }
 
   probe(pattern) {
-    if(pattern instanceof RegExp) {
+    if (pattern instanceof RegExp) {
       assert(pattern.source[0] == '^');
       const r = this.source.substring(this.index).match(pattern);
-      if(r) return r[0];
+      if (r) return r[0];
     } else {
-      if(this.source[this.index] == pattern[0] && this.source.substr(this.index, pattern.length) == pattern) return pattern;
+      if (this.source[this.index] == pattern[0] && this.source.substr(this.index, pattern.length) == pattern) return pattern;
     }
     return null;
   }
@@ -41,7 +40,7 @@ class Reader {
 
   readIf(pattern) {
     const r = this.probe(pattern);
-    if(r != null) this.index += r.length;
+    if (r != null) this.index += r.length;
     return r;
   }
 
@@ -50,8 +49,8 @@ class Reader {
   }
 
   skip() {
-    while(!this.end()) {
-      if(!this.source[this.index].match(/\s/)) break;
+    while (!this.end()) {
+      if (!this.source[this.index].match(/\s/)) break;
       this.index++;
     }
   }
@@ -60,21 +59,21 @@ class Reader {
     let q = this.read();
     assert(q == '"' || q == '`' || q == `'`, 'Wrong syntax');
     let a = null, p, result = q;
-    while(true) {
+    while (true) {
       p = a;
-      a = this.read()
+      a = this.read();
       result += a;
-      if(a == q && p != '\\') break;
+      if (a == q && p != '\\') break;
     }
     return result;
   }
 
   readAttribute() {
     let name = '';
-    while(true) {
-      if(this.end()) break;
+    while (true) {
+      if (this.end()) break;
       let a = this.source[this.index];
-      if(a == '=' || a == '/' || a == '>' || a == '\t' || a == '\n' || a == '\v' || a == '\f' || a == '\r' || a == ' ' || a == ' ') break;
+      if (a == '=' || a == '/' || a == '>' || a == '\t' || a == '\n' || a == '\v' || a == '\f' || a == '\r' || a == ' ' || a == ' ') break;
       name += a;
       this.index++;
     }
@@ -85,7 +84,7 @@ class Reader {
   sub(start, end) {
     return this.source.substring(start, end || this.index);
   }
-};
+}
 
 
 export function parseHTML(source) {
@@ -103,7 +102,7 @@ export function parseHTML(source) {
       }
     }
     tag.content = isJS ? readScriptJS(reader) : readScriptRaw(reader);
-  }
+  };
 
   const readScriptJS = (reader) => {
     class ScriptParser extends acorn.Parser {
@@ -128,7 +127,7 @@ export function parseHTML(source) {
     let end = parser.scan();
     reader.index = end + 9;
     return reader.sub(start, end);
-  }
+  };
 
   const readScriptRaw = () => {
     return reader.read(/^(.*?)<\/script>/s);
@@ -148,10 +147,10 @@ export function parseHTML(source) {
 
   const go = (parent, push) => {
     let textNode = null;
-    if(!push) push = n => parent.body.push(n);
+    if (!push) push = n => parent.body.push(n);
 
     const addText = v => {
-      if(!textNode) {
+      if (!textNode) {
         textNode = {
           type: 'text',
           value: ''
@@ -161,16 +160,16 @@ export function parseHTML(source) {
     };
 
     const flushText = () => {
-      if(!textNode) return;
+      if (!textNode) return;
       push(textNode);
       textNode = null;
     };
 
-    while(!reader.end()) {
-      if(reader.probe('<') && reader.probe(/^<\S/)) {
+    while (!reader.end()) {
+      if (reader.probe('<') && reader.probe(/^<\S/)) {
         flushText();
 
-        if(reader.probe('<!--')) {
+        if (reader.probe('<!--')) {
           push({
             type: 'comment',
             content: readComment()
@@ -178,10 +177,10 @@ export function parseHTML(source) {
           continue;
         }
 
-        if(reader.readIf('</')) { // close tag
+        if (reader.readIf('</')) { // close tag
           let name = reader.read(/^([^>]*)>/);
           name = name.trim();
-          if(name) {
+          if (name) {
             name = name.split(':')[0];
             assert(name === parent.name, 'Wrong close-tag: ' + parent.name + ' - ' + name);
           }
@@ -190,14 +189,14 @@ export function parseHTML(source) {
 
         let tag = readTag(reader);
         push(tag);
-        if(tag.name === 'script') {
+        if (tag.name === 'script') {
           readScript(reader, tag);
           continue;
-        } else if(tag.name === 'template') {
+        } else if (tag.name === 'template') {
           tag.type = 'template';
           tag.content = readTemplate();
           continue;
-        } else if(tag.name === 'style') {
+        } else if (tag.name === 'style') {
           tag.type = 'style';
           tag.content = readStyle();
           continue;
@@ -205,31 +204,31 @@ export function parseHTML(source) {
           tag.classes = new Set();
         }
 
-        if(tag.closedTag) continue;
+        if (tag.closedTag) continue;
 
         tag.body = [];
         try {
           go(tag);
         } catch (e) {
-          if(typeof e == 'string') e = new Error(e);
-          if(!e.details) e.details = tag.openTag;
+          if (typeof e == 'string') e = new Error(e);
+          if (!e.details) e.details = tag.openTag;
           throw e;
         }
         continue;
-      } else if(reader.probe('{')) {
-        if(reader.probe(/^\{[#/:@*]/)) {
+      } else if (reader.probe('{')) {
+        if (reader.probe(/^\{[#/:@*]/)) {
           let bind = parseBinding(reader);
-          if(bind.value[0] != '*') flushText();
-          if(bind.value[0] == '*') {
+          if (bind.value[0] != '*') flushText();
+          if (bind.value[0] == '*') {
             addText(bind.raw);
-          } else if(bind.value.match(/^@\w+/)) {
+          } else if (bind.value.match(/^@\w+/)) {
             let tag = {
               type: 'systag',
               value: bind.value
             };
             push(tag);
             continue;
-          } else if(bind.value.startsWith('#each ')) {
+          } else if (bind.value.startsWith('#each ')) {
             let tag = {
               type: 'each',
               value: bind.value,
@@ -238,14 +237,14 @@ export function parseHTML(source) {
             push(tag);
             go(tag, n => tag.mainBlock.push(n));
             continue;
-          } else if(bind.value === ':else' && parent.type === 'each') {
+          } else if (bind.value === ':else' && parent.type === 'each') {
             assert(!parent.elseBlock);
             parent.elseBlock = [];
             return go(parent, n => parent.elseBlock.push(n));
-          } else if(bind.value === '/each') {
+          } else if (bind.value === '/each') {
             assert(parent.type === 'each', 'Bind error: /each');
             return;
-          } else if(bind.value.startsWith('#if ')) {
+          } else if (bind.value.startsWith('#if ')) {
             let tag = {
               type: 'if',
               parts: [{
@@ -256,7 +255,7 @@ export function parseHTML(source) {
             push(tag);
             go(tag, n => tag.parts[0].body.push(n));
             continue;
-          } else if(bind.value.match(/^:elif\s|^:else\s+if\s/)) {
+          } else if (bind.value.match(/^:elif\s|^:else\s+if\s/)) {
             assert(parent.type === 'if', 'Bind error: :else');
             let part = {
               value: bind.value,
@@ -264,14 +263,14 @@ export function parseHTML(source) {
             };
             parent.parts.push(part);
             return go(parent, n => part.body.push(n));
-          } else if(bind.value === ':else') {
+          } else if (bind.value === ':else') {
             assert(parent.type === 'if', 'Bind error: :else');
             parent.elsePart = [];
             return go(parent, n => parent.elsePart.push(n));
-          } else if(bind.value === '/if') {
+          } else if (bind.value === '/if') {
             assert(parent.type === 'if', 'Bind error: /if');
             return;
-          } else if(bind.value.startsWith('#await ')) {
+          } else if (bind.value.startsWith('#await ')) {
             let tag = {
               type: 'await',
               value: bind.value,
@@ -280,20 +279,20 @@ export function parseHTML(source) {
             push(tag);
             go(tag, n => tag.parts.main.push(n));
             continue;
-          } else if(bind.value.match(/^:then( |$)/)) {
+          } else if (bind.value.match(/^:then( |$)/)) {
             assert(parent.type === 'await', 'Bind error: await-then');
             parent.parts.then = [];
             parent.parts.thenValue = bind.value;
             return go(parent, n => parent.parts.then.push(n));
-          } else if(bind.value.match(/^:catch( |$)/)) {
+          } else if (bind.value.match(/^:catch( |$)/)) {
             assert(parent.type === 'await', 'Bind error: await-catch');
             parent.parts.catch = [];
             parent.parts.catchValue = bind.value;
             return go(parent, n => parent.parts.catch.push(n));
-          } else if(bind.value == '/await') {
+          } else if (bind.value == '/await') {
             assert(parent.type === 'await', 'Bind error: /await');
             return;
-          } else if(bind.value.match(/^#slot(:| |$)/)) {
+          } else if (bind.value.match(/^#slot(:| |$)/)) {
             let tag = {
               type: 'slot',
               value: bind.value,
@@ -302,10 +301,10 @@ export function parseHTML(source) {
             push(tag);
             go(tag);
             continue;
-          } else if(bind.value == '/slot') {
+          } else if (bind.value == '/slot') {
             assert(parent.type === 'slot', 'Slot error: /slot');
             return;
-          } else if(bind.value.startsWith('#fragment:')) {
+          } else if (bind.value.startsWith('#fragment:')) {
             let tag = {
               type: 'fragment',
               value: bind.value,
@@ -314,10 +313,10 @@ export function parseHTML(source) {
             push(tag);
             go(tag);
             continue;
-          } else if(bind.value == '/fragment') {
+          } else if (bind.value == '/fragment') {
             assert(parent.type === 'fragment', 'Fragment error: /fragment');
             return;
-          } else if(bind.value.match(/^#([\w\-]+)/)) {
+          } else if (bind.value.match(/^#([\w\-]+)/)) {
             const name = bind.value.match(/^#([\w\-]+)/)[1];
             let tag = {
               type: 'block',
@@ -328,7 +327,7 @@ export function parseHTML(source) {
             push(tag);
             go(tag);
             continue;
-          } else if(bind.value.match(/^\/([\w\-]+)/)) {
+          } else if (bind.value.match(/^\/([\w\-]+)/)) {
             const name = bind.value.match(/^\/([\w\-]+)/)[1];
             assert(parent.type === 'block' && parent.name == name, `Fragment error: ${parent.name} - ${name}`);
             return;
@@ -352,7 +351,7 @@ export function parseHTML(source) {
   go(root);
 
   return root;
-};
+}
 
 
 function readTag(reader) {
@@ -362,19 +361,19 @@ function readTag(reader) {
   let name = reader.read(/^[\da-zA-Z^\-]+/);
   let elArg = null;
 
-  if(reader.readIf(':')) {
+  if (reader.readIf(':')) {
     elArg = reader.read(/^[^\s>/]+/);
   }
 
-  let attributes = parseAttibutes(reader, {closedByTag: true});
+  let attributes = parseAttibutes(reader, { closedByTag: true });
 
   let closedTag = false;
-  if(reader.readIf('/>')) closedTag = true;
+  if (reader.readIf('/>')) closedTag = true;
   else assert(reader.readIf('>'));
 
   const voidTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
   let voidTag = voidTags.indexOf(name) >= 0;
-  if(voidTag) closedTag = true;
+  if (voidTag) closedTag = true;
   return {
     type: 'node',
     name,
@@ -386,7 +385,7 @@ function readTag(reader) {
     voidTag,
     attributes
   };
-};
+}
 
 
 export function parseText(source) {
@@ -398,28 +397,28 @@ export function parseText(source) {
   let len = source.length;
   let parts = [];
   let depth = 0;
-  while(i < len) {
+  while (i < len) {
     let a = source[i++];
-    if(step == 1) {
-      if(q) {
-        if(a === q) q = null;
+    if (step == 1) {
+      if (q) {
+        if (a === q) q = null;
         exp += a;
         continue;
       }
-      if(a === '"' || a === "'" || a === '`') {
+      if (a === '"' || a === "'" || a === '`') {
         q = a;
         exp += a;
         continue;
       }
-      if(a === '{') depth++;
-      else if(a === '}') {
+      if (a === '{') depth++;
+      else if (a === '}') {
         depth--;
-        if(!depth) {
+        if (!depth) {
           step = 0;
           let js = exp[0] == '*';
-          if(js) exp = exp.substring(1);
+          if (js) exp = exp.substring(1);
           exp = exp.trim();
-          if(!exp) throw 'Wrong expression';
+          if (!exp) throw 'Wrong expression';
           parts.push({ value: exp, type: js ? 'js' : 'exp' });
           exp = '';
           continue;
@@ -428,9 +427,9 @@ export function parseText(source) {
       exp += a;
       continue;
     }
-    if(a === '{') {
+    if (a === '{') {
       depth++;
-      if(text) {
+      if (text) {
         parts.push({ value: text, type: 'text' });
         text = '';
       }
@@ -439,10 +438,10 @@ export function parseText(source) {
     }
     text += a;
   }
-  if(text) parts.push({ value: text, type: 'text' });
+  if (text) parts.push({ value: text, type: 'text' });
   assert(step == 0, 'Wrong expression: ' + source);
   let staticText = null;
-  if(!parts.some(p => p.type == 'exp')) staticText = parts.map(p => p.type == 'text' ? p.value : '').join('');
+  if (!parts.some(p => p.type == 'exp')) staticText = parts.map(p => p.type == 'text' ? p.value : '').join('');
 
   let pe = {
     parts,
@@ -451,11 +450,11 @@ export function parseText(source) {
     getResult() {
       let result = [];
       this.parts.forEach(p => {
-        if(p.type == 'js') return;
-        if(p.type == 'exp') result.push(p);
+        if (p.type == 'js') return;
+        if (p.type == 'exp') result.push(p);
         else {
           let l = last(result);
-          if(l?.type == 'text') l.value += p.value;
+          if (l?.type == 'text') l.value += p.value;
           else result.push({ ...p });
         }
       });
@@ -476,37 +475,37 @@ export const parseBinding = (source) => {
   let a = null, p, q;
   let bkt = 1;
 
-  while(true) {
+  while (true) {
     p = a;
     a = reader.read();
 
-    if(q) {
-      if(a != q) continue;
-      if(p == '\\') continue;
+    if (q) {
+      if (a != q) continue;
+      if (p == '\\') continue;
       q = null;
       continue;
     }
-    if(a == '"' || a == "'" || a == '`') {
+    if (a == '"' || a == "'" || a == '`') {
       q = a;
       continue;
     }
-    if(a == '*' && p == '/') {
+    if (a == '*' && p == '/') {
       // comment block
-      while(true) {
+      while (true) {
         p = a;
         a = reader.read();
-        if(a == '/' && p == '*') break;
+        if (a == '/' && p == '*') break;
       }
       continue;
     }
 
-    if(a == '{') {
+    if (a == '{') {
       bkt++;
       continue;
     }
-    if(a == '}') {
+    if (a == '}') {
       bkt--;
-      if(bkt > 0) continue;
+      if (bkt > 0) continue;
     } else continue;
 
     const raw = reader.sub(start);
@@ -518,54 +517,54 @@ export const parseBinding = (source) => {
 };
 
 
-export const parseAttibutes = (source, option={}) => {
+export const parseAttibutes = (source, option = {}) => {
   const r = new Reader(source);
   let result = [];
 
-  while(!r.end()) {
+  while (!r.end()) {
     r.skip();
-    if(option.closedByTag) {
-      if(r.probe('/>') || r.probe('>')) break;
-    } else if(r.end()) break;
+    if (option.closedByTag) {
+      if (r.probe('/>') || r.probe('>')) break;
+    } else if (r.end()) break;
     let start = r.index;
-    if(r.probe('{*')) {
-      const {raw} = parseBinding(r);
-      result.push({name: raw, content: raw});
-    } else if(r.probe('*{')) {
+    if (r.probe('{*')) {
+      const { raw } = parseBinding(r);
+      result.push({ name: raw, content: raw });
+    } else if (r.probe('*{')) {
       r.read();
-      let {raw} = parseBinding(r);
+      let { raw } = parseBinding(r);
       raw = '*' + raw;
-      result.push({name: raw, content: raw});
-    } else if(r.probe('{...')) {
-      let {raw} = parseBinding(r);
-      result.push({name: raw, content: raw});
+      result.push({ name: raw, content: raw });
+    } else if (r.probe('{...')) {
+      let { raw } = parseBinding(r);
+      result.push({ name: raw, content: raw });
     } else {
       let name = r.readAttribute();
       assert(name, 'Wrong syntax');
-      if(r.readIf('=')) {
-        if(r.probe('{')) {
-          const {raw} = parseBinding(r);
-          result.push({name, value: raw, raw, content: r.sub(start), type: 'exp'});
-        } else if(r.probeQuote()) {
+      if (r.readIf('=')) {
+        if (r.probe('{')) {
+          const { raw } = parseBinding(r);
+          result.push({ name, value: raw, raw, content: r.sub(start), type: 'exp' });
+        } else if (r.probeQuote()) {
           const raw = r.readString();
           const value = raw.substring(1, raw.length - 1);
-          result.push({name, value, raw, content: r.sub(start), type: 'text'});
+          result.push({ name, value, raw, content: r.sub(start), type: 'text' });
         } else {
           const value = r.readIf(/^[^\s<>]+/);
-          result.push({name, value, raw: value, content: r.sub(start), type: 'word'});
+          result.push({ name, value, raw: value, content: r.sub(start), type: 'word' });
         }
       } else {
         let value;
-        if(name[0] == '{' && last(name) == '}' && !name.startsWith('{...')) {
+        if (name[0] == '{' && last(name) == '}' && !name.startsWith('{...')) {
           value = name;
           name = unwrapExp(name);
-          result.push({name, value, raw: value, content: r.sub(start), type: 'exp'});
+          result.push({ name, value, raw: value, content: r.sub(start), type: 'exp' });
         } else {
-          result.push({name, value, raw: value, content: r.sub(start), type: 'attribute'});
+          result.push({ name, value, raw: value, content: r.sub(start), type: 'attribute' });
         }
       }
     }
   }
 
   return result;
-}
+};

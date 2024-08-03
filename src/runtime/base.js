@@ -19,11 +19,11 @@ export const createTextNode = (text) => document.createTextNode(text);
 
 export const htmlToFragment = (html, option) => {
   let result = templatecache[html];
-  if(!result) {
+  if (!result) {
     let t = document.createElement('template');
     t.innerHTML = html.replace(/<>/g, '<!---->');
     result = t.content;
-    if(!(option & 2) && result.firstChild == result.lastChild) result = result.firstChild;
+    if (!(option & 2) && result.firstChild == result.lastChild) result = result.firstChild;
     templatecache[html] = result;
   }
 
@@ -32,18 +32,18 @@ export const htmlToFragment = (html, option) => {
 
 export const htmlToFragmentClean = (html, option) => {
   let result = templatecache[html];
-  if(!result) {
+  if (!result) {
     let t = document.createElement('template');
     t.innerHTML = html.replace(/<>/g, '<!---->');
     result = t.content;
 
     let it = document.createNodeIterator(result, 128);
     let n;
-    while(n = it.nextNode()) {
-      if(!n.nodeValue) n.parentNode.replaceChild(document.createTextNode(''), n);
+    while (n = it.nextNode()) {
+      if (!n.nodeValue) n.parentNode.replaceChild(document.createTextNode(''), n);
     }
 
-    if(!(option & 2) && result.firstChild == result.lastChild) result = result.firstChild;
+    if (!(option & 2) && result.firstChild == result.lastChild) result = result.firstChild;
     templatecache[html] = result;
   }
 
@@ -52,13 +52,13 @@ export const htmlToFragmentClean = (html, option) => {
 
 
 export function svgToFragment(content) {
-  if(templatecacheSvg[content]) return templatecacheSvg[content].cloneNode(true);
+  if (templatecacheSvg[content]) return templatecacheSvg[content].cloneNode(true);
   let t = document.createElement('template');
   t.innerHTML = '<svg>' + content + '</svg>';
 
   let result = document.createDocumentFragment();
   let svg = t.content.firstChild;
-  while(svg.firstChild) result.appendChild(svg.firstChild);
+  while (svg.firstChild) result.appendChild(svg.firstChild);
   templatecacheSvg[content] = result.cloneNode(true);
   return result;
 }
@@ -66,10 +66,10 @@ export function svgToFragment(content) {
 
 export const iterNodes = (el, last, fn) => {
   let next;
-  while(el) {
+  while (el) {
     next = el.nextSibling;
     fn(el);
-    if(el == last) break;
+    if (el == last) break;
     el = next;
   }
 };
@@ -89,7 +89,7 @@ export function $tick(fn) {
 export function makeEmitter(option) {
   return (name, detail) => {
     let fn = option.events?.[name];
-    if(!fn) return;
+    if (!fn) return;
     let e = document.createEvent('CustomEvent');
     e.initCustomEvent(name, false, false, detail);
     fn(e);
@@ -107,7 +107,7 @@ export const makeApply = () => {
   let planned, flag = [0];
   let apply = r => {
     flag[0]++;
-    if(planned) return r;
+    if (planned) return r;
     planned = true;
     $tick(() => {
       try {
@@ -150,7 +150,7 @@ export const makeComponent = (init) => {
 export const callComponent = (component, context, option = {}) => {
   option.context = { ...context };
   let $component = safeCall(() => component(option));
-  if($component instanceof Node) $component = { $dom: $component };
+  if ($component instanceof Node) $component = { $dom: $component };
   return $component;
 };
 
@@ -158,7 +158,7 @@ export const callComponent = (component, context, option = {}) => {
 export const callComponentDyn = (component, context, option = {}, propFn, cmp, setter, classFn) => {
   let $component, parentWatch;
 
-  if(propFn) {
+  if (propFn) {
     parentWatch = $watch(propFn, value => {
       $component.$push?.(value);
       $component.$apply?.();
@@ -166,7 +166,7 @@ export const callComponentDyn = (component, context, option = {}, propFn, cmp, s
     option.props = fire(parentWatch);
   }
 
-  if(classFn) {
+  if (classFn) {
     fire($watch(classFn, value => {
       option.$class = value;
       $component?.$apply?.();
@@ -174,7 +174,7 @@ export const callComponentDyn = (component, context, option = {}, propFn, cmp, s
   }
 
   $component = callComponent(component, context, option);
-  if(setter && $component?.$exportedProps) {
+  if (setter && $component?.$exportedProps) {
     let parentCD = share.current_cd, w = new WatchObject($component.$exportedProps, value => {
       setter(value);
       cd_component(parentCD).$apply();
@@ -197,10 +197,10 @@ export const attachDynComponent = (label, exp, bind, parentLabel) => {
 
   $watch(exp, (component) => {
     destroy();
-    if($cd) cd_detach($cd);
-    if(first) removeElements(first, parentLabel ? null : label.previousSibling);
+    if ($cd) cd_detach($cd);
+    if (first) removeElements(first, parentLabel ? null : label.previousSibling);
 
-    if(component) {
+    if (component) {
       destroyList = share.current_destroyList = [];
       share.current_mountList = [];
       $cd = share.current_cd = cd_new(parentCD);
@@ -208,7 +208,7 @@ export const attachDynComponent = (label, exp, bind, parentLabel) => {
         const $dom = bind(component).$dom;
         cd_attach(parentCD, $cd);
         first = $dom.nodeType == 11 ? $dom.firstChild : $dom;
-        if(parentLabel) label.appendChild($dom);
+        if (parentLabel) label.appendChild($dom);
         else label.parentNode.insertBefore($dom, label);
         safeGroupCall2(share.current_mountList, destroyList);
       } finally {
@@ -223,16 +223,16 @@ export const attachDynComponent = (label, exp, bind, parentLabel) => {
 
 export const autoSubscribe = (...list) => {
   list.forEach(i => {
-    if(isFunction(i.subscribe)) {
+    if (isFunction(i.subscribe)) {
       let unsub = i.subscribe(current_component.$apply);
-      if(isFunction(unsub)) $onDestroy(unsub);
+      if (isFunction(unsub)) $onDestroy(unsub);
     }
   });
 };
 
 
 export const addStyles = (id, content) => {
-  if(document.head.querySelector('style#' + id)) return;
+  if (document.head.querySelector('style#' + id)) return;
   let style = document.createElement('style');
   style.id = id;
   style.innerHTML = content;
@@ -245,7 +245,7 @@ export const addClass = (el, className) => el.classList.add(className);
 
 export const bindClass = (element, fn, className) => {
   $watch(fn, value => {
-    if(value) addClass(element, className);
+    if (value) addClass(element, className);
     else element.classList.remove(className);
   }, { value: false });
 };
@@ -274,7 +274,7 @@ export const bindStyle = (element, name, fn) => {
 
 
 export const bindAttributeBase = (element, name, value) => {
-  if(value != null) element.setAttribute(name, value);
+  if (value != null) element.setAttribute(name, value);
   else element.removeAttribute(name);
 };
 
@@ -289,11 +289,11 @@ export const bindAttribute = (element, name, fn) => {
 
 export const bindAction = (element, action, fn, subscribe) => {
   let handler, value;
-  if(fn) {
+  if (fn) {
     value = fn();
     handler = action.apply(null, [element].concat(value));
   } else handler = action(element);
-  if(isFunction(handler)) $onDestroy(handler);
+  if (isFunction(handler)) $onDestroy(handler);
   else {
     $onDestroy(handler?.destroy);
     subscribe?.(fn, handler, value);
@@ -303,7 +303,7 @@ export const bindAction = (element, action, fn, subscribe) => {
 
 
 export const __bindActionSubscribe = (fn, handler, value) => {
-  if(handler?.update && fn) {
+  if (handler?.update && fn) {
     $watch(fn, args => {
       handler.update.apply(handler, args);
     }, { cmp: deepComparator(1), value: cloneDeep(value, 1) });
@@ -322,32 +322,32 @@ export const bindInput = (element, name, get, set) => {
 
 
 export const makeClassResolver = ($option, classMap, metaClass, mainName) => {
-  if(!$option.$class) $option.$class = {};
-  if(!mainName && metaClass.main) mainName = 'main';
+  if (!$option.$class) $option.$class = {};
+  if (!mainName && metaClass.main) mainName = 'main';
   return (line, defaults) => {
     let result = {};
-    if(defaults) result[defaults] = 1;
+    if (defaults) result[defaults] = 1;
     line.trim().split(/\s+/).forEach(name => {
       let meta;
-      if(name[0] == '$') {
+      if (name[0] == '$') {
         name = name.substring(1);
         meta = true;
       }
       let h = metaClass[name] || meta;
-      if(h) {
+      if (h) {
         let className = ($option.$class[name === mainName ? '$$main' : name] || '').trim();
-        if(className) {
+        if (className) {
           result[className] = 1;
-        } else if(h !== true) {
+        } else if (h !== true) {
           result[name] = 1;
           result[h] = 1;
         }
       }
       let h2 = classMap[name];
-      if(h2) {
+      if (h2) {
         result[name] = 1;
         result[h2] = 1;
-      } else if(!h) {
+      } else if (!h) {
         result[name] = 1;
       }
     });
@@ -389,20 +389,20 @@ export const spreadAttributes = (el, fn) => {
   const props = Object.getOwnPropertyDescriptors(el.__proto__);
   let prev = {};
   const set = (k, v) => {
-    if(k == 'style') el.style.cssText = v;
-    else if(props[k]?.set) el[k] = v;
+    if (k == 'style') el.style.cssText = v;
+    else if (props[k]?.set) el[k] = v;
     else bindAttributeBase(el, k, v);
   };
   const apply = (state) => {
-    for(let k in state) {
+    for (let k in state) {
       let value = state[k];
-      if(prev[k] != value) {
+      if (prev[k] != value) {
         set(k, value);
         prev[k] = value;
       }
     }
-    for(let k in prev) {
-      if(!(k in state)) {
+    for (let k in prev) {
+      if (!(k in state)) {
         set(k, null);
         delete prev[k];
       }
@@ -419,8 +419,8 @@ export const spreadAttributes = (el, fn) => {
 
 export const callExportedFragment = (childComponent, name, slot, events, props, cmp) => {
   let push, $dom, fn = childComponent.$exported?.[name];
-  if(!fn) return;
-  if(cmp) {
+  if (!fn) return;
+  if (cmp) {
     let result;
     let w = $watch(props, (value) => {
       result = value;
@@ -436,10 +436,10 @@ export const callExportedFragment = (childComponent, name, slot, events, props, 
 
 export const exportFragment = (component, name, fn) => {
   let childCD = share.current_cd;
-  if(!component.$exported) component.$exported = {};
+  if (!component.$exported) component.$exported = {};
   component.$exported[name] = (props, events, slot) => {
     let prev = share.current_cd, apply;
-    if(childCD) {
+    if (childCD) {
       let $cd = share.current_cd = cd_new();
       cd_attach(childCD, $cd);
       $onDestroy(() => cd_detach($cd));
@@ -465,8 +465,8 @@ export const prefixPush = fn => {
 
 
 export const unwrapProps = (props, fn) => {
-  if(props) {
-    if(isFunction(props)) prefixPush(() => fn(props()));
+  if (props) {
+    if (isFunction(props)) prefixPush(() => fn(props()));
     else fn(props);
   }
 };
@@ -498,17 +498,17 @@ export const makeBlockBound = (fr, fn) => {
 
 
 export const attachBlock = (label, $dom) => {
-  if(!$dom) return;
+  if (!$dom) return;
   insertAfter(label, $dom.$dom || $dom);
 };
 
 export const addBlock = (parent, $dom) => {
-  if(!$dom) return;
+  if (!$dom) return;
   parent.appendChild($dom.$dom || $dom);
 };
 
 export const insertBlock = (label, $dom) => {
-  if(!$dom) return;
+  if (!$dom) return;
   label.parentNode.insertBefore($dom.$dom || $dom, label);
 };
 
@@ -519,8 +519,8 @@ export const mergeEvents = (...callbacks) => {
 
 export const mergeAllEvents = ($events, local) => {
   let result = Object.assign({}, $events);
-  for(let e in local) {
-    if(result[e]) result[e] = mergeEvents($events[e], local[e]);
+  for (let e in local) {
+    if (result[e]) result[e] = mergeEvents($events[e], local[e]);
     else result[e] = local[e];
   }
   return result;
@@ -529,28 +529,28 @@ export const mergeAllEvents = ($events, local) => {
 export const makeRootEvent = (root) => {
   let events = {}, nodes = [];
 
-  if(root.nodeType == 11) {
+  if (root.nodeType == 11) {
     let n = root.firstElementChild;
-    while(n) {
+    while (n) {
       nodes.push(n);
       n = n.nextElementSibling;
     }
   } else nodes = [root];
 
   $onDestroy(() => {
-    for(let eventName in events) {
+    for (let eventName in events) {
       nodes.forEach(n => n.removeEventListener(eventName, events[eventName]));
     }
   });
   return (target, eventName, callback) => {
     const key = `_$$${eventName}`;
-    if(!events[eventName]) {
+    if (!events[eventName]) {
       let handler = events[eventName] = ($event) => {
         let top = $event.currentTarget;
         let el = $event.target;
-        while(el) {
+        while (el) {
           el[key]?.($event);
-          if(el == top || $event.cancelBubble) break;
+          if (el == top || $event.cancelBubble) break;
           el = el.parentNode;
         }
       };
@@ -567,7 +567,7 @@ export const mount = (label, component, option) => {
     app = component(option);
     let $dom = app.$dom;
     delete app.$dom;
-    if($dom.nodeType == 11) {
+    if ($dom.nodeType == 11) {
       first = $dom.firstChild;
       last = $dom.lastChild;
     } else first = last = $dom;
@@ -600,7 +600,7 @@ export const refer = (active, line) => {
   let result = [], i, v;
   const code = (x, d) => x.charCodeAt() - d;
 
-  for(i = 0; i < line.length; i++) {
+  for (i = 0; i < line.length; i++) {
     let a = line[i];
     switch (a) {
       case '>':
@@ -613,17 +613,17 @@ export const refer = (active, line) => {
         break;
       case '!':
         v = code(line[++i], 48) * 42 + code(line[++i], 48);
-        while(v--) active = active.nextSibling;
+        while (v--) active = active.nextSibling;
         break;
       case '#':
         active = result[code(line[++i], 48) * 26 + code(line[++i], 48)];
         break;
       default:
         v = code(a, 0);
-        if(v >= 97) active = result[v - 97];
+        if (v >= 97) active = result[v - 97];
         else {
           v -= 48;
-          while(v--) active = active.nextSibling;
+          while (v--) active = active.nextSibling;
         }
     }
   }

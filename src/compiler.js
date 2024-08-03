@@ -1,8 +1,3 @@
-
-export { parseHTML, parseText, parseBinding, parseAttibutes } from './parser.js';
-export { xNode, xBuild } from './xnode.js';
-export { use_context, get_context } from './utils.js';
-
 import { assert, use_context } from './utils.js';
 import { xNode, xBuild, resolveDependecies } from './xnode.js';
 import { compactDOM, compactFull } from './compact.js';
@@ -25,6 +20,10 @@ import { inspectProp } from './code-utils.js';
 import { attachPortal } from './parts/portal.js';
 import { makeEventProp } from './event-prop.js';
 import { makeKeepAlive } from './parts/keep-alive.js';
+
+export { parseHTML, parseText, parseBinding, parseAttibutes } from './parser.js';
+export { xNode, xBuild } from './xnode.js';
+export { use_context, get_context } from './utils.js';
 
 
 export const version = '0.8.0-a2';
@@ -87,7 +86,7 @@ export async function compile(source, config = {}) {
       $attributes: xNode('$attributes')
     },
     require: function(...args) {
-      for(let name of args) {
+      for (let name of args) {
         if (ctx.inuse[name] == null) ctx.inuse[name] = 0;
         ctx.inuse[name]++;
         if (['apply', '$onMount', '$component', 'componentFn', 'rootCD', '$props', '$attributes'].includes(name)) ctx.glob[name].$setValue();
@@ -130,11 +129,11 @@ export async function compile(source, config = {}) {
   ctx.scriptNodes = [];
   ctx.styleNodes = [];
   ctx.DOM.body = ctx.DOM.body.filter(n => {
-    if(n.type == 'script') {
+    if (n.type == 'script') {
       ctx.scriptNodes.push(n);
       return false;
     }
-    if(n.type == 'style') {
+    if (n.type == 'style') {
       ctx.styleNodes.push(n);
       return false;
     }
@@ -143,7 +142,7 @@ export async function compile(source, config = {}) {
   await hook(ctx, 'dom:check');
   assert(ctx.scriptNodes.length <= 1, 'Only one script section');
   await hook(ctx, 'dom:compact');
-  if(config.compact) ctx.compactDOM();
+  if (config.compact) ctx.compactDOM();
   await hook(ctx, 'dom:after');
 
   await hook(ctx, 'js:before');
@@ -154,7 +153,7 @@ export async function compile(source, config = {}) {
 
   await hook(ctx, 'css:before');
   ctx.processCSS();
-  if(ctx.css.active()) ctx.css.process(ctx.DOM);
+  if (ctx.css.active()) ctx.css.process(ctx.DOM);
   await hook(ctx, 'css');
 
   await hook(ctx, 'runtime:before');
@@ -170,7 +169,7 @@ export async function compile(source, config = {}) {
       ctx.add(this.module.top);
       const componentFn = this.glob.componentFn;
 
-      if(componentFn.self) {
+      if (componentFn.self) {
         ctx.write(true, 'const $$selfComponent = ');
         ctx.add(componentFn);
         ctx.write(true, 'export default $$selfComponent;');
@@ -181,7 +180,7 @@ export async function compile(source, config = {}) {
     });
 
     for (let k in this.glob) resolveDependecies(this.glob[k]);
-    this.result = xBuild(root, {warning: this.config.warning});
+    this.result = xBuild(root, { warning: this.config.warning });
   });
 
   await hook(ctx, 'build');
@@ -190,9 +189,9 @@ export async function compile(source, config = {}) {
 
 
 async function hook(ctx, name) {
-  for(let i = 0; i < ctx.config.plugins.length; i++) {
+  for (let i = 0; i < ctx.config.plugins.length; i++) {
     const fn = ctx.config.plugins[i][name];
-    if(fn) await use_context(ctx, () => fn.call(ctx, ctx));
+    if (fn) await use_context(ctx, () => fn.call(ctx, ctx));
   }
 }
 
@@ -207,13 +206,13 @@ function detectDependency(data) {
     }
   };
 
-  if(typeof data == 'string') {
+  if (typeof data == 'string') {
     check(data);
   } else {
     assert(data.parts);
 
-    for(let p of data.parts) {
-      if(p.type == 'exp' || p.type == 'js') check(p.value);
+    for (let p of data.parts) {
+      if (p.type == 'exp' || p.type == 'js') check(p.value);
     }
   }
 }

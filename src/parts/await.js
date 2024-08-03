@@ -6,7 +6,7 @@ export function makeAwaitBlock(node, label) {
   let valueForThen, exp;
 
   let rx = node.value.match(/^#await\s+(.+)\s+then\s+(\S+)\s*$/s);
-  if(rx) {
+  if (rx) {
     assert(!node.parts.then);
     node.parts.then = node.parts.main;
     node.parts.main = null;
@@ -21,27 +21,27 @@ export function makeAwaitBlock(node, label) {
   let keywords = extractKeywords(exp);
 
   let parts = [null, null, null];
-  if(node.parts.main && node.parts.main.length) {
+  if (node.parts.main && node.parts.main.length) {
     parts[0] = this.buildBlock({ body: node.parts.main });
   }
-  if(node.parts.then && node.parts.then.length) {
+  if (node.parts.then && node.parts.then.length) {
     let args = [];
-    if(valueForThen) {
+    if (valueForThen) {
       assert(isSimpleName(valueForThen));
       args.push(valueForThen);
     } else {
       let rx = node.parts.thenValue.match(/^[^ ]+\s+(.*)$/s);
-      if(rx) {
+      if (rx) {
         assert(isSimpleName(rx[1]));
         args.push(rx[1]);
       }
     }
     parts[1] = this.buildBlock({ body: node.parts.then }, { extraArguments: args });
   }
-  if(node.parts.catch && node.parts.catch.length) {
+  if (node.parts.catch && node.parts.catch.length) {
     let args = [];
     let rx = node.parts.catchValue.match(/^[^ ]+\s+(.*)$/s);
-    if(rx) {
+    if (rx) {
       assert(isSimpleName(rx[1]));
       args.push(rx[1]);
     }
@@ -60,8 +60,8 @@ export function makeAwaitBlock(node, label) {
     ctx.write(true, `$runtime.awaitBlock(${n.label.name}, ${n.label.node ? 0 : 1}, () => [${n.keywords.join(', ')}], () => ${n.exp},`);
     ctx.indent++;
     n.parts.forEach((part, index) => {
-      if(index) ctx.write(', ');
-      if(part) {
+      if (index) ctx.write(', ');
+      if (part) {
         ctx.write(true);
         ctx.add(part.block);
       } else ctx.write('null');

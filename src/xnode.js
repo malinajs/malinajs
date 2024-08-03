@@ -9,15 +9,15 @@ function I(value = 0) {
 function xWriter(node) {
   this.indent = 0;
   this.write = function(...args) {
-    for(let i of args) {
-      if(i === true) node.$result.push(new I(this.indent));
+    for (let i of args) {
+      if (i === true) node.$result.push(new I(this.indent));
       else node.$result.push(i);
     }
   };
   this.writeLine = function(s) { this.write(true, s); };
 
   this.add = function(n) {
-    if(n === null) return;
+    if (n === null) return;
     assert(n instanceof xNode);
     assert(!n.$inserted, 'already inserted');
     node.$result.push({ node: n, indent: this.indent });
@@ -25,12 +25,12 @@ function xWriter(node) {
   };
 
   this.isEmpty = function(n) {
-    if(n == null) return true;
+    if (n == null) return true;
     assert(n.$done, 'Node is not built');
     return !n.$result.some(r => {
-      if(typeof (r) == 'string') return true;
-      else if(r.node instanceof xNode) return !this.isEmpty(r.node);
-      else if(r instanceof I) return true;
+      if (typeof (r) == 'string') return true;
+      else if (r.node instanceof xNode) return !this.isEmpty(r.node);
+      else if (r instanceof I) return true;
       else {
         console.error('Type', r);
         throw 'error type';
@@ -40,14 +40,14 @@ function xWriter(node) {
 }
 
 
-export function xBuild(node, option={}) {
+export function xBuild(node, option = {}) {
   let pending, trace, active;
 
   const resolve = n => {
     if (n.__resolving) return;
     n.__resolving = true;
     active = n;
-    resolveDependecies(n, {check: true});
+    resolveDependecies(n, { check: true });
 
     if (!n.$done) {
       let ready = true;
@@ -60,16 +60,16 @@ export function xBuild(node, option={}) {
         ready = false;
         trace.push(`${n.$type} -> ${i.$type}`);
       });
-      if(ready) {
+      if (ready) {
         let w = new xWriter(n);
         n.$handler(w, n);
         n.$done = true;
       }
     }
 
-    if(n.$done) {
+    if (n.$done) {
       n.$result.forEach(r => {
-        if(r?.node instanceof xNode) resolve(r.node);
+        if (r?.node instanceof xNode) resolve(r.node);
       });
     } else pending++;
 
@@ -77,7 +77,7 @@ export function xBuild(node, option={}) {
   };
 
   let depth;
-  for(depth = 10; depth > 0; depth--) {
+  for (depth = 10; depth > 0; depth--) {
     pending = 0;
     trace = [];
     try {
@@ -86,9 +86,9 @@ export function xBuild(node, option={}) {
       if (active) console.log('# Error node', active);
       throw e;
     }
-    if(!pending) break;
+    if (!pending) break;
   }
-  if(!depth) {
+  if (!depth) {
     option.warning?.('(i) Circular dependency:\n' + trace.map(s => ` * ${s}`).join('\n'));
     throw new Error('xNode: Circular dependency');
   }
@@ -96,15 +96,15 @@ export function xBuild(node, option={}) {
   let result = [];
 
   const asm = (n, baseIndent) => {
-    if(!n.$done) {
+    if (!n.$done) {
       console.log('not resolved', n);
       throw 'node is not resolved';
     }
     n.$result.forEach(r => {
-      if(typeof (r) == 'string') result.push(r);
-      else if(r.node instanceof xNode) {
+      if (typeof (r) == 'string') result.push(r);
+      else if (r.node instanceof xNode) {
         asm(r.node, r.indent + baseIndent);
-      } else if(r instanceof I) {
+      } else if (r instanceof I) {
         r.$indent += baseIndent;
         result.push(r);
       } else {
@@ -115,17 +115,17 @@ export function xBuild(node, option={}) {
   };
   asm(node, 0);
 
-  for(let i = 0; i < result.length; i++) {
+  for (let i = 0; i < result.length; i++) {
     let r = result[i];
     let next = result[i + 1];
 
-    if(r instanceof I) {
-      if(next instanceof I) {
+    if (r instanceof I) {
+      if (next instanceof I) {
         result[i] = '';
       } else {
         let s = '\n';
         let j = r.$indent;
-        while(j--) {
+        while (j--) {
           s += '  ';
         }
         result[i] = s;
@@ -161,7 +161,7 @@ export function xNode(type, ...args) {
       })
   */
 
-  if(!(this instanceof xNode)) return new xNode(type, ...args);
+  if (!(this instanceof xNode)) return new xNode(type, ...args);
 
   let data, handler;
   if (args.length == 2) {
@@ -183,9 +183,9 @@ export function xNode(type, ...args) {
   this.$inserted = false;
   this.$result = [];
 
-  this.$setValue = function(value=true) {
+  this.$setValue = function(value = true) {
     assert(!this.$done, 'Attempt to set active, depends node is already resolved');
-    if (typeof(value) == 'object') Object.assign(this, value);
+    if (typeof (value) == 'object') Object.assign(this, value);
     else this.value = value;
   };
   get_context(false) && resolveDependecies(this);
@@ -195,7 +195,7 @@ export function xNode(type, ...args) {
 export const resolveDependecies = (node, option) => {
   if (node.$wait) {
     node.$wait = node.$wait.map(n => {
-      if(typeof (n) == 'string') {
+      if (typeof (n) == 'string') {
         const context = get_context();
         if (context.glob[n]) n = context.glob[n];
         else if (option?.check) throw new Error(`Wrong dependency '${n}'`);
@@ -206,14 +206,14 @@ export const resolveDependecies = (node, option) => {
 
   if (node.$hold) {
     node.$hold = node.$hold.map(n => {
-      if(typeof (n) == 'string') {
+      if (typeof (n) == 'string') {
         const context = get_context();
         if (context.glob[n]) n = context.glob[n];
         else if (option?.check) throw new Error(`Wrong dependency '${n}'`);
         else return n;
       }
 
-      if(!n.$wait) n.$wait = [];
+      if (!n.$wait) n.$wait = [];
       if (!n.$wait.includes(node)) {
         assert(!n.$done, 'Attempt to add dependecy, but node is already resolved');
         n.$wait.push(node);
@@ -226,38 +226,38 @@ export const resolveDependecies = (node, option) => {
 
 
 xNode.raw = value => {
-  return xNode('raw', {value}, (ctx, node) => {
+  return xNode('raw', { value }, (ctx, node) => {
     ctx.write(true, node.value);
   });
 };
 
 
-xNode.block = (data={}) => {
+xNode.block = (data = {}) => {
   return xNode('block', {
     body: [],
     push(child) {
       assert(arguments.length == 1, 'Wrong xNode');
-      if(typeof child == 'string') child = xNode.raw(child);
+      if (typeof child == 'string') child = xNode.raw(child);
       this.body.push(child);
     },
     unshift(child) {
       assert(arguments.length == 1, 'Wrong xNode');
-      if(typeof child == 'string') child = xNode.raw(child);
+      if (typeof child == 'string') child = xNode.raw(child);
       this.body.unshift(child);
     },
     ...data
   }, (ctx, node) => {
-    if(node.scope) {
+    if (node.scope) {
       ctx.writeLine('{');
       ctx.indent++;
     }
     node.body.forEach(n => {
-      if(n == null) return;
-      if(typeof n == 'string') {
-        if(n) ctx.writeLine(n);
+      if (n == null) return;
+      if (typeof n == 'string') {
+        if (n) ctx.writeLine(n);
       } else ctx.add(n);
     });
-    if(node.scope) {
+    if (node.scope) {
       ctx.indent--;
       ctx.writeLine('}');
     }
@@ -268,7 +268,7 @@ xNode.block = (data={}) => {
 xNode.baseNode = (type, data, handler) => {
   return xNode(type, {
     bindName() {
-      if(!this._boundName) this._boundName = `el${get_context().uniqIndex++}`;
+      if (!this._boundName) this._boundName = `el${get_context().uniqIndex++}`;
       return this._boundName;
     },
     ...data
@@ -282,11 +282,11 @@ xNode.node = (data) => {
     attributes: [],
     class: new Set(),
     voidTag: false,
-    getLast() { return last(this.children) },
+    getLast() { return last(this.children); },
     push(n) {
-      if(typeof n == 'string') {
+      if (typeof n == 'string') {
         let p = last(this.children);
-        if(p && p.$type == 'node:text') {
+        if (p && p.$type == 'node:text') {
           p.value += n;
           return p;
         }
@@ -300,20 +300,20 @@ xNode.node = (data) => {
     },
     ...data
   }, (ctx, node) => {
-    if(node.inline) {
+    if (node.inline) {
       node.children.forEach(n => ctx.add(n));
     } else {
       assert(node.name, 'No node name');
       ctx.write(`<${node.name}`);
 
-      if(node.attributes.length) {
+      if (node.attributes.length) {
         node.attributes.forEach(p => {
-          if(p.name == 'class') {
-            if(p.value) p.value.split(/\s+/).forEach(name => node.class.add(name));
+          if (p.name == 'class') {
+            if (p.value) p.value.split(/\s+/).forEach(name => node.class.add(name));
             return;
           }
 
-          if(p.value) ctx.write(` ${p.name}="${p.value}"`);
+          if (p.value) ctx.write(` ${p.name}="${p.value}"`);
           else ctx.write(` ${p.name}`);
         });
       }
@@ -321,13 +321,13 @@ xNode.node = (data) => {
       if (node.class.size) {
         ctx.add(get_context().css.resolveAsNode(node.class, [' class="', '"']));
       }
-      
-      if(node.children.length) {
+
+      if (node.children.length) {
         ctx.write('>');
         node.children.forEach(n => ctx.add(n));
         ctx.write(`</${node.name}>`);
       } else {
-        if(node.voidTag) ctx.write('/>');
+        if (node.voidTag) ctx.write('/>');
         else ctx.write(`></${node.name}>`);
       }
     }
@@ -338,7 +338,7 @@ xNode.node = (data) => {
 xNode.nodeComment = (data) => {
   return xNode.baseNode('node:comment', data, (ctx, node) => {
     const config = get_context().config;
-    if(config.debug && config.debugLabel) ctx.write(`<!-- ${node.value} -->`);
+    if (config.debug && config.debugLabel) ctx.write(`<!-- ${node.value} -->`);
     else ctx.write('<!---->');
   });
 };
@@ -347,32 +347,32 @@ xNode.nodeComment = (data) => {
 xNode.template = (data) => {
   return xNode('template', data, (ctx, node) => {
     const config = get_context().config;
-    let template = xBuild(node.body, {warning: config.warning});
+    let template = xBuild(node.body, { warning: config.warning });
     let convert, cloneNode = node.cloneNode;
-    if(node.svg) {
+    if (node.svg) {
       convert = '$runtime.svgToFragment';
       cloneNode = false;
-    } else if(!template.match(/[<>]/) && !node.requireFragment) {
+    } else if (!template.match(/[<>]/) && !node.requireFragment) {
       convert = '$runtime.createTextNode';
       cloneNode = false;
-      if(!node.raw) template = htmlEntitiesToText(template);
+      if (!node.raw) template = htmlEntitiesToText(template);
     } else {
-      if(config.hideLabel) convert = '$runtime.htmlToFragmentClean';
+      if (config.hideLabel) convert = '$runtime.htmlToFragmentClean';
       else convert = '$runtime.htmlToFragment';
       template = template.replace(/<!---->/g, '<>');
     }
-    if(node.raw) {
+    if (node.raw) {
       ctx.write(Q(template));
-    } else if(node.inline) {
+    } else if (node.inline) {
       ctx.write(`${convert}(\`${Q(template)}\``);
-      if(cloneNode || node.requireFragment) {
+      if (cloneNode || node.requireFragment) {
         let opt = (cloneNode ? 1 : 0) + (node.requireFragment ? 2 : 0);
         ctx.write(`, ${opt})`);
       } else ctx.write(')');
     } else {
       assert(node.name);
       ctx.write(true, `const ${node.name} = ${convert}(\`${Q(template)}\``);
-      if(cloneNode || node.requireFragment) {
+      if (cloneNode || node.requireFragment) {
         let opt = (cloneNode ? 1 : 0) + (node.requireFragment ? 2 : 0);
         ctx.write(`, ${opt});`);
       } else ctx.write(');');

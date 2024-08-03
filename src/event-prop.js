@@ -8,18 +8,18 @@ export function makeEventProp(prop, requireElement) {
   };
 
   let name = prop.name;
-  if(name.startsWith('@@')) {
+  if (name.startsWith('@@')) {
     assert(!prop.raw);
     return { forward: true, name };
   }
-  if(name.startsWith('on:')) name = name.substring(3);
+  if (name.startsWith('on:')) name = name.substring(3);
   else {
     assert(name[0] == '@');
     name = name.substring(1);
   }
 
   // parse event
-  let modList = name.split('|')
+  let modList = name.split('|');
   let event = modList.shift();
   let globalFunction = false;
 
@@ -33,7 +33,7 @@ export function makeEventProp(prop, requireElement) {
     assert(detectExpressionType(handler) == 'identifier');
     globalFunction = !!this.script.rootFunctions[handler];
   } else if (prop.type == 'exp') {
-    exp = unwrapExp(prop.raw)
+    exp = unwrapExp(prop.raw);
     this.detectDependency(exp);
     let type = detectExpressionType(exp);
     if (type == 'identifier') {
@@ -42,12 +42,12 @@ export function makeEventProp(prop, requireElement) {
     } else if (type?.type == 'function-call') {
       globalFunction = !!this.script.rootFunctions[type.name];
       exp = replaceKeyword(exp, (name) => {
-        if(name == '$element') return requireElement();
+        if (name == '$element') return requireElement();
       }, true);
     } else {
       assert(!type);
       exp = replaceKeyword(exp, (name) => {
-        if(name == '$element') return requireElement();
+        if (name == '$element') return requireElement();
       }, true);
       this.require('apply');
     }
@@ -71,34 +71,34 @@ export function makeEventProp(prop, requireElement) {
   let mods = [];
   let rootModifier = false;
   modList.forEach(opt => {
-    if(opt == 'root') {
+    if (opt == 'root') {
       rootModifier = true;
       return;
     }
-    if(opt == 'preventDefault' || opt == 'prevent') {
+    if (opt == 'preventDefault' || opt == 'prevent') {
       mods.push('$event.preventDefault();');
       return;
-    } else if(opt == 'stopPropagation' || opt == 'stop') {
+    } else if (opt == 'stopPropagation' || opt == 'stop') {
       mods.push('$event.stopPropagation();');
       return;
     }
 
-    if(keyEvent) {
-      if(opt === 'delete') {
+    if (keyEvent) {
+      if (opt === 'delete') {
         mods.push('if($event.key != \'Backspace\' && $event.key != \'Delete\') return;');
         return;
       }
       let keyCode = keyCodes[opt];
-      if(keyCode) {
+      if (keyCode) {
         mods.push(`if($event.key != '${keyCode}') return;`);
         return;
       }
     }
 
-    if(opt == 'ctrl') { mods.push('if(!$event.ctrlKey) return;'); return; }
-    if(opt == 'alt') { mods.push('if(!$event.altKey) return;'); return; }
-    if(opt == 'shift') { mods.push('if(!$event.shiftKey) return;'); return; }
-    if(opt == 'meta') { mods.push('if(!$event.metaKey) return;'); return; }
+    if (opt == 'ctrl') { mods.push('if(!$event.ctrlKey) return;'); return; }
+    if (opt == 'alt') { mods.push('if(!$event.altKey) return;'); return; }
+    if (opt == 'shift') { mods.push('if(!$event.shiftKey) return;'); return; }
+    if (opt == 'meta') { mods.push('if(!$event.metaKey) return;'); return; }
 
     throw 'Wrong modificator: ' + opt;
   });
@@ -112,14 +112,14 @@ export function makeEventProp(prop, requireElement) {
   }, (ctx, n) => {
     if (n.handlerName && !n.mods && (n.globalFunction || !this.inuse.apply)) return ctx.write(n.handlerName);
     ctx.write('($event) => { ');
-    if(n.mods) ctx.write(n.mods, ' ');
-    if(n.handlerName) ctx.write(`${n.handlerName}($event);`);
+    if (n.mods) ctx.write(n.mods, ' ');
+    if (n.handlerName) ctx.write(`${n.handlerName}($event);`);
     else {
       assert(n.exp);
       ctx.write(n.exp);
-      if(last(n.exp) != ';') ctx.write(';');
+      if (last(n.exp) != ';') ctx.write(';');
     }
-    if(this.inuse.apply && !n.globalFunction) ctx.write(' $$apply();');
+    if (this.inuse.apply && !n.globalFunction) ctx.write(' $$apply();');
     ctx.write('}');
   });
 

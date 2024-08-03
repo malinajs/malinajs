@@ -4,7 +4,7 @@ import { xNode } from '../xnode.js';
 
 export function makeifBlock(data, label) {
   const getBlock = b => {
-    if(b.singleBlock) {
+    if (b.singleBlock) {
       return xNode('make-block', {
         block: b.singleBlock
       }, (ctx, n) => {
@@ -26,7 +26,7 @@ export function makeifBlock(data, label) {
       block: getBlock(this.buildBlock(part, { allowSingleBlock: true }))
     });
   });
-  if(data.elsePart) elseBlock = getBlock(this.buildBlock({ body: data.elsePart }, { allowSingleBlock: true }));
+  if (data.elsePart) elseBlock = getBlock(this.buildBlock({ body: data.elsePart }, { allowSingleBlock: true }));
 
   return xNode('if:bind', {
     $wait: ['apply'],
@@ -34,14 +34,14 @@ export function makeifBlock(data, label) {
     parts,
     elseBlock
   }, (ctx, n) => {
-    if(this.inuse.apply) {
+    if (this.inuse.apply) {
       ctx.write(true, `$runtime.ifBlock(${n.label.name}, `);
     } else {
       ctx.write(true, `$runtime.ifBlockReadOnly(${n.label.name}, `);
     }
 
-    if(n.parts.length == 1) {
-      if(n.elseBlock) ctx.write(`() => (${n.parts[0].exp}) ? 0 : 1`);
+    if (n.parts.length == 1) {
+      if (n.elseBlock) ctx.write(`() => (${n.parts[0].exp}) ? 0 : 1`);
       else ctx.write(`() => (${n.parts[0].exp}) ? 0 : null`);
       ctx.indent++;
     } else {
@@ -50,20 +50,20 @@ export function makeifBlock(data, label) {
       n.parts.forEach((p, i) => {
         ctx.write(true, `if(${p.exp}) return ${i};`);
       });
-      if(n.elseBlock) ctx.write(true, `return ${n.parts.length};`);
+      if (n.elseBlock) ctx.write(true, `return ${n.parts.length};`);
       ctx.write(true, `}`);
     }
     ctx.write(`, [`);
     n.elseBlock && n.parts.push({ block: n.elseBlock });
     n.parts.forEach((p, i) => {
-      if(i) ctx.write(', ');
+      if (i) ctx.write(', ');
       ctx.add(p.block);
     });
     ctx.write(']');
 
     ctx.indent--;
     ctx.write(true);
-    if(!n.label.node) ctx.write(', true');
+    if (!n.label.node) ctx.write(', true');
     ctx.write(');', true);
   });
 }

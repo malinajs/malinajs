@@ -1,4 +1,3 @@
-
 import * as share from '../runtime/share';
 
 export let __app_onerror = console.error;

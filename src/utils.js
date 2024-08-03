@@ -1,4 +1,3 @@
-
 import * as acorn from 'acorn';
 import * as astring from 'astring';
 
@@ -30,26 +29,26 @@ export const last = a => a[a.length - 1];
 export function assert(x, info) {
   if (x) return;
   if (!info) new Error('AssertError');
-  if (typeof(info) == 'string') throw new Error(info);
+  if (typeof (info) == 'string') throw new Error(info);
   throw info;
 }
 
 export function replace(s, from, to, count) {
   let d = s.split(from);
-  if(count) assert(d.length === count + 1, 'Replace multi-entry');
+  if (count) assert(d.length === count + 1, 'Replace multi-entry');
   return d.join(to);
 }
 
 export function toCamelCase(name) {
   assert(last(name) !== '-', 'Wrong name');
   return name.replace(/(.\-\w)/g, function(part) {
-    if(part[0] == '-') return part;
+    if (part[0] == '-') return part;
     return part[0] + part[2].toUpperCase();
   });
 }
 
 export function Q(s) {
-  if(get_context().config.inlineTemplate) return s.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\n/g, '\\n'); 
+  if (get_context().config.inlineTemplate) return s.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\n/g, '\\n');
   return s.replace(/\\/g, '\\\\').replace(/`/g, '\\`');
 }
 
@@ -61,16 +60,16 @@ export function unwrapExp(e) {
 }
 
 export function isSimpleName(name) {
-  if(!name) return false;
-  if(!name.match(/^([a-zA-Z$_][\w\d$_.]*)$/)) return false;
-  if(name[name.length - 1] == '.') return false;
+  if (!name) return false;
+  if (!name.match(/^([a-zA-Z$_][\w\d$_.]*)$/)) return false;
+  if (name[name.length - 1] == '.') return false;
   return true;
 }
 
 export const isNumber = (value) => {
-  if(typeof value == 'number') return true;
-  if(!value) return false;
-  if(typeof value != 'string') return false;
+  if (typeof value == 'number') return true;
+  if (!value) return false;
+  if (typeof value != 'string') return false;
   return !isNaN(value);
 };
 
@@ -89,61 +88,61 @@ export function detectExpressionType(name) {
     * undefined - another type of expression
   */
 
-  if(isSimpleName(name)) return 'identifier';
+  if (isSimpleName(name)) return 'identifier';
 
   let ast = acorn.parse(name, { allowReturnOutsideFunction: true, ecmaVersion: 'latest' });
 
   function checkIdentificator(body) {
-    if(body.length != 1) return;
-    if(body[0].type != 'ExpressionStatement') return;
+    if (body.length != 1) return;
+    if (body[0].type != 'ExpressionStatement') return;
     let obj = body[0].expression;
     return obj.type == 'Identifier' || obj.type == 'MemberExpression';
   }
 
   function checkFunction(body) {
-    if(body.length != 1) return;
-    if(body[0].type != 'ExpressionStatement') return;
+    if (body.length != 1) return;
+    if (body[0].type != 'ExpressionStatement') return;
     let obj = body[0].expression;
-    if(obj.type != 'ArrowFunctionExpression') return;
+    if (obj.type != 'ArrowFunctionExpression') return;
     return true;
   }
 
   function checkFunctionCall(body) {
-    if(body.length != 1) return;
-    if(body[0].type != 'ExpressionStatement') return;
+    if (body.length != 1) return;
+    if (body[0].type != 'ExpressionStatement') return;
     let obj = body[0].expression;
-    if(obj.type != 'CallExpression') return;
-    if(obj.callee?.type == 'Identifier') return obj.callee.name;
+    if (obj.type != 'CallExpression') return;
+    if (obj.callee?.type == 'Identifier') return obj.callee.name;
   }
 
-  if(checkIdentificator(ast.body)) return 'identifier';
-  if(checkFunction(ast.body)) return 'function';
+  if (checkIdentificator(ast.body)) return 'identifier';
+  if (checkFunction(ast.body)) return 'function';
 
   let fn = checkFunctionCall(ast.body);
-  if(fn) return { type: 'function-call', name: fn };
+  if (fn) return { type: 'function-call', name: fn };
 }
 
 
 export function checkRootName(name) {
   let rx = name.match(/^([\w$_][\w\d$_]*)/);
-  if(!rx) return this.warning({ message: 'Error name: ' + name });
+  if (!rx) return this.warning({ message: 'Error name: ' + name });
   let root = rx[1];
 
-  if(this.script.rootVariables[root] || this.script.rootFunctions[root]) return true;
+  if (this.script.rootVariables[root] || this.script.rootFunctions[root]) return true;
   this.warning({ message: 'No name: ' + name });
 }
 
 
 export function trimEmptyNodes(srcNodes) {
   let nodes = srcNodes.slice();
-  while(nodes.length) {
+  while (nodes.length) {
     let n = nodes[0];
-    if(n.type == 'text' && !n.value.trim()) nodes.shift();
+    if (n.type == 'text' && !n.value.trim()) nodes.shift();
     else break;
   }
-  while(nodes.length) {
+  while (nodes.length) {
     let n = last(nodes);
-    if(n.type == 'text' && !n.value.trim()) nodes.pop();
+    if (n.type == 'text' && !n.value.trim()) nodes.pop();
     else break;
   }
   return nodes;
@@ -152,7 +151,7 @@ export function trimEmptyNodes(srcNodes) {
 
 export const genId = () => {
   let id = Math.floor(Date.now() * Math.random()).toString(36);
-  if(id.length > 6) id = id.substring(id.length - 6);
+  if (id.length > 6) id = id.substring(id.length - 6);
   return 'm' + id;
 };
 
@@ -163,14 +162,14 @@ export const extractKeywords = (exp) => {
   const keys = new Set();
   const rec = (n) => {
     let self;
-    if(n.type) {
+    if (n.type) {
       self = n;
-      if(n.type == 'Identifier' && (n._parent.type != 'MemberExpression' || n._parent.property !== n)) {
+      if (n.type == 'Identifier' && (n._parent.type != 'MemberExpression' || n._parent.property !== n)) {
         let name = [n.name];
         let i = n._parent;
-        while(i?.type == 'MemberExpression') {
-          if(i.property.type == 'Identifier') name.push('.' + i.property.name);
-          else if(i.property.type == 'Literal') name.push(`[${i.property.raw}]`);
+        while (i?.type == 'MemberExpression') {
+          if (i.property.type == 'Identifier') name.push('.' + i.property.name);
+          else if (i.property.type == 'Literal') name.push(`[${i.property.raw}]`);
           else throw `Wrong member type: ${i.property.type}`;
           i = i._parent;
         }
@@ -178,11 +177,11 @@ export const extractKeywords = (exp) => {
       }
     }
 
-    for(let k in n) {
-      if(k == '_parent') continue;
+    for (let k in n) {
+      if (k == '_parent') continue;
       let v = n[k];
-      if(typeof (v) != 'object') continue;
-      if(Array.isArray(v)) {
+      if (typeof (v) != 'object') continue;
+      if (Array.isArray(v)) {
         v.forEach(i => {
           i._parent = self || n._parent;
           rec(i);
@@ -202,10 +201,10 @@ export const extractKeywords = (exp) => {
 export const replaceKeyword = (exp, fn, option) => {
   let changed = false;
   let r = parseJS(exp, option).transform((n, pk) => {
-    if(n.type != 'Identifier') return;
-    if(pk == 'property' || pk == 'params') return;
+    if (n.type != 'Identifier') return;
+    if (pk == 'property' || pk == 'params') return;
     let name = fn(n.name);
-    if(name) {
+    if (name) {
       n.name = name;
       changed = true;
     }
@@ -216,22 +215,22 @@ export const replaceKeyword = (exp, fn, option) => {
 
 export const parseJS = (exp, option) => {
   let self = {};
-  if(option === true) self.ast = acorn.parse(exp, { ecmaVersion: 'latest' });
+  if (option === true) self.ast = acorn.parse(exp, { ecmaVersion: 'latest' });
   else self.ast = acorn.parseExpressionAt(exp, 0, { ecmaVersion: 'latest' });
 
   self.transform = function(fn) {
     const rec = (n, pk) => {
       let self;
-      if(n.type) {
+      if (n.type) {
         self = n;
         fn?.(n, pk);
       }
 
-      for(let k in n) {
-        if(k == '_parent') continue;
+      for (let k in n) {
+        if (k == '_parent') continue;
         let v = n[k];
-        if(v == null || typeof (v) != 'object') continue;
-        if(Array.isArray(v)) {
+        if (v == null || typeof (v) != 'object') continue;
+        if (Array.isArray(v)) {
           v.forEach(i => {
             i._parent = self || n._parent;
             rec(i, k);

@@ -4,7 +4,7 @@ import { xNode } from '../xnode.js';
 
 export function attachPortal(node) {
   let body = trimEmptyNodes(node.body || []);
-  if(!body.length) return;
+  if (!body.length) return;
 
   let bb = this.buildBlock({ body }, {
     inline: true,
@@ -16,7 +16,7 @@ export function attachPortal(node) {
   });
 
   let mount = node.attributes.find(a => a.name == 'mount')?.value;
-  if(mount) mount = unwrapExp(mount);
+  if (mount) mount = unwrapExp(mount);
 
   const result = xNode('portal', {
     mount,

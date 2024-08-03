@@ -19,25 +19,25 @@ export function ifBlock(label, fn, parts, parentLabel) {
       share.current_destroyList = share.current_mountList = share.current_cd = null;
     }
     cd_attach(parentCD, $cd);
-    if($dom.nodeType == 11) {
+    if ($dom.nodeType == 11) {
       first = $dom.firstChild;
       last = $dom.lastChild;
     } else first = last = $dom;
-    if(parentLabel) label.appendChild($dom);
+    if (parentLabel) label.appendChild($dom);
     else label.parentNode.insertBefore($dom, label);
     safeGroupCall2(mountList, destroyList, 1);
   }
 
   function destroyBlock() {
-    if(!first) return;
+    if (!first) return;
     share.destroyResults = [];
     safeGroupCall2(destroyList, share.destroyResults);
     destroyList.length = 0;
-    if($cd) {
+    if ($cd) {
       cd_detach($cd);
       $cd = null;
     }
-    if(share.destroyResults.length) {
+    if (share.destroyResults.length) {
       let f = first, l = last;
       Promise.allSettled(share.destroyResults).then(() => {
         removeElements(f, l);
@@ -49,16 +49,16 @@ export function ifBlock(label, fn, parts, parentLabel) {
 
   $watch(fn, (value) => {
     destroyBlock();
-    if(value != null) createBlock(parts[value]);
+    if (value != null) createBlock(parts[value]);
   });
 }
 
 
 export function ifBlockReadOnly(label, fn, parts, parentLabel) {
   let value = fn();
-  if(value != null) {
+  if (value != null) {
     const $dom = parts[value]();
-    if(parentLabel) label.appendChild($dom);
+    if (parentLabel) label.appendChild($dom);
     else label.parentNode.insertBefore($dom, label);
   }
 }

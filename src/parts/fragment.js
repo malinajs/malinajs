@@ -8,9 +8,9 @@ export function makeFragment(node) {
   let name = rx[1], external = false;
   assert(isSimpleName(name));
   let props = rx[2] ? rx[2].trim() : null;
-  if(props) {
+  if (props) {
     props = props.split(/[\s,]+/).filter(p => {
-      if(p == 'export') {
+      if (p == 'export') {
         external = true;
         return false;
       }
@@ -19,7 +19,7 @@ export function makeFragment(node) {
   }
 
   let block;
-  if(node.body && node.body.length) {
+  if (node.body && node.body.length) {
     block = this.buildBlock({ body: trimEmptyNodes(node.body) }, { inline: true, context: 'fragment', parentElement: '$dom' });
   } else {
     this.warning(`Empty fragment: '${node.value}'`);
@@ -28,9 +28,9 @@ export function makeFragment(node) {
     });
   }
 
-  if(external) {
+  if (external) {
     this.require('$component');
-    if(props?.length) this.require('apply');
+    if (props?.length) this.require('apply');
   }
 
   return xNode('fragment', {
@@ -40,7 +40,7 @@ export function makeFragment(node) {
     external,
     block
   }, (ctx, n) => {
-    if(ctx.isEmpty(n.block.source)) {
+    if (ctx.isEmpty(n.block.source)) {
       ctx.write(true, `let $fragment_${n.name} = $runtime.makeBlock(`);
       ctx.add(n.block.template);
       ctx.write(');');
@@ -48,8 +48,8 @@ export function makeFragment(node) {
       ctx.write(true, `function $fragment_${n.name}($props, $events={}, $$fragmentSlot) {`);
       ctx.indent++;
 
-      if(n.props?.length) {
-        if(this.inuse.apply) {
+      if (n.props?.length) {
+        if (this.inuse.apply) {
           ctx.writeLine('let ' + n.props.join(', ') + ';');
           ctx.writeLine(`$runtime.unwrapProps($props, ($$) => ({${n.props.join(', ')}} = $$));`);
         } else {
@@ -69,7 +69,7 @@ export function makeFragment(node) {
       ctx.indent--;
       ctx.writeLine('}');
     }
-    if(n.external) ctx.writeLine(`$runtime.exportFragment($component, '${n.name}', $fragment_${n.name});`);
+    if (n.external) ctx.writeLine(`$runtime.exportFragment($component, '${n.name}', $fragment_${n.name});`);
   });
 }
 
@@ -84,10 +84,10 @@ function parseAttibutes(attributes) {
   attributes.forEach(prop => {
     let name = prop.name;
 
-    if(name[0] == '@' || name.startsWith('on:')) {
-      if(name.startsWith('@@')) {
+    if (name[0] == '@' || name.startsWith('on:')) {
+      if (name.startsWith('@@')) {
         this.require('$events');
-        if(name == '@@') forwardAllEvents = true;
+        if (name == '@@') forwardAllEvents = true;
         else {
           name = name.substring(2);
           events.push({
@@ -103,8 +103,8 @@ function parseAttibutes(attributes) {
     } else {
       let ip = this.inspectProp(prop);
       props.push(ip);
-      if(!ip.static) staticProps = false;
-      if(ip.mod.deep) deepChecking = true;
+      if (!ip.static) staticProps = false;
+      if (ip.mod.deep) deepChecking = true;
     }
   });
 
@@ -117,7 +117,7 @@ export function attachFragment(node) {
   assert(isSimpleName(name));
 
   let slot = null;
-  if(node.body?.length) slot = this.buildBlock({ body: trimEmptyNodes(node.body) }, { inline: true });
+  if (node.body?.length) slot = this.buildBlock({ body: trimEmptyNodes(node.body) }, { inline: true });
 
   let { props, events, forwardAllEvents, staticProps } = parseAttibutes.call(this, node.attributes);
 
@@ -134,12 +134,12 @@ export function attachFragment(node) {
     let missed = '';
     ctx.indent++;
 
-    if(n.props.length) {
+    if (n.props.length) {
       ctx.write(true);
 
       const writeProps = () => ctx.write('{' + n.props.map(p => p.name == p.value ? p.name : `${p.name}: ${p.value}`).join(', ') + '}');
 
-      if(n.staticProps || !this.inuse.apply) writeProps();
+      if (n.staticProps || !this.inuse.apply) writeProps();
       else {
         ctx.write('() => (');
         writeProps();
@@ -147,18 +147,18 @@ export function attachFragment(node) {
       }
     } else missed = 'null';
 
-    if(n.forwardAllEvents) {
-      if(n.events.length) this.warning(`Fragment: mixing binding and forwarding is not supported: '${node.openTag}'`);
+    if (n.forwardAllEvents) {
+      if (n.events.length) this.warning(`Fragment: mixing binding and forwarding is not supported: '${node.openTag}'`);
       ctx.write(missed, ', $events');
       missed = '';
-    } else if(n.events.length) {
+    } else if (n.events.length) {
       ctx.write(missed, ',', true, '{');
       missed = '';
 
       n.events.forEach((e, i) => {
-        if(i) ctx.write(', ');
-        if(e.callback) {
-          if(e.name == e.callback) ctx.write(e.name);
+        if (i) ctx.write(', ');
+        if (e.callback) {
+          if (e.name == e.callback) ctx.write(e.name);
           ctx.write(`${e.name}: ${e.callback}`);
         } else {
           assert(e.fn);
@@ -169,10 +169,10 @@ export function attachFragment(node) {
       ctx.write('}');
     } else missed += ', 0';
 
-    if(n.slot) {
+    if (n.slot) {
       ctx.write(missed, ',', true);
       missed = '';
-      if(ctx.isEmpty(n.slot.source)) {
+      if (ctx.isEmpty(n.slot.source)) {
         ctx.write('$runtime.makeBlock(');
         ctx.add(n.slot.template);
         ctx.write(')');
@@ -188,7 +188,7 @@ export function attachFragment(node) {
     }
 
     ctx.indent--;
-    if(n.props.length || n.events.length || n.slot) ctx.write(true, ')');
+    if (n.props.length || n.events.length || n.slot) ctx.write(true, ')');
     else ctx.write(')');
   });
 }
@@ -198,7 +198,7 @@ export function attachFragmentSlot(label) {
   return xNode('fragment-slot', {
     label
   }, (ctx, n) => {
-    if(n.label.node) ctx.write(true, `$runtime.insertBlock(${n.label.name}, $$fragmentSlot?.())`);
+    if (n.label.node) ctx.write(true, `$runtime.insertBlock(${n.label.name}, $$fragmentSlot?.())`);
     else ctx.write(true, `$runtime.addBlock(${n.label.name}, $$fragmentSlot?.())`);
   });
 }
@@ -212,7 +212,7 @@ export function attchExportedFragment(node, label, componentName) {
   };
 
   let body = trimEmptyNodes(node.body || []);
-  if(body.length) {
+  if (body.length) {
     data.slot = this.buildBlock({ body }, { inline: true });
     data.$wait = [data.slot.requireCD, data.slot.source];
     // assert(!data.slot.template.svg, 'SVG is not supported for exported fragment');
@@ -222,15 +222,15 @@ export function attchExportedFragment(node, label, componentName) {
   data = { ...pa, ...data };
 
   return xNode('attach-exported-fragment', data, (ctx, n) => {
-    if(n.label.node) ctx.write(true, `$runtime.insertBlock(${n.label.name}, $runtime.callExportedFragment($instance_${n.componentName}, '${n.name}'`);
+    if (n.label.node) ctx.write(true, `$runtime.insertBlock(${n.label.name}, $runtime.callExportedFragment($instance_${n.componentName}, '${n.name}'`);
     else ctx.write(true, `$runtime.addBlock(${n.label.name}, $runtime.callExportedFragment($instance_${n.componentName}, '${n.name}'`);
     ctx.indent++;
     let missed = '';
 
-    if(n.slot) {
+    if (n.slot) {
       ctx.write(',', true);
 
-      if(ctx.isEmpty(n.slot.source)) {
+      if (ctx.isEmpty(n.slot.source)) {
         ctx.write('$runtime.makeBlock(');
         ctx.add(n.slot.template);
         ctx.write(')');
@@ -240,7 +240,7 @@ export function attchExportedFragment(node, label, componentName) {
           template: n.slot.template,
           source: n.slot.source
         }, (ctx, n) => {
-          if(this.inuse.apply) ctx.write('$runtime.makeBlockBound(');
+          if (this.inuse.apply) ctx.write('$runtime.makeBlockBound(');
           else ctx.write('$runtime.makeBlock(');
           ctx.add(n.template);
           ctx.write(', ($parentElement) => {', true);
@@ -252,18 +252,18 @@ export function attchExportedFragment(node, label, componentName) {
       }
     } else missed = ', null';
 
-    if(n.forwardAllEvents) {
-      if(n.events.length) this.warning(`Fragment: mixing binding and forwarding is not supported: '${node.openTag}'`);
+    if (n.forwardAllEvents) {
+      if (n.events.length) this.warning(`Fragment: mixing binding and forwarding is not supported: '${node.openTag}'`);
       ctx.write(missed, ', $events');
       missed = '';
-    } else if(n.events.length) {
+    } else if (n.events.length) {
       ctx.write(missed, ',', true, '{');
       missed = '';
 
       n.events.forEach((e, i) => {
-        if(i) ctx.write(', ');
-        if(e.callback) {
-          if(e.name == e.callback) ctx.write(e.name);
+        if (i) ctx.write(', ');
+        if (e.callback) {
+          if (e.name == e.callback) ctx.write(e.name);
           ctx.write(`${e.name}: ${e.callback}`);
         } else {
           assert(e.fn);
@@ -274,19 +274,19 @@ export function attchExportedFragment(node, label, componentName) {
       ctx.write('}');
     } else missed += ', null';
 
-    if(n.props.length) {
-      if(missed) ctx.write(missed);
+    if (n.props.length) {
+      if (missed) ctx.write(missed);
       missed = '';
       ctx.write(',', true);
 
       const writeProps = () => ctx.write('{' + n.props.map(p => p.name == p.value ? p.name : `${p.name}: ${p.value}`).join(', ') + '}');
 
-      if(n.staticProps) writeProps();
+      if (n.staticProps) writeProps();
       else {
         ctx.write('() => (');
         writeProps();
         ctx.write('), ');
-        if(n.deepChecking) ctx.write('$runtime.compareDeep');
+        if (n.deepChecking) ctx.write('$runtime.compareDeep');
         else ctx.write('$runtime.keyComparator');
       }
     }
