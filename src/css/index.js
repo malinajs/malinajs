@@ -339,8 +339,10 @@ function makeDom(data) {
             else n.className += ' ' + a.value;
           }
           n.attributes[a.name] = a.value;
-        } else if(a.name == 'id') n.attributes.id = n.id = a.value;
-        else if(a.name.startsWith('class:')) {
+        } else if(a.name == 'id') {
+          if (a.value?.includes('{')) n.dynId = true;
+          n.attributes.id = n.id = a.value;
+        } else if(a.name.startsWith('class:')) {
           n.className += ' ' + a.name.substring(6);
         } else n.attributes[a.name] = a.value;
       });

@@ -329,7 +329,7 @@ export default function Factory(global, Export) {
     function(id, context) {
       var node = context, nodes = [ ], next = node.firstElementChild;
       while ((node = next)) {
-        node.id == id && (nodes[nodes.length] = node);
+        (node.id == id || node.dynId) && (nodes[nodes.length] = node);
         if ((next = node.firstElementChild || node.nextElementSibling)) continue;
         while (!next && (node = node.parentElement) && node !== context) {
           next = node.nextElementSibling;
