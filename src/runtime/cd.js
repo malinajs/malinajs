@@ -16,6 +16,12 @@ export function $watch(fn, callback, option) {
   return w;
 }
 
+export function $watchCustom(fn, callback, option) {
+  let w = $watch(fn, callback, option);
+  let cd = share.current_cd;
+  return () => removeItem(cd.watchers, w);
+}
+
 export function addEvent(el, event, callback) {
   if (!callback) return;
   el.addEventListener(event, callback);
@@ -138,11 +144,13 @@ export const compareDeep = deepComparator(10);
 export const keyComparator = (w, value) => {
   let diff = false;
   for (let k in value) {
-    if (w.value[k] != value[k]) diff = true;
-    w.value[k] = value[k];
+    if (w.value[k] != value[k]) {
+      diff = true;
+      w.value[k] = value[k];
+    }
   }
   diff && !w.idle && w.cb(value);
-  w.idle = false;
+  w.idle && (w.idle = false);
 };
 
 

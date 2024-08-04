@@ -1,6 +1,6 @@
 import * as acorn from 'acorn';
 import * as astring from 'astring';
-import { assert, detectExpressionType, last } from './utils.js';
+import { assert, detectExpressionType, last, isNumber } from './utils.js';
 import { xNode } from './xnode.js';
 
 
@@ -111,7 +111,7 @@ export function transform() {
     return node.type == 'ExpressionStatement' && node.expression.type == 'Identifier' && node.expression.name == '$$_noCheck';
   }
 
-  function transformNode(node) {
+  const transformNode = (node) => {
     if (funcTypes[node.type] && node.body.body && node.body.body.length) {
       if (node._parent.type == 'CallExpression' && node._parent.callee.name == '$onDestroy') return 'stop';
       for (let i = 0; i < node.body.body.length; i++) {
@@ -150,17 +150,31 @@ export function transform() {
           }
         }
       }
+    } else if (node.type == 'CallExpression' && node.callee?.name == '$watch') {
+      this.require('rootCD');
+      node.callee.name = '$watchCustom';
+      node.arguments[0].__skip = true;
+
+      if (node.arguments[2]?.type == 'Literal') {
+        let value = node.arguments[2].raw;
+        if (isNumber(value)) {
+          value = +value;
+          if (value == 1) node.arguments[2] = {type: 'Raw', value: '{cmp: $runtime.keyComparator, value: {}}'};
+          else if (value > 1) node.arguments[2] = {type: 'Raw', value: `{cmp: $runtime.deepComparator(${value})}`};
+          else node.arguments.length = 2;
+        }
+      }
     }
   }
 
-  function walk(node, parent, fn) {
+  function walk(node, parent) {
     if (typeof node !== 'object') return;
 
     if (node._apply && node.type == 'ExpressionStatement') return;
     node._parent = parent;
     let forParent = parent;
     if (node.type) {
-      if (fn(node) == 'stop') return;
+      if (transformNode(node) == 'stop') return;
       forParent = node;
     }
     for (let key in node) {
@@ -170,15 +184,15 @@ export function transform() {
 
       if (Array.isArray(child)) {
         for (let i = 0; i < child.length; i++) {
-          walk(child[i], forParent, fn);
+          if (!child[i].__skip) walk(child[i], forParent);
           if (child[i].__stop) break;
         }
       } else {
-        walk(child, forParent, fn);
+        walk(child, forParent);
       }
     }
   }
-  walk(ast, null, transformNode);
+  walk(ast, null);
 
   function makeVariable(name) {
     return {

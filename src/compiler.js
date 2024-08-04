@@ -26,7 +26,7 @@ export { xNode, xBuild } from './xnode.js';
 export { use_context, get_context } from './utils.js';
 
 
-export const version = '0.8.0-a2';
+export const version = '0.8.0-a3';
 
 
 export async function compile(source, config = {}) {
@@ -165,7 +165,7 @@ export async function compile(source, config = {}) {
   use_context(ctx, function() {
     const root = xNode('root', (ctx) => {
       ctx.write(true, `import * as $runtime from 'malinajs/runtime.js';`);
-      ctx.write(true, 'import { $watch } from \'malinajs/runtime.js\';');
+      ctx.write(true, 'import { $watch, $watchCustom } from \'malinajs/runtime.js\';');
       ctx.add(this.module.top);
       const componentFn = this.glob.componentFn;
 
