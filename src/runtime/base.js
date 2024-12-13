@@ -56,9 +56,12 @@ export function svgToFragment(content) {
   let t = document.createElement('template');
   t.innerHTML = '<svg>' + content + '</svg>';
 
-  let result = document.createDocumentFragment();
-  let svg = t.content.firstChild;
-  while(svg.firstChild) result.appendChild(svg.firstChild);
+  let result, svg = t.content.firstChild;
+  if (svg.firstChild == svg.lastChild) result = svg.firstChild;
+  else {
+    result = document.createDocumentFragment();
+    while(svg.firstChild) result.appendChild(svg.firstChild);
+  }
   templatecacheSvg[content] = result.cloneNode(true);
   return result;
 }
