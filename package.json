@@ -1,6 +1,6 @@
 {
   "name": "malinajs",
-  "version": "0.8.0-a3",
+  "version": "0.8.0-a4",
   "license": "MIT",
   "scripts": {
     "build": "rollup -c",

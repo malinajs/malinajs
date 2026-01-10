@@ -26,7 +26,7 @@ export { xNode, xBuild } from './xnode.js';
 export { use_context, get_context } from './utils.js';
 
 
-export const version = '0.8.0-a3';
+export const version = '0.8.0-a4';
 
 
 export async function compile(source, config = {}) {

@@ -18,13 +18,18 @@ export function parse() {
     comments: []
   };
   if (source) {
-    source = source.split(/\n/).map(line => {
-      let rx = line.match(/^(\s*)\/\/(.*)$/);
-      if (!rx) return line;
-      let code = rx[2].trim();
-      if (code != '!no-check') return line;
-      return rx[1] + '$$_noCheck;';
-    }).join('\n');
+    if (this.scriptNodes[0].attributes?.some(a => a.name == 'manual')) {
+      this.require('apply');
+      this.script.manual = true;
+    } else {
+      source = source.split(/\n/).map(line => {
+        let rx = line.match(/^(\s*)\/\/(.*)$/);
+        if (!rx) return line;
+        let code = rx[2].trim();
+        if (code != '!no-check') return line;
+        return rx[1] + '$$_noCheck;';
+      }).join('\n');
+    }
 
     const onComment = (isBlockComment, value, start, end) => {
       if (isBlockComment) return;
@@ -192,7 +197,7 @@ export function transform() {
       }
     }
   }
-  walk(ast, null);
+  if (!this.script.manual) walk(ast, null);
 
   function makeVariable(name) {
     return {

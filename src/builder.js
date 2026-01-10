@@ -44,6 +44,7 @@ export function buildRuntime() {
     if (n.value || this.inuse.rootCD) {
       this.require('componentFn');
       ctx.writeLine('const $$apply = $runtime.makeApply();');
+      if (this.script.manual) ctx.writeLine('const $render = $$apply;');
     }
   };
   this.module.head.unshift(this.glob.apply);
